@@ -132,7 +132,7 @@ def get_editor_filter(state=None, check=None, user=None, month=None,
     elif check_category is not None:
         filter_string = '#filter=checks&category=%s' % check_category
     elif search is not None:
-        filter_string = '#search=%s' % urllib.quote_plus(search)
+        filter_string = '#search=%s' % urllib.quote_plus(search.encode('utf8'))
         if sfields is not None:
             if not isinstance(sfields, list):
                 sfields = [sfields]
