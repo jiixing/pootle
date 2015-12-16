@@ -1261,6 +1261,7 @@ a.editor-specialchar:hover
 .highlight-html
 {
     color: #840;
+    font-size: 85%;
 }
 
 .tm-server .suggestion-original .highlight-html
