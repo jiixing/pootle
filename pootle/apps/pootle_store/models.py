@@ -26,6 +26,7 @@ from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.http import urlquote
 from django.utils.translation import ugettext_lazy as _
+from django.utils.html import strip_tags
 
 from translate.filters.decorators import Category
 from translate.storage import base
@@ -925,8 +926,8 @@ class Unit(models.Model, base.TranslationUnit):
             'revision': self.revision,
             'project': self.store.translation_project.project.fullname,
             'path': self.store.pootle_path,
-            'source': self.source,
-            'target': self.target,
+            'source': strip_tags(self.source),
+            'target': strip_tags(self.target),
             'username': '',
             'fullname': '',
             'email_md5': '',

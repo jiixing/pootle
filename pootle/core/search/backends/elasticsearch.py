@@ -11,6 +11,7 @@ from __future__ import absolute_import
 
 import logging
 
+from django.utils.html import strip_tags
 
 __all__ = ('ElasticSearchBackend',)
 
@@ -73,7 +74,7 @@ class ElasticSearchBackend(SearchBackend):
                 "query": {
                     "match": {
                         "source": {
-                            "query": unit.source,
+                            "query": strip_tags(unit.source),
                             "fuzziness": self._settings['MIN_SCORE'],
                         }
                     }
