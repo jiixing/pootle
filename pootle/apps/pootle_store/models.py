@@ -88,16 +88,6 @@ FILE_WINS = 2
 
 # # # # # # # # Quality Check # # # # # # #
 
-class QualityCheckManager(models.Manager):
-
-    def get_queryset(self):
-        """Mimics `select_related(depth=1)` behavior. Pending review."""
-        return (
-            super(QualityCheckManager, self).get_queryset().select_related(
-                'unit',
-            )
-        )
-
 
 class QualityCheck(models.Model):
     """Database cache of results of qualitychecks on unit."""
@@ -107,8 +97,6 @@ class QualityCheck(models.Model):
     category = models.IntegerField(null=False, default=Category.NO_CATEGORY)
     message = models.TextField()
     false_positive = models.BooleanField(default=False, db_index=True)
-
-    objects = QualityCheckManager()
 
     def __unicode__(self):
         return self.name
@@ -127,14 +115,6 @@ class QualityCheck(models.Model):
 
 
 class SuggestionManager(models.Manager):
-
-    def get_queryset(self):
-        """Mimics `select_related(depth=1)` behavior. Pending review."""
-        return (
-            super(SuggestionManager, self).get_queryset().select_related(
-                'unit', 'user', 'reviewer',
-            )
-        )
 
     def pending(self):
         return self.get_queryset().filter(state=SuggestionStates.PENDING)
@@ -1351,11 +1331,6 @@ fs = PootleFileSystemStorage()
 
 class StoreManager(models.Manager):
     use_for_related_fields = True
-
-    def get_queryset(self):
-        """Mimics `select_related(depth=1)` behavior. Pending review."""
-        return super(StoreManager, self).get_queryset().select_related(
-            'parent', 'translation_project',)
 
     def live(self):
         """Filters non-obsolete stores."""

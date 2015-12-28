@@ -14,6 +14,12 @@ checker = ENChecker()
 
 
 def do_test(check, tests):
+    """Runs `check` against a list of `tests`.
+
+    :param check: Checker function.
+    :param tests: List of tuples in the form of:
+        `(source string, target string, whether the check should skip or not)`.
+    """
     for str1, str2, state in tests:
         info = "check('%s', '%s') == %s" % (str1, str2, state)
         try:
@@ -134,6 +140,14 @@ def test_mustache_placeholders():
         (u'{{a}}a{{/a}}', u'{{a}}A{{/s}}', False),
         (u'{{#a}}a{{/a}}', u'{{a}}A{{/a#}}', False),
         (u'{{#a}}a{{/a}}', u'{{# a}}A{{/ a}}', False),
+
+        # Ignore the check altogether for Plurr-like source strings
+        (u'{:{BAR}}', u'Foo', True),
+        (u'{:{:a|b}|c}', u'Foo', True),
+        (u'{FOO:{BAR}}', u'Foo', True),
+        (u'{FOO:{BAR:a|b}|c}', u'Foo', True),
+        (u'Foo {BAR_PLURAL:Zero|{BAR}}', u'', True),
+        (u'Foo {BAR_PLURAL:Zero|{BAR}}', u'Foo', True),
     ]
 
     do_test(check, tests)
@@ -194,6 +208,14 @@ def test_unbalanced_curly_braces():
         (u'', u'', True),
         (u'{a}', u'{a}', True),
         (u'{{a}}', u'{{a}', False),
+
+        # Ignore the check altogether for Plurr-like source strings
+        (u'{:{BAR}}', u'Foo', True),
+        (u'{:{:a|b}|c}', u'Foo', True),
+        (u'{FOO:{BAR}}', u'Foo', True),
+        (u'{FOO:{BAR:a|b}|c}', u'Foo', True),
+        (u'Foo {BAR_PLURAL:Zero|{BAR}}', u'', True),
+        (u'Foo {BAR_PLURAL:Zero|{BAR}}', u'Foo', True),
     ]
 
     do_test(check, tests)

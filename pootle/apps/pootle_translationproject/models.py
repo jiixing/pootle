@@ -91,15 +91,6 @@ class TranslationProjectManager(models.Manager):
     # disabled objects are hidden for related objects too
     use_for_related_fields = True
 
-    def get_queryset(self):
-        """Mimics `select_related(depth=1)` behavior. Pending review."""
-        return (
-            super(TranslationProjectManager, self).get_queryset()
-                                                  .select_related(
-                'language', 'project', 'directory',
-            )
-        )
-
     def get_terminology_project(self, language_id):
         # FIXME: the code below currently uses the same approach to determine
         # the 'terminology' kind of a project as 'Project.is_terminology()',
@@ -296,6 +287,9 @@ class TranslationProject(models.Model, CachedTreeItem):
                     init_store_from_template(self, template_store)
 
             self.scan_files()
+            # If this TP has no stores cache should be updated forcibly.
+            if self.stores.live().count() == 0:
+                self.update_all_cache()
 
             # Create units from disk store
             for store in self.stores.live().iterator():

@@ -37,6 +37,11 @@ import msg from '../msg';
 import score from '../score';
 import search from '../search';
 import utils from '../utils';
+
+import {
+  decodeEntities, escapeUnsafeRegexSymbols, makeRegexForMultipleWords,
+} from './utils';
+
 import suttacentral from '../suttacentral';
 import { escapeUnsafeRegexSymbols, makeRegexForMultipleWords } from './utils';
 
@@ -2167,7 +2172,7 @@ PTL.editor = {
 
     const area = document.querySelector('.js-translation-area');
 
-    area.value = translation;
+    area.value = decodeEntities(translation);
     autosize.update(area);
 
     // Save a copy of the resulting text in the DOM for further

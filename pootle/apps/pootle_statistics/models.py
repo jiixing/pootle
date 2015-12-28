@@ -49,11 +49,10 @@ class SubmissionTypes(object):
     # Combined types that rely on other types (useful for querying)
     # Please use the `_TYPES` suffix to make it clear they're not core
     # types that are stored in the DB
-    EDIT_TYPES = [NORMAL, SYSTEM]
+    EDIT_TYPES = [NORMAL, SYSTEM, UPLOAD]
     CONTRIBUTION_TYPES = [NORMAL, SYSTEM, SUGG_ADD]
     SUGGESTION_TYPES = [SUGG_ACCEPT, SUGG_ADD, SUGG_REJECT]
     REVIEW_TYPES = [SUGG_ACCEPT, SUGG_REJECT]
-    EDITING_TYPES = [NORMAL, SYSTEM, UNIT_CREATE, UPLOAD]
 
 
 #: Values for the 'field' field of Submission
@@ -120,15 +119,6 @@ class SubmissionManager(BaseSubmissionManager):
 
     use_for_related_fields = True
 
-    def get_queryset(self):
-        """Mimics `select_related(depth=1)` behavior. Pending review."""
-        return (
-            super(SubmissionManager, self).get_queryset().select_related(
-                'translation_project', 'suggestion', 'submitter', 'unit',
-                'quality_check', 'store',
-            )
-        )
-
     def get_unit_comments(self):
         """Submissions that change a `Unit`'s comment.
 
@@ -151,7 +141,7 @@ class SubmissionManager(BaseSubmissionManager):
         return (
             self.get_queryset().exclude(new_value__isnull=True).filter(
                 field__in=SubmissionFields.TRANSLATION_FIELDS,
-                type__in=SubmissionTypes.EDITING_TYPES,
+                type__in=SubmissionTypes.EDIT_TYPES,
             )
         )
 

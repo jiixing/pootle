@@ -59,8 +59,16 @@ UPDATE_STORE_TESTS['old_subset_1'] = {
 UPDATE_STORE_TESTS['old_subset_2'] = {
     "update_store": ("MID", UPDATED_STORE_UNITS_2)
 }
+UPDATE_STORE_TESTS['old_subset_2_pootle_wins'] = {
+    "update_store": ("MID", UPDATED_STORE_UNITS_2),
+    "fs_wins": False
+}
 UPDATE_STORE_TESTS['old_same_updated'] = {
     "update_store": ("MID", UPDATED_STORE_UNITS_1 + UPDATED_STORE_UNITS_2)
+}
+UPDATE_STORE_TESTS['old_same_updated_pootle_wins'] = {
+    "update_store": ("MID", UPDATED_STORE_UNITS_1 + UPDATED_STORE_UNITS_2),
+    "fs_wins": False
 }
 
 UPDATE_STORE_TESTS['old_unobsolete'] = {
@@ -72,11 +80,6 @@ UPDATE_STORE_TESTS['old_unobsolete'] = {
 
 UPDATE_STORE_TESTS['old_merge'] = {
     "update_store": ("MID", UPDATED_STORE_UNITS_1 + UPDATED_STORE_UNITS_3)
-}
-
-UPDATE_STORE_TESTS['old_same_updated_fs_wins'] = {
-    "update_store": ("MID", UPDATED_STORE_UNITS_1 + UPDATED_STORE_UNITS_2),
-    "fs_wins": True
 }
 
 UPDATE_STORE_TESTS['max_empty'] = {"update_store": ("MAX", [])}
@@ -131,7 +134,6 @@ def _setup_store_test(store, member, member2, test):
             _create_comment_on_unit(unit, member, comment)
 
     store_revision, units_update = test["update_store"]
-    revision_min = store.get_max_unit_revision()
     units_before = [
         unit for unit in store.unit_set.all().order_by("index")]
 
@@ -143,9 +145,6 @@ def _setup_store_test(store, member, member2, test):
 
     if store_revision == "MAX":
         store_revision = store.get_max_unit_revision()
-
-    elif store_revision == "MIN":
-        store_revision = revision_min
 
     elif store_revision == "MID":
         revisions = [unit.revision for unit in units_before]
