@@ -37,8 +37,8 @@ import msg from '../msg';
 import score from '../score';
 import search from '../search';
 import utils from '../utils';
+import suttacentral from '../suttacentral';
 import { escapeUnsafeRegexSymbols, makeRegexForMultipleWords } from './utils';
-
 
 const CTX_STEP = 1;
 
@@ -285,7 +285,15 @@ PTL.editor = {
 
     shortcut.add('ctrl+down', () => this.gotoNext({ isSubmission: false }));
     shortcut.add('ctrl+.', () => this.gotoNext({ isSubmission: false }));
-
+    shortcut.add('alt+down', function() {
+      console.log('Copy Original!');
+      $('.js-copyoriginal').click()
+    });
+    shortcut.add('ctrl+b', function() {
+      console.log('Copy Original!');
+      $('.js-copyoriginal').click()
+    });
+    
     if (navigator.platform.toUpperCase().indexOf('MAC') >= 0) {
       // Optimize string join with '<br/>' as separator
       this.$navNext
@@ -529,6 +537,8 @@ PTL.editor = {
     this.hideActivity();
     this.updateExportLink();
     helpers.updateRelativeDates();
+    
+    window.suttacentral.init();
   },
 
   /* Things to do when no results are returned */
@@ -605,19 +615,27 @@ PTL.editor = {
   copyOriginal(sources) {
     const targets = $('.js-translation-area');
     if (targets.length) {
+      var newval;
       const max = sources.length - 1;
 
       for (let i = 0; i < targets.length; i++) {
-        const newval = sources[i] || sources[max];
+        newval = sources[i] || sources[max];
         $(targets.get(i)).val(newval).trigger('input');
       }
-
+      
       // Focus on the first textarea
       const active = $(targets)[0];
       active.focus();
       autosize.update(active);
-      // Make this fuzzy
-      this.goFuzzy();
+      
+      /* Should we make this fuzzy? */
+      
+      var text = $('<div>' + newval + '</div>').text().trim();
+      text = $('<div>' + text + '</div>').text().trim()
+      if (text.search(/[a-zA-Zāīōū]/) != -1) {
+          // Make this fuzzy
+          this.goFuzzy();
+      }
       // Place cursor at start of target text
       this.cpRE.exec($(active).val());
       const i = this.cpRE.lastIndex;
