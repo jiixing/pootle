@@ -37,11 +37,6 @@ import msg from '../msg';
 import score from '../score';
 import search from '../search';
 import utils from '../utils';
-
-import {
-  decodeEntities, escapeUnsafeRegexSymbols, makeRegexForMultipleWords,
-} from './utils';
-
 import suttacentral from '../suttacentral';
 import { escapeUnsafeRegexSymbols, makeRegexForMultipleWords } from './utils';
 
