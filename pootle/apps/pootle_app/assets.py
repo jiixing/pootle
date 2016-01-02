@@ -77,8 +77,8 @@ css_common = Bundle(
     'css/scores.css',
     'css/user.css',
     'css/welcome.css',
-    'css/suttacentral.css',
     'css/pali-lookup-standalone.css',
+    'css/suttacentral.css',
     filters='cssmin', output='css/common.min.%(version)s.css')
 register('css_common', css_common)
 
