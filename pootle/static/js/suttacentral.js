@@ -138,7 +138,6 @@ window.suttacentral = {
             var hits = resp.hits.hits;
             hits.sort(function(a, b) {return comparePaliAlphabet(a._source.term, b._source.term)});
             hits.forEach(function(hit) {
-                console.log(hit._source);
                 var tmUnit = tmUnitTmpl.clone();
                 var term = hit._source.term;
                 if (hit._source.context) {
@@ -159,8 +158,6 @@ window.suttacentral = {
         var TMSuggestions = $('[id^=tm] .js-editor-copytext').has('.suggestion-translation'),
             TMSuggestionPlace = 0,
             resetTimeout;
-            
-        console.log('Suggestions: ', TMSuggestions.length);
 
         if (TMSuggestions.length > 0) {
             shortcut.add('ctrl+m', function() {
@@ -181,84 +178,3 @@ $(document).on('change keyup', 'textarea.translation', suttacentral.unicodeify);
 $(document).on('editor_ready', suttacentral.init);
 
 
-
-/*
-// Gets TM suggestions from amaGama
-  PTL.editor.getTMUnits = _.bind(function () {
-    var unit = this.units.getCurrent(),
-        store = unit.get('store'),
-        src = store.get('source_lang'),
-        tgt = store.get('target_lang'),
-        sText = cleanText(unit.get('source')[0]),
-        pStyle = store.get('project_style'),
-        tmUrl = this.settings.tmUrl + src + "/" + tgt +
-          "/unit/?source=" + encodeURIComponent(sText) + "&jsoncallback=?";
-    console.log('Source Text ', sText);
-    if (!sText.length) {
-        // No use in looking up an empty string
-        return;
-    }
-
-    if (pStyle.length && pStyle != "standard") {
-        tmUrl += '&style=' + pStyle;
-    }
-
-    // Always abort previous requests so we only get results for the
-    // current unit
-    if (this.tmReq != null) {
-      this.tmReq.abort();
-    }
-
-    this.tmReq = $.jsonp({
-      url: tmUrl,
-      callback: '_jsonp' + PTL.editor.units.getCurrent().id,
-      dataType: 'jsonp',
-      cache: true,
-      success: function (data) {
-        var uid = this.callback.slice(6);
-
-        if (uid == PTL.editor.units.getCurrent().id && data.length) {
-          var filtered = PTL.editor.filterTMResults(data),
-              name = gettext("Similar translations"),
-              tm = PTL.editor.tmpl.tm({store: store.toJSON(),
-                                       suggs: filtered,
-                                       name: name});
-
-          $(tm).hide().appendTo("#extras-container")
-                      .slideDown(1000, 'easeOutQuad');
-          addAcceptShortcut();
-        }
-      },
-      error: PTL.editor.error
-    });
-  }, PTL.editor);
-
-
-*/
-
-
-/* Perform human sorting
- * This crude implementation pads all numbers to 6 digits long
- * as such it will break down for numbers larger than 999999
- * for normal filenames based on numbers humans normally relate
- * to this is not going to be a problem.
- */
-/*
-function zfill(num) {
-    // jsperf indicates this is generally the fasted way to zfill
-    // presumably because function calls are harder to optimize.
-    while (num.length < 6) {
-        num = '0' + num
-    }
-    return num
-}
-
-sorttable.sort_alpha = function(a,b) {
-    var left = a[0].replace(/\d+/g, zfill),
-        right = b[0].replace(/\d+/g, zfill);
-    
-    if (left==right) return 0;
-    if (left<right) return -1;
-    return 1;
-};
-*/
