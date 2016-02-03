@@ -7,9 +7,6 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
-
-__all__ = ('User', )
-
 import datetime
 import re
 from hashlib import md5
@@ -22,7 +19,7 @@ from django.core.mail import send_mail
 from django.core.urlresolvers import reverse
 from django.core.validators import RegexValidator
 from django.db import models
-from django.db.models import ProtectedError, Sum, Q
+from django.db.models import ProtectedError, Q, Sum
 from django.forms.models import model_to_dict
 from django.utils import timezone
 from django.utils.functional import cached_property
@@ -39,6 +36,9 @@ from pootle_store.models import SuggestionStates, Unit
 
 from .managers import UserManager
 from .utils import UserMerger, UserPurger
+
+
+__all__ = ('User', )
 
 
 CURRENCIES = (('USD', 'USD'), ('EUR', 'EUR'), ('CNY', 'CNY'), ('JPY', 'JPY'))
@@ -276,6 +276,18 @@ class User(AbstractBaseUser):
     def is_system(self):
         """Returns `True` if this is the special `system` user."""
         return self.username == 'system'
+
+    def has_manager_permissions(self):
+        """Tells if the user is a manager for any language, project or TP."""
+        if self.is_anonymous():
+            return False
+        if self.is_superuser:
+            return True
+        criteria = {
+            'positive_permissions__codename': 'administrate',
+            'directory__pootle_path__regex': r'^/[^/]*/([^/]*/)?$',
+        }
+        return self.permissionset_set.filter(**criteria).exists()
 
     def get_full_name(self):
         """Returns the user's full name."""

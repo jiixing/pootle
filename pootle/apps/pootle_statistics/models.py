@@ -17,7 +17,7 @@ from django.utils.functional import cached_property
 from django.utils.html import format_html
 from django.utils.translation import ugettext_lazy as _
 
-from pootle.core.log import log, SCORE_CHANGED
+from pootle.core.log import SCORE_CHANGED, log
 from pootle.core.utils import dateformat
 from pootle.core.utils.json import jsonify
 from pootle_misc.checks import check_names
@@ -25,10 +25,6 @@ from pootle_store.fields import to_python
 from pootle_store.util import FUZZY, TRANSLATED, UNTRANSLATED
 
 
-EDIT_COEF = 5.0/7
-REVIEW_COEF = 2.0/7
-SUGG_COEF = 0.2
-ANALYZE_COEF = 0.1
 SIMILARITY_THRESHOLD = 0.5
 
 
@@ -353,7 +349,7 @@ class Submission(models.Model):
         super(Submission, self).save(*args, **kwargs)
 
         if self.needs_scorelog():
-            ScoreLog.record_submission(submission=self)
+            ScoreLog.record_scorelogs(submission=self)
 
 
 class TranslationActionCodes(object):
@@ -412,7 +408,7 @@ class ScoreLog(models.Model):
         unique_together = ('submission', 'action_code')
 
     @classmethod
-    def record_submission(cls, submission):
+    def record_scorelogs(cls, submission):
         """Records a new log entry for ``submission``."""
         score_dict = {
             'creation_time': submission.creation_time,
@@ -551,6 +547,11 @@ class ScoreLog(models.Model):
 
     def get_score_delta(self):
         """Returns the score change performed by the current action."""
+        EDIT_COEF = settings.POOTLE_SCORE_COEFFICIENTS['EDIT']
+        REVIEW_COEF = settings.POOTLE_SCORE_COEFFICIENTS['REVIEW']
+        SUGG_COEF = settings.POOTLE_SCORE_COEFFICIENTS['SUGGEST']
+        ANALYZE_COEF = settings.POOTLE_SCORE_COEFFICIENTS['ANALYZE']
+
         ns = self.wordcount
         s = self.similarity
         rawTranslationCost = ns * EDIT_COEF * (1 - s)
@@ -560,6 +561,8 @@ class ScoreLog(models.Model):
         def get_sugg_rejected():
             result = 0
             try:
+                # Get similarity from initial submission where
+                # the suggestion was added.
                 s = self.submission.suggestion.submission_set \
                         .get(type=SubmissionTypes.SUGG_ADD) \
                         .similarity
@@ -575,6 +578,8 @@ class ScoreLog(models.Model):
 
         def get_edit_penalty():
             try:
+                # Get similarity from initial submission where overwritten
+                # translation was added.
                 s = Submission.objects.get(
                     unit__id=self.submission.unit_id,
                     submitter__id=self.submission.unit.submitted_by_id,
@@ -593,12 +598,14 @@ class ScoreLog(models.Model):
 
         def get_sugg_accepted():
             try:
+                # Get similarity from initial submission where overwritten
+                # translation was added.
                 s = self.submission.suggestion.submission_set \
                         .get(type=SubmissionTypes.SUGG_ADD) \
                         .similarity
                 if s is None:
                     s = 0
-                self.similarity = 0
+                self.similarity = s
                 rawTranslationCost = ns * EDIT_COEF * (1 - s)
             except Submission.DoesNotExist:
                 rawTranslationCost = 0
@@ -643,6 +650,10 @@ class ScoreLog(models.Model):
         """Returns the translated and reviewed wordcount in the current
         action.
         """
+
+        EDIT_COEF = settings.POOTLE_SCORE_COEFFICIENTS['EDIT']
+        REVIEW_COEF = settings.POOTLE_SCORE_COEFFICIENTS['REVIEW']
+
         ns = self.wordcount
         s = self.get_similarity()
 

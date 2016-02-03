@@ -8,26 +8,26 @@
 # AUTHORS file for copyright and authorship information.
 
 """Form fields required for handling translation files."""
+
 import re
+
+from translate.misc.multistring import multistring
 
 from django import forms
 from django.utils import timezone
 from django.utils.translation import get_language, ugettext as _
 
-from translate.misc.multistring import multistring
-
-from pootle.core.log import (TRANSLATION_ADDED,
-                             TRANSLATION_CHANGED, TRANSLATION_DELETED)
+from pootle.core.log import (TRANSLATION_ADDED, TRANSLATION_CHANGED,
+                             TRANSLATION_DELETED)
 from pootle.core.mixins import CachedMethods
 from pootle_app.models.permissions import check_permission
 from pootle_statistics.models import (Submission, SubmissionFields,
                                       SubmissionTypes)
 
-from .models import Unit
 from .fields import to_db
-from .util import UNTRANSLATED, FUZZY, TRANSLATED, OBSOLETE
+from .models import Unit
+from .util import FUZZY, OBSOLETE, TRANSLATED, UNTRANSLATED
 
-# # # # # # #  text cleanup and highlighting # # # # # # # # # # # # #
 
 FORM_RE = re.compile('\r\n|\r|\n|\t|\\\\')
 

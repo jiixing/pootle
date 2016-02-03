@@ -1959,6 +1959,7 @@ PTL.editor = {
     // we could limit based on a threshold too.
     const filtered = [];
 
+    // FIXME: move this side-effect elsewhere
     if (results.length > 0 && results[0].source === sourceText) {
       const $element = $(this.focused);
       // set only if the textarea is empty

@@ -46,27 +46,6 @@
         encoder: encodeURIComponent
     };
 
-    var iframeWrapper = {
-        id: "__jQuery_history",
-        init: function() {
-            var html = '<iframe id="'+ this.id +'" style="display:none" src="javascript:false;" />';
-            $("body").prepend(html);
-            return this;
-        },
-        _document: function() {
-            return $("#"+ this.id)[0].contentWindow.document;
-        },
-        put: function(hash) {
-            var doc = this._document();
-            doc.open();
-            doc.close();
-            locationWrapper.put(hash, doc);
-        },
-        get: function() {
-            return locationWrapper.get(this._document());
-        }
-    };
-
     function initObjects(options) {
         options = $.extend({
                 unescape: false
@@ -92,70 +71,27 @@
         }
     }
 
-    var implementations = {};
-
-    implementations.base = {
+    $.history = {
         callback: undefined,
         type: undefined,
 
-        check: function() {},
-        load:  function(hash) {},
-        init:  function(callback, options) {
-            initObjects(options);
-            self.callback = callback;
-            self._options = options;
-            self._init();
-        },
-
-        _init: function() {},
-        _options: {}
-    };
-
-    implementations.timer = {
-        _appState: undefined,
-        _init: function() {
-            var current_hash = locationWrapper.get();
-            self._appState = current_hash;
-            self.callback(current_hash);
-            setInterval(self.check, 100);
-        },
         check: function() {
-            var current_hash = locationWrapper.get();
-            if(current_hash != self._appState) {
-                self._appState = current_hash;
-                self.callback(current_hash);
-            }
-        },
-        load: function(hash) {
-            if(hash != self._appState) {
-                locationWrapper.put(hash);
-                self._appState = hash;
-                self.callback(hash);
-            }
-        }
-    };
-
-    implementations.hashchangeEvent = {
-        _init: function() {
-            self.callback(locationWrapper.get());
-            $(window).bind('hashchange', self.check);
-        },
-        check: function() {
-            self.callback(locationWrapper.get());
+            this.callback(locationWrapper.get());
         },
         load: function(hash) {
             locationWrapper.put(hash);
-        }
+        },
+        init:  function(callback, options) {
+            initObjects(options);
+            this.callback = callback;
+            this._options = options;
+            this._init();
+        },
+
+        _init: function() {
+            this.callback(locationWrapper.get());
+            $(window).bind('hashchange', this.check.bind(this));
+        },
+        _options: {}
     };
-
-    var self = $.extend({}, implementations.base);
-
-    if ("onhashchange" in window) {
-        self.type = 'hashchangeEvent';
-    } else {
-        self.type = 'timer';
-    }
-
-    $.extend(self, implementations[self.type]);
-    $.history = self;
 })(jQuery);

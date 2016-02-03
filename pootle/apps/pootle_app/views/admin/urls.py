@@ -7,18 +7,18 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
-from django.conf.urls import include, patterns, url
+from django.conf.urls import include, url
 
 import staticpages.urls
 
 from . import (LanguageAdminView, LanguageAPIView, ProjectAdminView,
-               ProjectAPIView, UserAdminView, UserAPIView)
+               ProjectAPIView, UserAdminView, UserAPIView, adminroot,
+               dashboard)
 
 
-urlpatterns = patterns(
-    'pootle_app.views.admin',
+urlpatterns = [
     url(r'^/?$',
-        'dashboard.view',
+        dashboard.view,
         name='pootle-admin'),
 
     # FIXME: remove ad-hoc inclusion, make this pluggable
@@ -47,18 +47,17 @@ urlpatterns = patterns(
         name='pootle-admin-project-edit'),
 
     url(r'^/permissions/$',
-        'adminroot.view',
+        adminroot.view,
         name='pootle-admin-permissions'),
 
     # XHR
     url(r'^/more-stats/?$',
-        'dashboard.server_stats_more',
+        dashboard.server_stats_more,
         name='pootle-admin-more-stats'),
-)
+]
 
 
-api_patterns = patterns(
-    '',
+api_patterns = [
     url(r'^users/?$',
         UserAPIView.as_view(),
         name='pootle-xhr-admin-users'),
@@ -79,4 +78,4 @@ api_patterns = patterns(
     url(r'^projects/(?P<id>[0-9]+)/?$',
         ProjectAPIView.as_view(),
         name='pootle-xhr-admin-project'),
-)
+]

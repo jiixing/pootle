@@ -9,15 +9,15 @@
 
 import logging
 
-from django.utils.translation import ugettext as _
-
 from translate.storage.factory import getclass
 
-from pootle_store.models import Store
-from pootle_statistics.models import SubmissionTypes
+from django.utils.translation import ugettext as _
 
-from .exceptions import (UnsupportedFiletypeError, MissingPootlePathError,
-                         MissingPootleRevError, FileImportError)
+from pootle_statistics.models import SubmissionTypes
+from pootle_store.models import Store
+
+from .exceptions import (FileImportError, MissingPootlePathError,
+                         MissingPootleRevError, UnsupportedFiletypeError)
 
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,8 @@ def import_file(file, user=None):
 
     try:
         store.update(store=f, user=user,
-                     submission_type=SubmissionTypes.UPLOAD)
+                     submission_type=SubmissionTypes.UPLOAD,
+                     store_revision=rev)
     except Exception as e:
         # This should not happen!
         logger.error("Error importing file: %s", str(e))

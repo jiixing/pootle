@@ -18,7 +18,7 @@ User = get_user_model()
 
 class Command(BaseCommand):
 
-    def handle(self, *args, **kwargs):
+    def handle(self, **options):
         duplicates = get_duplicate_emails()
         if not duplicates:
             self.stdout.write("There are no accounts with duplicate emails\n")
@@ -35,7 +35,8 @@ class Command(BaseCommand):
             for user in users:
                 args = (user.username,
                         " " * (25 - len(user.username)),
-                        user.last_login.strftime('%Y-%m-%d %H:%M'),
+                        user.last_login.strftime('%Y-%m-%d %H:%M')
+                        if user.last_login is not None else "never logged in",
                         (user.is_superuser
                          and "\t\tthis user is a Superuser" or ""))
                 self.stdout.write(" %s%slast login: %s%s\n" % args)

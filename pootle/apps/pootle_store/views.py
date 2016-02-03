@@ -9,22 +9,22 @@
 
 from itertools import groupby
 
+from translate.lang import data
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
-from django.core.urlresolvers import reverse
+from django.core.urlresolvers import resolve, reverse, Resolver404
 from django.db.models import Max, Q
 from django.http import Http404
 from django.shortcuts import redirect
-from django.template import loader, RequestContext
+from django.template import RequestContext, loader
+from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django.utils.translation import to_locale, ugettext as _
 from django.utils.translation.trans_real import parse_accept_lang_header
-from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
-
-from translate.lang import data
 
 from pootle.core.dateparse import parse_datetime
 from pootle.core.decorators import (get_path_obj, get_resource,
@@ -34,21 +34,21 @@ from pootle.core.http import JsonResponse, JsonResponseBadRequest
 from pootle_app.models.directory import Directory
 from pootle_app.models.permissions import (check_permission,
                                            check_user_permission)
-from pootle_misc.checks import get_category_id, check_names
+from pootle_misc.checks import check_names, get_category_id
 from pootle_misc.forms import make_search_form
-from pootle_misc.util import ajax_required, to_int, get_date_interval
+from pootle_misc.util import ajax_required, get_date_interval, to_int
 from pootle_statistics.models import (Submission, SubmissionFields,
                                       SubmissionTypes)
+from virtualfolder.models import VirtualFolderTreeItem
 
 from .decorators import get_unit_context
 from .fields import to_python
-from .forms import (unit_comment_form_factory, unit_form_factory,
-                    highlight_whitespace)
-from .models import Unit, SuggestionStates
+from .forms import (highlight_whitespace, unit_comment_form_factory,
+                    unit_form_factory)
+from .models import SuggestionStates, Unit
 from .templatetags.store_tags import (highlight_diffs, pluralize_source,
                                       pluralize_target)
-from .util import (UNTRANSLATED, FUZZY, TRANSLATED, STATES_MAP,
-                   find_altsrcs)
+from .util import FUZZY, STATES_MAP, TRANSLATED, UNTRANSLATED, find_altsrcs
 
 
 #: Mapping of allowed sorting criteria.
@@ -56,7 +56,7 @@ from .util import (UNTRANSLATED, FUZZY, TRANSLATED, STATES_MAP,
 #: will be used against the DB.
 ALLOWED_SORTS = {
     'units': {
-        'priority': 'priority',
+        'priority': '-priority',
         'oldest': 'submitted_on',
         'newest': '-submitted_on',
     },
@@ -288,28 +288,7 @@ def get_step_query(request, units_queryset):
             sort_by = ALLOWED_SORTS[sort_on].get(sort_by_param, None)
             if sort_by is not None:
                 if sort_on in SIMPLY_SORTED:
-                    if sort_by == 'priority':
-                        # TODO: Replace the following extra() with Coalesce
-                        # https://docs.djangoproject.com/en/1.8/ref/models/database-functions/#coalesce
-                        # once we drop support for Django<1.8.x:
-                        # .annotate(
-                        #     sort_by_field=Coalesce(
-                        #         Max("vfolders__priority"),
-                        #         Value(1)
-                        #     )
-                        # ).order_by("-sort_by_field")
-                        match_queryset = match_queryset.extra(select={'sort_by_field': """
-                            SELECT
-                              COALESCE(MAX(virtualfolder_virtualfolder.priority), 1)
-                            FROM virtualfolder_virtualfolder
-                            INNER JOIN virtualfolder_virtualfolder_units
-                            ON virtualfolder_virtualfolder.id =
-                              virtualfolder_virtualfolder_units.virtualfolder_id
-                            WHERE virtualfolder_virtualfolder_units.unit_id =
-                              pootle_store_unit.id
-                        """}).extra(order_by=['-sort_by_field'])
-                    else:
-                        match_queryset = match_queryset.order_by(sort_by)
+                    match_queryset = match_queryset.order_by(sort_by)
                 else:
                     # Omit leading `-` sign
                     if sort_by[0] == '-':
@@ -463,6 +442,8 @@ def get_units(request):
     pootle_path = request.GET.get('path', None)
     if pootle_path is None:
         raise Http400(_('Arguments missing.'))
+    elif len(pootle_path) > 2048:
+        raise Http400(_('Path too long.'))
 
     User = get_user_model()
     request.profile = User.get(request.user)
@@ -472,11 +453,25 @@ def get_units(request):
     if 'virtualfolder' in settings.INSTALLED_APPS:
         from virtualfolder.helpers import extract_vfolder_from_path
 
-        vfolder, pootle_path = extract_vfolder_from_path(pootle_path)
+        vfolder, pootle_path = extract_vfolder_from_path(
+            pootle_path,
+            vfti=VirtualFolderTreeItem.objects.select_related(
+                "directory", "vfolder"))
 
-    units_qs = (
-        Unit.objects.get_for_path(pootle_path, request.profile)
-                    .order_by("store", "index"))
+    path_keys = [
+        "project_code", "language_code", "dir_path", "filename"]
+    try:
+        path_kwargs = {
+            k: v
+            for k, v in resolve(pootle_path).kwargs.items()
+            if k in path_keys}
+    except Resolver404:
+        raise Http404('Unrecognised path')
+
+    units_qs = Unit.objects.get_translatable(
+        user=request.profile,
+        **path_kwargs)
+    units_qs = units_qs.order_by("store", "index")
 
     if vfolder is not None:
         units_qs = units_qs.filter(vfolders=vfolder)
@@ -591,7 +586,7 @@ def timeline(request, unit):
         field=SubmissionFields.COMMENT,
         creation_time=unit.commented_on
     ).order_by("id")
-    timeline = timeline.select_related("submitter__user",
+    timeline = timeline.select_related("submitter",
                                        "translation_project__language")
 
     User = get_user_model()

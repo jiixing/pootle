@@ -1,6 +1,10 @@
 Pootle
 ======
 
+.. image:: https://img.shields.io/gitter/room/translate/pootle.svg?style=flat-square
+   :alt: Join the chat at https://gitter.im/translate/pootle
+   :target: https://gitter.im/translate/pootle
+
 .. image:: https://img.shields.io/travis/translate/pootle.svg?style=flat-square
     :alt: Build Status
     :target: https://travis-ci.org/translate/pootle
@@ -38,8 +42,8 @@ Resources
 - `Bug Tracker <https://github.com/translate/pootle/issues>`_
 - `Mailing List
   <https://lists.sourceforge.net/lists/listinfo/translate-pootle>`_
-- Support: `#pootle on chat.freenode.net <irc://chat.freenode.net/#pootle>`_
-- Development: `#pootle-dev on chat.freenode.net <irc://chat.freenode.net/#pootle-dev>`_
+- `Support channel <https://gitter.im/translate/pootle>`_
+- `Development channel <https://gitter.im/translate/dev>`_
 
 Copying
 -------

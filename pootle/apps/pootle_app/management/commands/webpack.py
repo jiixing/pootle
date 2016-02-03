@@ -12,8 +12,6 @@ os.environ['DJANGO_SETTINGS_MODULE'] = 'pootle.settings'
 import subprocess
 import sys
 
-from optparse import make_option
-
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
@@ -23,17 +21,35 @@ from pootle_misc.baseurl import l
 class Command(BaseCommand):
     help = 'Builds and bundles static assets using webpack'
 
-    option_list = BaseCommand.option_list + (
-        make_option(
+    def add_arguments(self, parser):
+        parser.add_argument(
             '--dev',
             action='store_true',
             dest='dev',
             default=False,
             help='Enable development builds and watch for changes.',
-        ),
-    )
+        )
+        parser.add_argument(
+            '--nowatch',
+            action='store_false',
+            dest='watch',
+            default=True,
+            help='Disable watching for changes.',
+        )
+        parser.add_argument(
+            '--progress',
+            action='store_true',
+            default=False,
+            help='Show progress (implied if --dev is present).',
+        )
+        parser.add_argument(
+            '--extra',
+            action='append',
+            default=[],
+            help='Additional options to pass to the JavaScript webpack tool.',
+        )
 
-    def handle(self, *args, **options):
+    def handle(self, **options):
         default_static_dir = os.path.join(settings.WORKING_DIR, 'static')
         custom_static_dirs = filter(lambda x: x != default_static_dir,
                                     settings.STATICFILES_DIRS)
@@ -45,13 +61,21 @@ class Command(BaseCommand):
         if os.name == 'nt':
             webpack_bin = '%s.cmd' % webpack_bin
 
-        args = [webpack_bin, '--config=%s' % webpack_config_file, '--progress',
-                '--colors']
+        webpack_progress = (
+            '--progress' if options['progress'] or options['dev'] else ''
+        )
+        webpack_colors = '--colors' if not options['no_color'] else ''
+
+        webpack_args = [webpack_bin, '--config=%s' % webpack_config_file,
+                        webpack_progress, webpack_colors]
 
         if options['dev']:
-            args.extend(['--watch', '--display-error-details'])
+            watch = '--watch' if options['watch'] else ''
+            webpack_args.extend([watch, '--display-error-details'])
         else:
             os.environ['NODE_ENV'] = 'production'
+
+        webpack_args.extend(options['extra'])
 
         static_base = l(settings.STATIC_URL)
         suffix = 'js/' if static_base.endswith('/') else '/js/'
@@ -66,7 +90,7 @@ class Command(BaseCommand):
             os.environ['WEBPACK_ROOT'] = ':'.join(custom_static_dirs)
 
         try:
-            subprocess.call(args)
+            subprocess.call(webpack_args)
         except OSError:
             raise CommandError(
                 'webpack executable not found.\n'

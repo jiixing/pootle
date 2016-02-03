@@ -9,20 +9,20 @@
 
 
 import os
-
 import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
 os.environ['DJANGO_SETTINGS_MODULE'] = 'pootle.settings'
 
-from optparse import make_option
-
 from django.core.management.base import CommandError
 
 from pootle_app.management.commands import PootleCommand
 from pootle_app.models import Directory
+from pootle_language.models import Language
 from pootle_project.models import Project
+from pootle_translationproject.models import TranslationProject
+
 
 DUMPED = {
     'TranslationProject': ('pootle_path', 'real_path', 'disabled'),
@@ -42,30 +42,30 @@ DUMPED = {
 class Command(PootleCommand):
     help = "Dump data."
 
-    shared_option_list = (
-        make_option(
+    def add_arguments(self, parser):
+        super(Command, self).add_arguments(parser)
+        parser.add_argument(
             '--stats',
             action='store_true',
             dest='stats',
             default=False,
             help='Dump stats',
-        ),
-        make_option(
+        )
+        parser.add_argument(
             '--data',
             action='store_true',
             dest='data',
             default=False,
             help='Data all data',
-        ),
-        make_option(
+        )
+        parser.add_argument(
             '--stop-level',
             action='store',
             dest='stop_level',
             default=-1,
             type=int,
-        ),
-    )
-    option_list = PootleCommand.option_list + shared_option_list
+            help="Depth of data to retrieve",
+        )
 
     def handle_all(self, **options):
         if not self.projects and not self.languages:
@@ -113,12 +113,18 @@ class Command(PootleCommand):
         res[key] = (item.get_stats(include_children=False))
 
         if res[key]['lastaction']:
-            last_action_id = res[key]['lastaction']['id']
+            if 'id' in res[key]['lastaction']:
+                last_action_id = res[key]['lastaction']['id']
+            else:
+                last_action_id = None
         else:
             last_action_id = None
 
         if res[key]['lastupdated']:
-            last_updated_id = res[key]['lastupdated']['id']
+            if 'id' in res[key]['lastupdated']:
+                last_updated_id = res[key]['lastupdated']['id']
+            else:
+                last_updated_id = None
         else:
             last_updated_id = None
 
@@ -136,17 +142,18 @@ class Command(PootleCommand):
 
     def _dump_item(self, item, level, stop_level):
         self.stdout.write(self.dumped(item))
-        if item.is_dir:
-            # item is a Directory
-            if item.is_project():
-                self.stdout.write(self.dumped(item.project))
-            elif item.is_language():
-                self.stdout.write(self.dumped(item.language))
-            elif item.is_translationproject():
-                try:
-                    self.stdout.write(self.dumped(item.translationproject))
-                except:
-                    pass
+        if isinstance(item, Directory):
+            pass
+        elif isinstance(item, Language):
+            self.stdout.write(self.dumped(item.language))
+        elif isinstance(item, TranslationProject):
+            try:
+                self.stdout.write(self.dumped(item.translationproject))
+            except:
+                pass
+        elif isinstance(item, Project):
+            pass
+            # self.stdout.write(self.dumped(item))
         else:
             # item should be a Store
             for unit in item.units:

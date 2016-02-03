@@ -7,46 +7,49 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
-from django.conf.urls import patterns, url
+from django.conf.urls import url
+
+from .views import (
+    ProjectBrowseView, ProjectExportView, ProjectsBrowseView,
+    ProjectsExportView, ProjectsTranslateView, ProjectTranslateView,
+    project_admin, project_admin_permissions)
 
 
-urlpatterns = patterns(
-    'pootle_project.views',
-
+urlpatterns = [
     # All projects
     url(r'^$',
-        'projects_browse',
+        ProjectsBrowseView.as_view(),
         name='pootle-projects-browse'),
 
     url(r'^translate/$',
-        'projects_translate',
+        ProjectsTranslateView.as_view(),
         name='pootle-projects-translate'),
 
     url(r'^export-view/$',
-        'projects_export_view',
-        name='pootle-projects-export-view'),
+        ProjectsExportView.as_view(),
+        name='pootle-projects-export'),
 
     # Admin
     url(r'^(?P<project_code>[^/]*)/admin/languages/$',
-        'project_admin',
+        project_admin,
         name='pootle-project-admin-languages'),
     url(r'^(?P<project_code>[^/]*)/admin/permissions/$',
-        'project_admin_permissions',
+        project_admin_permissions,
         name='pootle-project-admin-permissions'),
 
     # Specific project
     url(r'^(?P<project_code>[^/]*)/translate/'
         r'(?P<dir_path>(.*/)*)(?P<filename>.*\.*)?$',
-        'translate',
+        ProjectTranslateView.as_view(),
         name='pootle-project-translate'),
 
     url(r'^(?P<project_code>[^/]*)/export-view/'
         r'(?P<dir_path>(.*/)*)(?P<filename>.*\.*)?$',
-        'export_view',
-        name='pootle-project-export-view'),
+        ProjectExportView.as_view(),
+        name='pootle-project-export'),
 
     url(r'^(?P<project_code>[^/]*)/'
         r'(?P<dir_path>(.*/)*)(?P<filename>.*\.*)?$',
-        'browse',
-        name='pootle-project-browse'),
-)
+        ProjectBrowseView.as_view(),
+        name='pootle-project-browse')
+]

@@ -21,9 +21,9 @@ assets:
 	cd ${JS_DIR} && \
 	npm install && \
 	cd ${CWD}
-	python manage.py webpack
+	python manage.py webpack --extra=--display-error-details
 	mkdir -p ${ASSETS_DIR}
-	python manage.py collectstatic --noinput --clear -i node_modules -i *.jsx ${TAIL}
+	python manage.py collectstatic --noinput --clear -i node_modules -i .tox -i docs ${TAIL}
 	python manage.py assets build ${TAIL}
 	chmod 664 ${ASSETS_DIR}.webassets-cache/*
 
@@ -39,6 +39,7 @@ docs-review: docs
 
 sprite:
 	glue --sprite-namespace="" --namespace="" ${SPRITE_DIR} --css=${CSS_DIR} --img=${IMAGES_DIR}
+	optipng -o7 ${IMAGES_DIR}/sprite.png
 
 clean:
 	rm -rf ${TEST_ENV_NAME}

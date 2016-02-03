@@ -9,11 +9,12 @@
 
 import pytest
 
+from django.http import Http404
+
+from pytest_pootle.utils import create_api_request
+
 from pootle.core.exceptions import Http400
-
 from pootle_store.views import get_units
-
-from pootle_pytest.utils import create_api_request
 
 
 @pytest.mark.django_db
@@ -28,8 +29,8 @@ def test_get_units(rf, default):
 
     # `path` query parameter present
     request = create_api_request(rf, url='/?path=foo', user=default)
-    response = view(request)
-    assert response.status_code == 200
+    with pytest.raises(Http404):
+        view(request)
 
 
 @pytest.mark.django_db

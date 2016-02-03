@@ -11,56 +11,51 @@ import logging
 import os
 os.environ['DJANGO_SETTINGS_MODULE'] = 'pootle.settings'
 
-from optparse import make_option
-
 from translate.filters.checks import FilterFailure, projectcheckers
 
 from django.conf import settings
-from django.core.management.base import NoArgsCommand, CommandError
+from django.core.management.base import CommandError, BaseCommand
 
 from pootle_misc.checks import get_qualitychecks
 from pootle_misc.util import import_func
 from pootle_store.models import Unit
 
 
-class Command(NoArgsCommand):
+class Command(BaseCommand):
     help = "Tests quality checks against string pairs."
 
-    shared_option_list = (
-        make_option(
+    def add_arguments(self, parser):
+        parser.add_argument(
             '--check',
             action='append',
             dest='checks',
             help='Check name to check for',
-        ),
-        make_option(
+        )
+        parser.add_argument(
             '--source',
             dest='source',
             help='Source string',
-        ),
-        make_option(
+        )
+        parser.add_argument(
             '--unit',
             dest='unit',
             help='Unit id',
-        ),
-        make_option(
+        )
+        parser.add_argument(
             '--target',
             dest='target',
             help='Translation string',
-        ),
-    )
-    option_list = NoArgsCommand.option_list + shared_option_list
+        )
 
-    def handle_noargs(self, **options):
+    def handle(self, **options):
         # adjust debug level to the verbosity option
-        verbosity = int(options.get('verbosity', 1))
         debug_levels = {
             0: logging.ERROR,
             1: logging.WARNING,
             2: logging.INFO,
             3: logging.DEBUG
         }
-        debug_level = debug_levels.get(verbosity, logging.DEBUG)
+        debug_level = debug_levels.get(options['verbosity'], logging.DEBUG)
         logging.getLogger().setLevel(debug_level)
         self.name = self.__class__.__module__.split('.')[-1]
 
@@ -77,16 +72,15 @@ class Command(NoArgsCommand):
         checks = options.get('checks', [])
 
         if options['unit'] is not None:
-            unit_id = options.get('unit', '')
             try:
-                unit = Unit.objects.get(id=unit_id)
+                unit = Unit.objects.get(id=options['unit'])
                 source = unit.source
                 target = unit.target
-            except Unit.DoesNotExist, e:
-                raise CommandError(e.message)
+            except Unit.DoesNotExist as e:
+                raise CommandError(e)
         else:
-            source = options.get('source', '').decode('utf-8')
-            target = options.get('target', '').decode('utf-8')
+            source = options['source'].decode('utf-8')
+            target = options['target'].decode('utf-8')
 
         if settings.POOTLE_QUALITY_CHECKER:
             checkers = [import_func(settings.POOTLE_QUALITY_CHECKER)()]
@@ -100,6 +94,7 @@ class Command(NoArgsCommand):
         for checker in checkers:
             for check in checks:
                 filtermessage = ''
+                filterresult = True
                 if check in error_checks:
                     continue
                 try:
@@ -109,7 +104,7 @@ class Command(NoArgsCommand):
                             filterresult = test(source, target)
                         except AttributeError:
                             continue
-                except FilterFailure, e:
+                except FilterFailure as e:
                     filterresult = False
                     filtermessage = unicode(e)
 

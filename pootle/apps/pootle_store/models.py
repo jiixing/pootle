@@ -11,8 +11,10 @@ import datetime
 import logging
 import operator
 import os
-
 from hashlib import md5
+
+from translate.filters.decorators import Category
+from translate.storage import base
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -28,34 +30,32 @@ from django.utils.http import urlquote
 from django.utils.translation import ugettext_lazy as _
 from django.utils.html import strip_tags
 
-from translate.filters.decorators import Category
-from translate.storage import base
-
-from pootle.core.log import (TRANSLATION_ADDED, TRANSLATION_CHANGED,
-                             TRANSLATION_DELETED, UNIT_ADDED, UNIT_DELETED,
-                             UNIT_OBSOLETE, UNIT_RESURRECTED,
-                             STORE_ADDED, STORE_OBSOLETE, STORE_DELETED,
-                             MUTE_QUALITYCHECK, UNMUTE_QUALITYCHECK,
-                             action_log, store_log, log)
+from pootle.core.log import (
+    TRANSLATION_ADDED, TRANSLATION_CHANGED, TRANSLATION_DELETED,
+    UNIT_ADDED, UNIT_DELETED, UNIT_OBSOLETE, UNIT_RESURRECTED,
+    STORE_ADDED, STORE_DELETED, STORE_OBSOLETE,
+    MUTE_QUALITYCHECK, UNMUTE_QUALITYCHECK,
+    action_log, log, store_log)
 from pootle.core.mixins import CachedMethods, CachedTreeItem
 from pootle.core.models import Revision
-from pootle.core.storage import PootleFileSystemStorage
 from pootle.core.search import SearchBroker
-from pootle.core.url_helpers import get_editor_filter, split_pootle_path
+from pootle.core.storage import PootleFileSystemStorage
+from pootle.core.url_helpers import (
+    get_all_pootle_paths, get_editor_filter, split_pootle_path)
 from pootle.core.utils import dateformat
 from pootle.core.utils.timezone import datetime_min, make_aware
 from pootle_misc.aggregate import max_column
-from pootle_misc.checks import check_names, run_given_filters, get_checker
+from pootle_misc.checks import check_names, get_checker, run_given_filters
 from pootle_misc.util import import_func
-from pootle_statistics.models import (SubmissionFields,
-                                      SubmissionTypes, Submission)
+from pootle_statistics.models import (Submission, SubmissionFields,
+                                      SubmissionTypes)
 
 from .diff import StoreDiff
-from .fields import (TranslationStoreField, MultiStringField,
-                     PLURAL_PLACEHOLDER, SEPARATOR)
+from .fields import (PLURAL_PLACEHOLDER, SEPARATOR, MultiStringField,
+                     TranslationStoreField)
 from .filetypes import factory_classes
 from .util import (
-    OBSOLETE, UNTRANSLATED, FUZZY, TRANSLATED, get_change_str,
+    FUZZY, OBSOLETE, TRANSLATED, UNTRANSLATED, get_change_str,
     vfolders_installed)
 
 
@@ -84,6 +84,9 @@ CHECKED = 2
 # Resolve conflict flags for Store.update
 POOTLE_WINS = 1
 FILE_WINS = 2
+
+LANGUAGE_REGEX = r"[^/]{2,255}"
+PROJECT_REGEX = r"[^/]{1,255}"
 
 
 # # # # # # # # Quality Check # # # # # # #
@@ -236,50 +239,63 @@ class UnitManager(models.Manager):
         return self.live() \
                    .filter(store__translation_project__project__disabled=False)
 
-    def get_for_path(self, pootle_path, user):
-        """Returns units that fall below the `pootle_path` umbrella.
+    def get_translatable(self, user, project_code=None, language_code=None,
+                         dir_path=None, filename=None):
+        """Returns translatable units for a `user`, optionally filtered by their
+        location within Pootle.
 
-        :param pootle_path: An internal pootle path.
         :param user: The user who is accessing the units.
+        :param project_code: A string for matching the code of a Project.
+        :param language_code: A string for matching the code of a Language.
+        :param dir_path: A string for matching the dir_path and descendants
+           from the TP.
+        :param filename: A string for matching the filename of Stores.
         """
-        lang, proj, dir_path, filename = split_pootle_path(pootle_path)
+        from pootle_project.models import Project
+
+        if not user.is_superuser:
+            user_projects = Project.accessible_by_user(user)
+            if project_code and project_code not in user_projects:
+                return self.none()
 
         units_qs = self.get_for_user(user)
 
-        # /projects/<project_code>/translate/*
-        if lang is None and proj is not None:
-            if dir_path and filename:
-                units_path = ''.join(['/%/', proj, '/', dir_path, filename])
-            elif dir_path:
-                units_path = ''.join(['/%/', proj, '/', dir_path, '%'])
-            elif filename:
-                units_path = ''.join(['/%/', proj, '/', filename])
-            else:
-                units_path = ''.join(['/%/', proj, '/%'])
-        # /projects/translate/*
-        elif lang is None and proj is None:
-            units_path = '/%'
-        # /<lang_code>/<project_code>/translate/*
-        # /<lang_code>/translate/*
-        else:
-            units_path = ''.join([pootle_path, '%'])
-
-        units_qs = units_qs.extra(
-            where=[
-                'pootle_store_store.pootle_path LIKE %s',
-                'pootle_store_store.pootle_path NOT LIKE %s',
-            ], params=[units_path, '/templates/%']
-        )
-
-        # Non-superusers are limited to the projects they have access to
-        if not user.is_superuser:
-            from pootle_project.models import Project
-            user_projects = Project.accessible_by_user(user)
+        if language_code:
             units_qs = units_qs.filter(
-                store__translation_project__project__code__in=user_projects,
-            )
+                store__translation_project__language__code=language_code)
+        else:
+            units_qs = units_qs.exclude(
+                store__pootle_path__startswith="/templates/")
 
-        return units_qs
+        if project_code:
+            units_qs = units_qs.filter(
+                store__translation_project__project__code=project_code)
+        elif not user.is_superuser:
+            units_qs = units_qs.filter(
+                store__translation_project__project__code__in=user_projects)
+
+        if not (dir_path or filename):
+            return units_qs
+
+        pootle_path = "/%s/%s/%s%s" % (
+            language_code or LANGUAGE_REGEX,
+            project_code or PROJECT_REGEX,
+            dir_path or "",
+            filename or "")
+        if language_code and project_code:
+            if filename:
+                return units_qs.filter(
+                    store__pootle_path=pootle_path)
+            else:
+                return units_qs.filter(
+                    store__pootle_path__startswith=pootle_path)
+        else:
+            # we need to use a regex in this case as lang or proj are not
+            # set
+            if filename:
+                pootle_path = "%s$" % pootle_path
+            return units_qs.filter(
+                store__pootle_path__regex=pootle_path)
 
 
 class Unit(models.Model, base.TranslationUnit):
@@ -314,8 +330,7 @@ class Unit(models.Model, base.TranslationUnit):
     # Metadata
     creation_time = models.DateTimeField(auto_now_add=True, db_index=True,
                                          editable=False, null=True)
-    mtime = models.DateTimeField(auto_now=True, auto_now_add=True,
-                                 db_index=True, editable=False)
+    mtime = models.DateTimeField(auto_now=True, db_index=True, editable=False)
 
     # unit translator
     submitted_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True,
@@ -534,15 +549,13 @@ class Unit(models.Model, base.TranslationUnit):
             self.store.update_dirty_cache()
 
     def get_absolute_url(self):
-        lang, proj, dir, fn = split_pootle_path(self.store.pootle_path)
-        return reverse('pootle-tp-browse', args=[lang, proj, dir, fn])
+        return self.store.get_absolute_url()
 
     def get_translate_url(self):
-        lang, proj, dir, fn = split_pootle_path(self.store.pootle_path)
-        return u''.join([
-            reverse('pootle-tp-translate', args=[lang, proj, dir, fn]),
-            '#unit=', unicode(self.id),
-        ])
+        return (
+            "%s%s"
+            % (self.store.get_translate_url(),
+               '#unit=%s' % unicode(self.id)))
 
     def get_search_locations_url(self, **kwargs):
         lang, proj, dir, fn = split_pootle_path(self.store.pootle_path)
@@ -1356,8 +1369,12 @@ class Store(models.Model, CachedTreeItem, base.TranslationStore):
                                             related_name='stores',
                                             db_index=True, editable=False)
 
+    # any changes to the `pootle_path` field may require updating the schema
+    # see migration 0007_case_sensitive_schema.py
     pootle_path = models.CharField(max_length=255, null=False, unique=True,
                                    db_index=True, verbose_name=_("Path"))
+    # any changes to the `name` field may require updating the schema
+    # see migration 0007_case_sensitive_schema.py
     name = models.CharField(max_length=128, null=False, editable=False)
 
     file_mtime = models.DateTimeField(default=datetime_min)
@@ -1397,13 +1414,6 @@ class Store(models.Model, CachedTreeItem, base.TranslationStore):
         # terminology project. Probably not, in case this might be called over
         # several files in a project.
         return self.name.startswith('pootle-terminology')
-
-    @property
-    def parent_vfolder_treeitems(self):
-        if 'virtualfolder' in settings.INSTALLED_APPS:
-            return self.parent_vf_treeitems.all()
-
-        return []
 
     @property
     def units(self):
@@ -1500,15 +1510,15 @@ class Store(models.Model, CachedTreeItem, base.TranslationStore):
         self.clear_all_cache(parents=False, children=False)
 
     def get_absolute_url(self):
-        lang, proj, dir, fn = split_pootle_path(self.pootle_path)
-        return reverse('pootle-tp-browse', args=[lang, proj, dir, fn])
+        return reverse(
+            'pootle-tp-store-browse',
+            args=split_pootle_path(self.pootle_path))
 
     def get_translate_url(self, **kwargs):
-        lang, proj, dir, fn = split_pootle_path(self.pootle_path)
-        return u''.join([
-            reverse('pootle-tp-translate', args=[lang, proj, dir, fn]),
-            get_editor_filter(**kwargs),
-        ])
+        return u''.join(
+            [reverse("pootle-tp-store-translate",
+                     args=split_pootle_path(self.pootle_path)),
+             get_editor_filter(**kwargs)])
 
     def require_dbid_index(self, update=False, obsolete=False):
         """build a quick mapping index between unit ids and database ids"""
@@ -1594,6 +1604,7 @@ class Store(models.Model, CachedTreeItem, base.TranslationStore):
         :param user: attribute specific changes to this user.
         :param revision: set updated unit revision to this value.
         :param submission_type: set submission type for update.
+        :param resolve_conflict: set how conflicts are resolved.
         :return: a tuple ``(updated, suggested)`` where ``updated`` is the
             the number of units that were actually updated, and ``suggested``
             is the number of suggestions added due to revision conflicts.
@@ -1701,21 +1712,20 @@ class Store(models.Model, CachedTreeItem, base.TranslationStore):
             submission_type = SubmissionTypes.SYSTEM
 
         # Create Submission after unit saved
+        # FIXME: we can store these objects in a list and
+        # `bulk_create()` them in a single go
         for field in create_subs:
-            sub = Submission(
+            Submission.objects.create(
                 creation_time=current_time,
-                translation_project=self.translation_project,
+                translation_project_id=self.translation_project_id,
                 submitter=user,
                 unit=unit,
-                store=unit.store,
+                store_id=self.id,
                 field=field,
                 type=submission_type,
                 old_value=create_subs[field][0],
                 new_value=create_subs[field][1]
             )
-            # FIXME: we can store these objects in a list and
-            # `bulk_create()` them in a single go
-            sub.save()
 
     def update(self, store, user=None, store_revision=None,
                submission_type=None, resolve_conflict=POOTLE_WINS):
@@ -1971,8 +1981,12 @@ class Store(models.Model, CachedTreeItem, base.TranslationStore):
         if self.last_sync_revision is not None:
             filter_by.update({'revision__gt': self.last_sync_revision})
 
-        modified_units = set(Unit.objects.filter(**filter_by)
-                                 .values_list('id', flat=True).distinct())
+        if last_revision > self.last_sync_revision:
+            modified_units = set(
+                Unit.objects.filter(**filter_by).values_list(
+                    'id', flat=True).distinct())
+        else:
+            modified_units = set()
 
         common_dbids = set(self.dbid_index.get(uid)
                            for uid in old_ids & new_ids)
@@ -2119,7 +2133,8 @@ class Store(models.Model, CachedTreeItem, base.TranslationStore):
         else:
             parents = [self.parent]
 
-        parents.extend(self.parent_vfolder_treeitems)
+        if 'virtualfolder' in settings.INSTALLED_APPS:
+            parents.extend(self.parent_vf_treeitems.all())
 
         return parents
 
@@ -2230,10 +2245,14 @@ class Store(models.Model, CachedTreeItem, base.TranslationStore):
         of current TreeItem
         """
         pootle_paths = super(Store, self).all_pootle_paths()
-
-        for vfolder_treeitem in self.parent_vfolder_treeitems:
-            pootle_paths.extend(vfolder_treeitem.all_pootle_paths())
-
+        if 'virtualfolder' in settings.INSTALLED_APPS:
+            vftis = self.parent_vf_treeitems.values_list(
+                "vfolder__location", "pootle_path")
+            for location, pootle_path in vftis:
+                pootle_paths.extend(
+                    [p for p
+                     in get_all_pootle_paths(pootle_path)
+                     if p.count('/') > location.count('/')])
         return pootle_paths
 
     # # # /TreeItem
@@ -2261,21 +2280,36 @@ class Store(models.Model, CachedTreeItem, base.TranslationStore):
             mtime = self.get_cached_value(CachedMethods.MTIME)
             if mtime is None or mtime == datetime_min:
                 mtime = timezone.now()
+            user_displayname = None
+            user_email = None
             if user is None:
+                submissions = self.translation_project.submission_set.exclude(
+                    submitter__username="nobody")
                 try:
-                    submit = self.translation_project.submission_set \
-                                 .filter(creation_time=mtime).latest()
-                    if submit.submitter.username != 'nobody':
-                        user = submit.submitter
-                except ObjectDoesNotExist:
+                    username, fullname, user_email = (
+                        submissions.filter(creation_time=mtime).values_list(
+                            "submitter__username",
+                            "submitter__full_name",
+                            "submitter__email").latest())
+                except Submission.DoesNotExist:
                     try:
-                        lastsubmit = self.translation_project.submission_set \
-                                                             .latest()
-                        if lastsubmit.submitter.username != 'nobody':
-                            user = lastsubmit.submitter
-                        mtime = min(lastsubmit.creation_time, mtime)
+                        _mtime, username, fullname, user_email = (
+                            submissions.values_list(
+                                "creation_time",
+                                "submitter__username",
+                                "submitter__full_name",
+                                "submitter__email").latest())
+                        mtime = min(_mtime, mtime)
                     except ObjectDoesNotExist:
                         pass
+                if user_email:
+                    user_displayname = (
+                        fullname.strip()
+                        if fullname.strip()
+                        else username)
+            elif user.is_authenticated:
+                user_displayname = user.display_name
+                user_email = user.email
 
             po_revision_date = mtime.strftime('%Y-%m-%d %H:%M') + \
                 poheader.tzstring()
@@ -2288,9 +2322,10 @@ class Store(models.Model, CachedTreeItem, base.TranslationStore):
                                    (int(dateformat.format(mtime, 'U')),
                                     mtime.microsecond)),
             }
-            if user and user.is_authenticated():
-                headerupdates['Last_Translator'] = '%s <%s>' % \
-                    (user.display_name, user.email)
+
+            if user_displayname and user_email:
+                headerupdates['Last_Translator'] = (
+                    '%s <%s>' % (user_displayname, user_email))
             else:
                 # FIXME: maybe insert settings.POOTLE_TITLE or domain here?
                 headerupdates['Last_Translator'] = 'Anonymous Pootle User'

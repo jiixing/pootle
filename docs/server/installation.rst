@@ -107,7 +107,7 @@ To verify that everything installed correctly, you should be able to access the
 .. code-block:: bash
 
   (env) $ pootle --version
-  Pootle 2.7.3 (Django 1.7.10, Translate Toolkit 1.13.0)
+  Pootle 2.7.3 (Django 1.8.8, Translate Toolkit 1.13.0)
 
 
 .. _installation#initializing-the-configuration:
@@ -209,16 +209,20 @@ their email address:
 Running Pootle
 --------------
 
-By default Pootle provides a built-in `CherryPy server
-<http://www.cherrypy.org/>`_ that will be enough for quickly testing the
-software. To run it, just issue:
+The Django default server will be enough for quickly testing the software. To
+run it, just issue:
 
 .. code-block:: bash
 
-   (env) $ pootle start
+   (env) $ pootle runserver --insecure
 
-And the server will start listening on port 8000. This can be accessed from
-your web browser at `localhost:8000 <http://localhost:8000/>`_.
+
+.. warning:: There are :ref:`serious drawbacks <django:staticfiles-runserver>`
+   to using :command:`runserver`. Never use it in production.
+
+
+And the server will start listening on port 8000. Pootle can then be accessed
+from your web browser at `localhost:8000 <http://localhost:8000/>`_.
 
 
 .. _installation#next-steps:

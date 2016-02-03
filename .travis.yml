@@ -2,27 +2,32 @@
 sudo: false
 language: python
 env:
-  - TOXENV=py27-django17-sqlite
-  - TOXENV=py27-django17-mysql
-  - TOXENV=py27-django17-postgres
+  - TOXENV=py27-django18-sqlite
+  - TOXENV=py27-django18-mysql
+  - TOXENV=py27-django18-postgres
   # Meta
   - TOXENV=sdist
   - TOXENV=eslint
   - TOXENV=docs
   - TOXENV=mo
-  - TOXENV=pep8
+  - TOXENV=isort
+  - TOXENV=pep8_flake8
   - TOXENV=pep257
+matrix:
+  allow_failures:
+    - env: TOXENV=isort
 cache:
   directories:
-    - pootle/assets/js/node_modules
+    - pootle/static/js/node_modules
     - $HOME/.cache/pip
     - docs/_build
+    - .tox
 before_install:
   # Error as early as possible if we can't compile
-  - python -m compileall -q -f .
+  - python -m compileall -q -f -x ".*[.]tox.*" .
 install:
-  - pip install --upgrade pip # FIXME remove once Travis support pip7 by default
-  - pip install tox
+  - pip install --upgrade "pip>=8.0" # FIXME remove once Travis support pip8 by default
+  - pip install --upgrade "tox>=2.3"
 script:
   - tox -e $TOXENV
 notifications:
@@ -38,5 +43,12 @@ notifications:
     skip_join: true
     template:
       - "(%{branch} @ %{commit} : %{author}): %{message} %{build_url}"
+  webhooks:
+    urls:
+      - https://webhooks.gitter.im/e/a6e983c90a9617548a6d
+    on_success: change
+    on_failure: always
+    on_start: never
 services:
   - redis-server
+  - elasticsearch

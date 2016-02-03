@@ -9,6 +9,9 @@ PostgreSQL.
 You should read the :ref:`full installation instructions <installation>` in
 order to install Pootle.
 
+Pootle supports the :ref:`versions of PostgreSQL supported by Django
+<django:postgresql-notes>`, make sure that your installed version is supported.
+
 
 .. _postgresql_installation#setting-up-db:
 
@@ -107,9 +110,8 @@ The default value for :setting:`CONN_MAX_AGE <django:DATABASE-CONN_MAX_AGE>` is
 it at the end. PostgreSQL supports persistent connections, and it will be fine
 to set :setting:`CONN_MAX_AGE <django:DATABASE-CONN_MAX_AGE>` to ``None``.
 
-To learn more please check `Django's docs on persistent connections and
-connection management
-<https://docs.djangoproject.com/en/1.7/ref/databases/#connection-management>`_.
+To learn more please check Django's docs on :ref:`persistent connections and
+connection management <django:persistent-database-connections>`.
 
 .. code-block:: python
 

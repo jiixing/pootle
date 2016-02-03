@@ -36,9 +36,13 @@ class DirectoryManager(models.Manager):
 
 class Directory(models.Model, CachedTreeItem):
 
+    # any changes to the `name` field may require updating the schema
+    # see migration 0005_case_sensitive_schema.py
     name = models.CharField(max_length=255, null=False)
     parent = models.ForeignKey('Directory', related_name='child_dirs',
                                null=True, db_index=True)
+    # any changes to the `pootle_path` field may require updating the schema
+    # see migration 0005_case_sensitive_schema.py
     pootle_path = models.CharField(max_length=255, null=False, db_index=True,
                                    unique=True)
     obsolete = models.BooleanField(default=False)
@@ -49,6 +53,7 @@ class Directory(models.Model, CachedTreeItem):
 
     class Meta(object):
         ordering = ['name']
+        default_permissions = ()
         app_label = "pootle_app"
 
     # # # # # # # # # # # # # #  Properties # # # # # # # # # # # # # # # # # #
@@ -131,7 +136,7 @@ class Directory(models.Model, CachedTreeItem):
 
         if lang and proj:
             pattern_name = 'pootle-tp-translate'
-            pattern_args = [lang, proj, dir, fn]
+            pattern_args = [lang, proj, dir]
         elif lang:
             pattern_name = 'pootle-language-translate'
             pattern_args = [lang]

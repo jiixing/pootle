@@ -10,26 +10,23 @@
 import os
 os.environ['DJANGO_SETTINGS_MODULE'] = 'pootle.settings'
 
-from optparse import make_option
-
-from django.core.management.base import NoArgsCommand
+from django.core.management.base import BaseCommand
 
 from pootle_project.models import Project
 
 
-class Command(NoArgsCommand):
-    option_list = NoArgsCommand.option_list + (
-        make_option(
+class Command(BaseCommand):
+    def add_arguments(self, parser):
+        parser.add_argument(
             "--modified-since",
             action="store",
             dest="revision",
             type=int,
             default=0,
             help="Only process translations newer than specified revision",
-        ),
-    )
+        )
 
-    def handle_noargs(self, **options):
+    def handle(self, **options):
         self.list_projects(**options)
 
     def list_projects(self, **options):

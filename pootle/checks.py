@@ -16,26 +16,33 @@ from django.utils.translation import ugettext as _
 TTK_MINIMUM_REQUIRED_VERSION = (1, 13, 0)
 
 # Minimum Django version required for Pootle to run.
-DJANGO_MINIMUM_REQUIRED_VERSION = (1, 7, 10)
+DJANGO_MINIMUM_REQUIRED_VERSION = (1, 8, 9)
 
 # Minimum lxml version required for Pootle to run.
 LXML_MINIMUM_REQUIRED_VERSION = (2, 2, 2, 0)
 
 # Minimum Redis server version required.
 # Initially set to some minimums based on:
-# 1. Ubuntu 12.04LTS's version 2.8.4 (10.04LTS was too old for RQ)
-# 2. RQ requires >= 2.6.0, and
-# 3. Wanting to insist on at least the latest stable that devs are using i.e.
-#    2.8.* versions of Redis
+# 1. Ubuntu 14.04LTS (Trusty) version 2.8.4
+#    Ubuntu 12.04LTS (Precise) version 2.2.12
+#    Ubuntu 10.04LTS was too old for RQ
+#    See http://packages.ubuntu.com/search?keywords=redis-server
+# 2. RQ requires Redis >= 2.7.0, and
+#    See https://github.com/nvie/rq/blob/master/README.md
+# 3. Aligining with current Redis stable as best we can
+#    At time of writing, actual Redis stable is 3.0 series with 2.8 cosidered
+#    old stable.
+# 4. Wanting to insist on at least the latest stable that devs are using
+#    The 2.8.* versions of Redis
 REDIS_MINIMUM_REQUIRED_VERSION = (2, 8, 4)
 
 
 # XXX List of manage.py commands not to run the rqworker check on.
 # Maybe tagging can improve this?
 RQWORKER_WHITELIST = [
-    "start", "initdb", "revision", "sync_stores", "run_cherrypy",
-    "refresh_stats", "update_stores", "calculate_checks", "retry_failed_jobs",
-    "check", "runserver",
+    "start", "initdb", "revision", "sync_stores", "refresh_stats",
+    "update_stores", "calculate_checks", "retry_failed_jobs", "check",
+    "runserver",
 ]
 
 
@@ -247,11 +254,11 @@ def check_settings(app_configs=None, **kwargs):
         if markup_filter is not None:
             try:
                 if markup_filter == 'textile':
-                    import textile
+                    import textile  # noqa
                 elif markup_filter == 'markdown':
-                    import markdown
+                    import markdown  # noqa
                 elif markup_filter == 'restructuredtext':
-                    import docutils
+                    import docutils  # noqa
                 else:
                     errors.append(checks.Warning(
                         _("Invalid markup in POOTLE_MARKUP_FILTER."),
@@ -331,6 +338,24 @@ def check_settings(app_configs=None, **kwargs):
                     hint=_("Set a WEIGHT between 0.0 and 1.0 (both included) "
                            "for POOTLE_TM_SERVER['%s'].", server),
                     id="pootle.W019",
+                ))
+
+    for coefficient_name in ['EDIT', 'REVIEW', 'SUGGEST', 'ANALYZE']:
+        if coefficient_name not in settings.POOTLE_SCORE_COEFFICIENTS:
+            errors.append(checks.Critical(
+                _("POOTLE_SCORE_COEFFICIENTS has no %s.", coefficient_name),
+                hint=_("Set %s in POOTLE_SCORE_COEFFICIENTS.", coefficient_name),
+                id="pootle.C014",
+            ))
+        else:
+            coef = settings.POOTLE_SCORE_COEFFICIENTS[coefficient_name]
+            if not isinstance(coef, float):
+                errors.append(checks.Critical(
+                    _("Invalid value for %s in POOTLE_SCORE_COEFFICIENTS.",
+                        coefficient_name),
+                    hint=_("Set a valid value for %s "
+                           "in POOTLE_SCORE_COEFFICIENTS.", coefficient_name),
+                    id="pootle.C015",
                 ))
 
     return errors

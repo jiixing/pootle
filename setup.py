@@ -10,10 +10,9 @@
 import os
 import re
 import sys
-
 from distutils import log
-from distutils.core import Command
 from distutils.command.build import build as DistutilsBuild
+from distutils.core import Command
 from distutils.errors import DistutilsOptionError
 
 from setuptools import find_packages, setup
@@ -161,7 +160,7 @@ class BuildChecksTemplatesCommand(Command):
         except ImportError:
             from distutils.errors import DistutilsModuleError
             raise DistutilsModuleError("Please install the docutils library.")
-        from pootle import syspath_override
+        from pootle import syspath_override  # noqa
         django.setup()
 
         def get_check_description(name, filterfunc):
@@ -253,7 +252,7 @@ setup(
         'console_scripts': [
             'pootle = pootle.runner:main',
         ],
-        'pytest11': ['pootle = pootle_pytest.plugin'],
+        'pytest11': ['pootle = pytest_pootle.plugin'],
     },
     cmdclass={
         'build_checks_templates': BuildChecksTemplatesCommand,

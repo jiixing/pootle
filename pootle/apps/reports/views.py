@@ -20,8 +20,7 @@ from django.template import RequestContext
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.translation import ugettext_lazy as _
-from django.views.generic import View, CreateView
-from django.views.generic.detail import SingleObjectMixin
+from django.views.generic import CreateView
 
 from accounts.models import CURRENCIES
 from pootle.core.decorators import admin_required
@@ -30,14 +29,14 @@ from pootle.core.http import (JsonResponse, JsonResponseBadRequest,
 from pootle.core.log import PAID_TASK_ADDED, PAID_TASK_DELETED, log
 from pootle.core.utils.json import jsonify
 from pootle.core.utils.timezone import make_aware, make_naive
-from pootle.core.views import AjaxResponseMixin
+from pootle.core.views import AjaxResponseMixin, UserObjectMixin
 from pootle_misc.util import (ajax_required, get_date_interval,
                               get_max_month_datetime, import_func)
-from pootle_profile.views import (NoDefaultUserMixin, TestUserFieldMixin,
-                                  DetailView)
+from pootle_profile.views import (DetailView, NoDefaultUserMixin,
+                                  TestUserFieldMixin)
 from pootle_statistics.models import ScoreLog
 
-from .forms import UserRatesForm, PaidTaskForm
+from .forms import PaidTaskForm, UserRatesForm
 from .models import PaidTask, PaidTaskTypes, ReportActionTypes
 
 
@@ -58,10 +57,7 @@ STAT_FIELDS = ['n1']
 INITIAL_STATES = ['new', 'edit']
 
 
-class UserStatsView(NoDefaultUserMixin, DetailView):
-    model = get_user_model()
-    slug_field = 'username'
-    slug_url_kwarg = 'username'
+class UserStatsView(NoDefaultUserMixin, UserObjectMixin, DetailView):
     template_name = 'user/stats.html'
 
     def get_context_data(self, **kwargs):
@@ -79,10 +75,7 @@ class UserStatsView(NoDefaultUserMixin, DetailView):
         return ctx
 
 
-class UserActivityView(NoDefaultUserMixin, SingleObjectMixin, View):
-    model = get_user_model()
-    slug_field = 'username'
-    slug_url_kwarg = 'username'
+class UserActivityView(NoDefaultUserMixin, UserObjectMixin, DetailView):
 
     @method_decorator(ajax_required)
     def dispatch(self, request, *args, **kwargs):
@@ -94,10 +87,7 @@ class UserActivityView(NoDefaultUserMixin, SingleObjectMixin, View):
         return JsonResponse(data)
 
 
-class UserDetailedStatsView(NoDefaultUserMixin, DetailView):
-    model = get_user_model()
-    slug_field = 'username'
-    slug_url_kwarg = 'username'
+class UserDetailedStatsView(NoDefaultUserMixin, UserObjectMixin, DetailView):
     template_name = 'user/detailed_stats.html'
 
     def dispatch(self, request, *args, **kwargs):
@@ -114,28 +104,21 @@ class UserDetailedStatsView(NoDefaultUserMixin, DetailView):
         return ctx
 
 
-class PaidTaskFormView(AjaxResponseMixin, CreateView):
+class AddUserPaidTaskView(NoDefaultUserMixin, TestUserFieldMixin,
+                          AjaxResponseMixin, UserObjectMixin, CreateView):
     form_class = PaidTaskForm
     template_name = 'admin/reports/paid_task_form.html'
 
     def get_success_url(self):
-        # XXX: This is unused. We don't need this URL, but
-        # the parent :cls:`PaidTaskFormView` enforces us to set some value here
+        # XXX: This is unused but enforced by `CreateView`
         return reverse('pootle-user-stats', kwargs=self.kwargs)
 
     def form_valid(self, form):
-        super(PaidTaskFormView, self).form_valid(form)
+        super(AddUserPaidTaskView, self).form_valid(form)
         # ignore redirect response
         log('%s\t%s\t%s' % (self.object.user.username, PAID_TASK_ADDED,
                             self.object))
         return JsonResponse({'result': self.object.id})
-
-
-class AddUserPaidTaskView(NoDefaultUserMixin, TestUserFieldMixin,
-                          PaidTaskFormView):
-    model = get_user_model()
-    slug_field = 'username'
-    slug_url_kwarg = 'username'
 
 
 @admin_required

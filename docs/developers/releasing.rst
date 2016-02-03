@@ -267,7 +267,6 @@ checkout run:
     (build-pootle-release)$ pip install -r requirements/build.txt
     (build-pootle-release)$ export PYTHONPATH="${PYTHONPATH}:`pwd`"
     (build-pootle-release)$ export POOTLE_SETTINGS=~/.pootle/pootle_build.conf
-    (build-pootle-release)$ cd pootle/static/js && npm install && cd ../../../
     (build-pootle-release)$ make mo-all  # If we are shipping an RC
     (build-pootle-release)$ make build
     (build-pootle-release)$ deactivate
@@ -306,7 +305,7 @@ You can then proceed with other tests such as checking:
 
      (test-pootle-release)$ pootle migrate
      (test-pootle-release)$ pootle initdb
-     (test-pootle-release)$ pootle start
+     (test-pootle-release)$ pootle runserver --insecure
      (test-pootle-release)$  # Browse to localhost:8000
 
 #. MySQL installation check:
@@ -326,7 +325,7 @@ You can then proceed with other tests such as checking:
 
         (test-pootle-release)$ pootle migrate
         (test-pootle-release)$ pootle initdb
-        (test-pootle-release)$ pootle start
+        (test-pootle-release)$ pootle runserver --insecure
         (test-pootle-release)$  # Browse to localhost:8000
 
    #. Drop the MySQL database you have created:
@@ -356,7 +355,7 @@ You can then proceed with other tests such as checking:
       .. code-block:: bash
 
         (test-pootle-release)$ pootle migrate
-        (test-pootle-release)$ pootle start
+        (test-pootle-release)$ pootle runserver --insecure
         (test-pootle-release)$  # Browse to localhost:8000
 
    #. Drop the MySQL database you have created:
@@ -524,13 +523,9 @@ Let people know that there is a new version:
    - translate-pootle@lists.sourceforge.net
    - translate-devel@lists.sourceforge.net
 
-#. Adjust the #pootle channel notice. Use ``/topic [new topic]`` to change the
-   topic. It is easier if you copy the previous topic and adjust it.
-
-   .. note:: You might need to identify yourself by using
-      ``/msg nickserv identify [password]`` so the IRC server knows you in
-      order to check if you have enough permissions.
-
+#. Adjust the `Pootle channel <https://gitter.im/translate/pootle>`_ notice.
+   Use ``/topic [new topic]`` to change the topic. It is easier if you copy the
+   previous topic and adjust it.
 #. Email important users
 #. Tweet about it
 #. Update `Pootle's Wikipedia page <https://en.wikipedia.org/wiki/Pootle>`_

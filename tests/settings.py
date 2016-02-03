@@ -11,6 +11,7 @@
 
 import os
 
+
 SECRET_KEY = "test_secret_key"
 
 
@@ -35,6 +36,11 @@ CACHES = {
         'BACKEND': 'django_redis.cache.RedisCache',
         'LOCATION': 'redis://127.0.0.1:6379/15',
         'TIMEOUT': None,
+    },
+    'exports': {
+        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+        'LOCATION': os.path.join(ROOT_DIR, 'tests', 'exports'),
+        'TIMEOUT': 259200,  # 3 days.
     },
 }
 

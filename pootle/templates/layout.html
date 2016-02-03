@@ -41,8 +41,8 @@
     {% endassets %}
     <script type="text/javascript">
     function l(path) {
-      var basepath = "{{ settings.SCRIPT_NAME  }}";
-      if (path[0] == '/') {
+      var basepath = '{{ settings.SCRIPT_NAME }}';
+      if (path[0] === '/' && path.indexOf(basepath) !== 0) {
         return basepath + path;
       }
       return path;
@@ -59,7 +59,7 @@
       });
 
       {% if user.is_authenticated %}
-      PTL.score.init({{ request.user.public_score }});
+      PTL.score.init({{ user.public_score }});
       PTL.dropdown.init('.js-navbar-dropdown');
       {% endif %}
 

@@ -8,6 +8,9 @@ These instructions provide additional steps for setting up Pootle with MySQL.
 You should read the :ref:`full installation instructions <installation>` in
 order to install Pootle.
 
+Pootle supports the :ref:`versions of MySQL supported by Django
+<django:mysql-notes>`, make sure that your installed version is supported.
+
 
 .. _mysql_installation#setting-up-db:
 
@@ -112,9 +115,8 @@ value will be fine (it defaults to ``0``).  Persistent connections where
 :setting:`CONN_MAX_AGE <django:CONN_MAX_AGE>` is ``None`` can't be used with
 MySQL.
 
-To learn more please check `Django's docs on persistent connections and
-connection management
-<https://docs.djangoproject.com/en/1.7/ref/databases/#connection-management>`_.
+To learn more please check Django's docs on :ref:`persistent connections and
+connection management <django:persistent-database-connections>`.
 
 
 .. code-block:: python

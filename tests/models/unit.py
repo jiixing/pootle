@@ -8,14 +8,13 @@
 # AUTHORS file for copyright and authorship information.
 
 import pytest
-
 from translate.storage import factory
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from pootle.core.mixins.treeitem import CachedMethods
-from pootle_store.util import UNTRANSLATED, FUZZY, TRANSLATED
+from pootle_store.util import FUZZY, TRANSLATED, UNTRANSLATED
 
 
 User = get_user_model()

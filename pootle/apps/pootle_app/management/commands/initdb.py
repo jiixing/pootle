@@ -7,31 +7,30 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
-from optparse import make_option
 import os
 
 # This must be run before importing Django.
 os.environ['DJANGO_SETTINGS_MODULE'] = 'pootle.settings'
 
-from django.core.management.base import NoArgsCommand
+from django.core.management.base import BaseCommand
 
 from pootle.core.initdb import InitDB
 
 
-class Command(NoArgsCommand):
+class Command(BaseCommand):
     help = 'Populates the database with initial values: users, projects, ...'
 
-    option_list = NoArgsCommand.option_list + (
-        make_option(
+    def add_arguments(self, parser):
+        parser.add_argument(
             '--no-projects',
             action='store_false',
             dest='create_projects',
             default=True,
-            help="Do not create the default 'terminology' and 'tutorial'"
+            help="Do not create the default 'terminology' and 'tutorial' "
                  "projects.",
-        ), )
+        )
 
-    def handle_noargs(self, **options):
+    def handle(self, **options):
         self.stdout.write('Populating the database.')
         InitDB().init_db(options["create_projects"])
         self.stdout.write('Successfully populated the database.')

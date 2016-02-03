@@ -7,6 +7,7 @@
  */
 
 import Backbone from 'backbone';
+import $ from 'jquery';
 import React from 'react';
 import _ from 'underscore';
 
@@ -56,9 +57,7 @@ const AdminController = React.createClass({
     });
 
     router.on('route:edit', (id) => {
-      const { Model } = this.props.adminModule;
-      const item = new Model({ id: id });
-      this.handleSelectItem(item);
+      this.handleSelectItem(id);
     });
   },
 
@@ -78,18 +77,39 @@ const AdminController = React.createClass({
     });
   },
 
-  handleSelectItem(item) {
-    const newState = {
-      selectedItem: item,
-      view: 'edit',
-    };
-
-    if (this.state.items.contains(item)) {
-      this.setState(newState);
+  handleSelectItem(itemId) {
+    const item = this.state.items.get(itemId);
+    if (item) {
+      this.setState({ selectedItem: item, view: 'edit' });
     } else {
-      item.fetch().then(() => {
-        this.handleSearch(this.state.searchQuery, newState);
-      });
+      const { items } = this.state;
+      items.search('')
+        .then(() => {
+          /* eslint-disable new-cap */
+          const deferred = $.Deferred();
+          /* eslint-enable new-cap */
+
+          let newItem = items.get(itemId);
+          if (newItem !== undefined) {
+            deferred.resolve(newItem);
+          } else {
+            newItem = new this.props.adminModule.Model({ id: itemId });
+            newItem.fetch({
+              success: () => {
+                deferred.resolve(newItem);
+              },
+            });
+          }
+
+          return deferred.promise();
+        }).then((newItem) => {
+          items.unshift(newItem, { merge: true });
+          this.setState({
+            items,
+            selectedItem: newItem,
+            view: 'edit',
+          });
+        });
     }
   },
 
@@ -102,7 +122,16 @@ const AdminController = React.createClass({
   },
 
   handleSave(item) {
-    this.handleSelectItem(item);
+    const { items } = this.state;
+    items.unshift(item, { merge: true });
+    items.move(item, 0);
+
+    this.setState({
+      items,
+      selectedItem: item,
+      view: 'edit',
+    });
+
     msg.show({
       text: gettext('Saved successfully.'),
       level: 'success',

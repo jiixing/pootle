@@ -11,21 +11,21 @@ import logging
 import os
 from collections import OrderedDict
 
+from translate.filters import checks
+from translate.lang.data import langcode_re
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.urlresolvers import reverse
-from django.db import connection, models
+from django.db import models
 from django.db.models import Q
 from django.db.models.signals import post_delete, post_save, pre_delete
 from django.dispatch import receiver
 from django.utils.encoding import iri_to_uri
 from django.utils.functional import cached_property
 from django.utils.translation import ugettext_lazy as _
-
-from translate.filters import checks
-from translate.lang.data import langcode_re
 
 from pootle.core.cache import make_method_key
 from pootle.core.mixins import CachedTreeItem
@@ -35,6 +35,7 @@ from pootle.core.url_helpers import (get_editor_filter, get_path_sortkey,
 from pootle_app.models.directory import Directory
 from pootle_app.models.permissions import PermissionSet
 from pootle_store.filetypes import factory_classes
+from pootle_store.models import Store
 from pootle_store.util import absolute_real_path
 from staticpages.models import StaticPage
 
@@ -136,6 +137,8 @@ class Project(models.Model, CachedTreeItem, ProjectURLMixin):
     code_help_text = _('A short code for the project. This should only '
                        'contain ASCII characters, numbers, and the underscore '
                        '(_) character.')
+    # any changes to the `code` field may require updating the schema
+    # see migration 0003_case_sensitive_schema.py
     code = models.CharField(max_length=255, null=False, unique=True,
                             db_index=True, verbose_name=_('Code'),
                             help_text=code_help_text)
@@ -282,21 +285,6 @@ class Project(models.Model, CachedTreeItem, ProjectURLMixin):
         """Returns ``True`` if this project is a terminology project."""
         return self.checkstyle == 'terminology'
 
-    @property
-    def vfolders(self):
-        """Return the public virtual folders for this project."""
-        if 'virtualfolder' in settings.INSTALLED_APPS:
-            # This import must be here to avoid circular import issues.
-            from virtualfolder.models import VirtualFolder
-
-            return [vf.tp_relative_path
-                    for vf in VirtualFolder.objects.filter(
-                        units__store__translation_project__project__code=self.code,
-                        is_public=True
-                    ).distinct()]
-
-        return []
-
     @cached_property
     def languages(self):
         """Returns a list of active :cls:`~pootle_languages.models.Language`
@@ -314,36 +302,33 @@ class Project(models.Model, CachedTreeItem, ProjectURLMixin):
         :cls:`~pootle_store.models.Store` resource paths available for
         this :cls:`~pootle_project.models.Project` across all languages.
         """
-        cache_key = make_method_key(self, 'resources', self.code)
+        from virtualfolder.models import VirtualFolderTreeItem
 
+        cache_key = make_method_key(self, 'resources', self.code)
         resources = cache.get(cache_key, None)
         if resources is not None:
             return resources
 
-        logging.debug(u'Cache miss for %s', cache_key)
-
-        resources_path = ''.join(['/%/', self.code, '/%'])
-
-        sql_query = '''
-        SELECT pootle_path
-        FROM pootle_store_store
-        WHERE pootle_path LIKE %s
-          UNION
-        SELECT pootle_path
-        FROM pootle_app_directory
-        WHERE pootle_path LIKE %s;
-        '''
-        cursor = connection.cursor()
-        cursor.execute(sql_query, [resources_path, resources_path])
-        results = cursor.fetchall()
-
-        # Calculate TP-relative paths and sort them
-        resources_set = {to_tp_relative_path(result[0]) for result in results}
-        resources = sorted(resources_set | set(self.vfolders),
-                           key=get_path_sortkey)
-
+        stores = Store.objects.live().order_by().filter(
+            translation_project__project__pk=self.pk)
+        dirs = Directory.objects.live().order_by().filter(
+            pootle_path__regex=r"^/[^/]*/%s/" % self.code)
+        vftis = (
+            VirtualFolderTreeItem.objects.filter(
+                vfolder__is_public=True,
+                pootle_path__regex=r"^/[^/]*/%s/" % self.code)
+            if 'virtualfolder' in settings.INSTALLED_APPS
+            else [])
+        resources = sorted(
+            {to_tp_relative_path(pootle_path)
+             for pootle_path
+             in (set(stores.values_list("pootle_path", flat=True))
+                 | set(dirs.values_list("pootle_path", flat=True))
+                 | set(vftis.values_list("pootle_path", flat=True)
+                       if vftis
+                       else []))},
+            key=get_path_sortkey)
         cache.set(cache_key, resources, settings.POOTLE_CACHE_TIMEOUT)
-
         return resources
 
     # # # # # # # # # # # # # #  Methods # # # # # # # # # # # # # # # # # # #
@@ -403,11 +388,14 @@ class Project(models.Model, CachedTreeItem, ProjectURLMixin):
 
     def get_stats_for_user(self, user):
         self.set_children(self.get_children_for_user(user))
+
         return self.get_stats()
 
-    def get_children_for_user(self, user):
+    def get_children_for_user(self, user, select_related=None):
         """Returns children translation projects for a specific `user`."""
-        return self.translationproject_set.for_user(user)
+        return (
+            self.translationproject_set.for_user(user, select_related)
+                                       .select_related("language"))
 
     def get_announcement(self, user=None):
         """Return the related announcement, if any."""
@@ -514,14 +502,21 @@ class Project(models.Model, CachedTreeItem, ProjectURLMixin):
 
 class ProjectResource(VirtualResource, ProjectURLMixin):
 
+    def __eq__(self, other):
+        return (
+            self.pootle_path == other.pootle_path
+            and list(self.get_children()) == list(other.get_children()))
+
     # # # TreeItem
 
     def _get_code(self, resource):
-        return resource.translation_project.language.code
+        return split_pootle_path(resource.pootle_path)[0]
 
     # # # /TreeItem
 
-    def get_children_for_user(self, user):
+    def get_children_for_user(self, user, select_related=None):
+        if select_related:
+            return self.children.select_related(*select_related)
         return self.children
 
     def get_stats_for_user(self, user):
@@ -529,6 +524,11 @@ class ProjectResource(VirtualResource, ProjectURLMixin):
 
 
 class ProjectSet(VirtualResource, ProjectURLMixin):
+
+    def __eq__(self, other):
+        return (
+            self.pootle_path == other.pootle_path
+            and list(self.get_children()) == list(other.get_children()))
 
     def __init__(self, resources, *args, **kwargs):
         self.directory = Directory.objects.projects

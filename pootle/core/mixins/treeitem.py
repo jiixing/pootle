@@ -7,29 +7,30 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
-__all__ = ('TreeItem', 'CachedTreeItem', 'CachedMethods')
-
 import logging
-
 from datetime import datetime
 from functools import wraps
+
+from redis import WatchError
+from rq import get_current_job
+from rq.job import Job, JobStatus, dumps, loads
+from rq.utils import utcnow
 
 from django.conf import settings
 from django.core.urlresolvers import set_script_prefix
 from django.db import connection
 from django.utils.encoding import force_unicode, iri_to_uri
 
-from django_rq.queues import get_queue, get_connection
-from redis import WatchError
-from rq import get_current_job
-from rq.job import JobStatus, Job, loads, dumps
-from rq.utils import utcnow
+from django_rq.queues import get_connection, get_queue
 
 from pootle.core.cache import get_cache
 from pootle.core.log import log
 from pootle.core.url_helpers import get_all_pootle_paths, split_pootle_path
 from pootle.core.utils.timezone import datetime_min
 from pootle_misc.util import dictsum
+
+
+__all__ = ('TreeItem', 'CachedTreeItem', 'CachedMethods')
 
 
 POOTLE_DIRTY_TREEITEMS = 'pootle:dirty:treeitems'
@@ -329,7 +330,8 @@ class CachedTreeItem(TreeItem):
 
     def get_stats(self, include_children=True):
         """get stats for self and - optionally - for children"""
-        self.initialize_children()
+        if include_children:
+            self.initialize_children()
         result = {
             'total': None,
             'translated': None,
@@ -648,7 +650,7 @@ class JobWrapper(object):
         args = (self.instance,)
         return Job.create(self.func, args=args, id=self.id,
                           connection=self.connection, depends_on=depends_on,
-                          status=status)
+                          status=status, origin=self.origin)
 
     def save_enqueued(self, pipe):
         """

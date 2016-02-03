@@ -21,7 +21,10 @@ var entries = {
   common: ['./common.js'],
   editor: ['./editor/app.js'],
   reports: ['./reports/app.js'],
-  vendor: ['react', 'react/addons', 'jquery', 'underscore', 'backbone'],
+  vendor: [
+    'react', 'react-dom', 'react-addons-pure-render-mixin', 'jquery',
+    'underscore', 'backbone'
+  ],
 };
 
 
@@ -71,17 +74,15 @@ if (root !== undefined) {
   var customPaths = root.split(':');
   resolve.root = [path.join(__dirname, 'node_modules')].concat(customPaths);
 
-  var i, customPath, manifestEntries;
-
   var mergeArrays = function (a, b) {
     return _.isArray(a) ? a.concat(b) : undefined;
   };
 
-  for (i=0; i<customPaths.length; i++) {
-    customPath = customPaths[i];
+  for (var i=0; i<customPaths.length; i++) {
+    var customPath = customPaths[i];
 
     try {
-      manifestEntries = require(path.join(customPath, 'manifest.json'));
+      var manifestEntries = require(path.join(customPath, 'manifest.json'));
       entries = _.merge(entries, manifestEntries, mergeArrays);
     } catch (e) {
       console.error(e.message);

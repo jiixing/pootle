@@ -8,15 +8,15 @@
 # AUTHORS file for copyright and authorship information.
 
 from django.conf import settings
-from django.conf.urls import include, patterns, url
+from django.conf.urls import include, url
 from django.views.generic import TemplateView
+from django.views.i18n import javascript_catalog
 
 
-urlpatterns = patterns(
-    '',
-
+urlpatterns = [
     # JavaScript i18n
-    url(r'^jsi18n/$', 'django.views.i18n.javascript_catalog',
+    url(r'^jsi18n/$',
+        javascript_catalog,
         {'packages': ('pootle', ), }, ),
 
     # Allauth
@@ -26,18 +26,16 @@ urlpatterns = patterns(
     # Reports
     url(r'^admin/reports/', include('reports.urls')),
     url(r'', include('reports.profile_urls')),
-)
+]
 
 # XXX should be autodiscovered
 if "import_export" in settings.INSTALLED_APPS:
-    urlpatterns += patterns(
-        '',
+    urlpatterns += [
         # Pootle offline translation support URLs.
         url(r'', include('import_export.urls')),
-    )
+    ]
 
-urlpatterns += patterns(
-    '',
+urlpatterns += [
     # External apps
     url(r'^contact/', include('contact.urls')),
     url(r'', include('pootle_profile.urls')),
@@ -53,7 +51,7 @@ urlpatterns += patterns(
     url(r'', include('pootle_store.urls')),
     url(r'', include('pootle_language.urls')),
     url(r'', include('pootle_translationproject.urls')),
-)
+]
 
 
 # TODO: handler400

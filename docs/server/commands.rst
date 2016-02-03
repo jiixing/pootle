@@ -774,9 +774,12 @@ removing a spam account or other malicious user.
 This command requires a mandatory ``username`` argument, which should be a valid
 username for a user of your site.
 
+.. versionchanged:: 2.7.3 :djadmin:`purge_user` can accept multiple user
+   accounts to purge.
+
 .. code-block:: bash
 
-    $ pootle purge_user username
+    $ pootle purge_user username [username ...]
 
 
 .. django-admin:: update_user_email
@@ -794,9 +797,12 @@ update_user_email
 This command can be used if you wish to update a user's email address. This
 might be useful if you have users with duplicate email addresses.
 
-This command requires a mandatory ``username`` argument, which should be a valid
-username for a user of your site, and a mandatory ``email`` argument which
-should to update a valid email address.
+This command requires a mandatory ``username``, which should be a valid
+username for a user of your site, and a mandatory valid ``email`` address.
+
+.. code-block:: bash
+
+    $ pootle update_user_email username email
 
 
 .. django-admin:: verify_user
@@ -811,13 +817,16 @@ Verify a user without the user having to go through email verification process.
 This is useful if you are migrating users that have already been verified, or
 if you want to create a superuser that can log in immediately.
 
-This command requires either a mandatory ``username`` argument, which should be a
-valid username for a user of your site, or the :option:`--all` flag if you wish to
-verify all users of your site.
+This command requires either mandatory ``username`` arguments, which should be
+valid username(s) for user(s) on your site, or the :option:`--all` flag if you
+wish to verify all users of your site.
+
+.. versionchanged:: 2.7.3 :djadmin:`verify_user` can accept multiple user
+   accounts to verify.
 
 .. code-block:: bash
 
-    $ pootle verify_user username
+    $ pootle verify_user username [username ...]
 
 Available options:
 
@@ -834,50 +843,9 @@ There are multiple ways to run Pootle, and some of them rely on running WSGI
 servers that can be reverse proxied to a proper HTTP web server such as nginx
 or lighttpd.
 
-The Translate Toolkit offers a bundled CherryPy server but there are many more
-options such as gunicorn, flup, paste, etc.
-
-
-.. django-admin:: run_cherrypy
-
-run_cherrypy
-^^^^^^^^^^^^
-
-Run the CherryPy server bundled with the Translate Toolkit.
-
-Available options:
-
-:option:`--host`
-  The hostname to listen on.
-
-  Default: ``127.0.0.1``.
-
-:option:`--port`
-  The TCP port on which the server should listen for new connections.
-
-  Default: ``8080``.
-
-:option:`--threads`
-  The number of working threads to create.
-
-  Default: ``1``.
-
-:option:`--name`
-  The name of the worker process.
-
-  Default: :func:`socket.gethostname`.
-
-:option:`--queue`
-  Specifies the maximum number of queued connections. This is the the
-  ``backlog`` argument to :func:`socket.listen`.
-
-  Default: ``5``.
-
-:option:`--ssl_certificate`
-  The filename of the server SSL certificate.
-
-:option:`--ssl_privatekey`
-  The filename of the server's private key file.
+There are many more options such as `uWSGI
+<http://uwsgi-docs.readthedocs.org/en/latest/WSGIquickstart.html>`_, `Gunicorn
+<http://gunicorn.org/>`_, etc.
 
 
 .. _commands#deprecated:
@@ -920,6 +888,28 @@ update_from_vcs
 
 Version Control support has been removed from Pootle and will reappear in a
 later release.
+
+
+.. django-admin:: run_cherrypy
+
+run_cherrypy
+^^^^^^^^^^^^
+
+.. deprecated:: 2.7.3
+
+Run the CherryPy server bundled with the Translate Toolkit.
+
+
+.. django-admin:: start
+
+start
+^^^^^
+
+.. removed:: 2.7.3
+
+Use :djadmin:`runserver` instead.
+
+Run Pootle using the default Django server.
 
 
 .. _commands#running_in_cron:

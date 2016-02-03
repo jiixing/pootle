@@ -7,16 +7,16 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
-from django.db import models
-from django.db.models import Q
-from django.db.models.aggregates import Max
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
+from django.db import models
+from django.db.models import Q
+from django.db.models.aggregates import Max
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 
-from pootle.core.markup import get_markup_filter_display_name, MarkupField
+from pootle.core.markup import MarkupField, get_markup_filter_display_name
 from pootle.core.mixins import DirtyFieldsMixin
 
 from .managers import PageManager

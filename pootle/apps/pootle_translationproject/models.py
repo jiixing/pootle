@@ -19,15 +19,15 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils.functional import cached_property
 
-from pootle_app.project_tree import does_not_exist
-from pootle.core.mixins import CachedTreeItem, CachedMethods
+from pootle.core.mixins import CachedMethods, CachedTreeItem
 from pootle.core.url_helpers import get_editor_filter, split_pootle_path
 from pootle_app.models.directory import Directory
+from pootle_app.project_tree import does_not_exist
 from pootle_language.models import Language
 from pootle_misc.checks import excluded_filters
 from pootle_project.models import Project
-from pootle_store.models import Store, Unit, PARSED
-from pootle_store.util import absolute_real_path, relative_real_path, OBSOLETE
+from pootle_store.models import PARSED, Store, Unit
+from pootle_store.util import OBSOLETE, absolute_real_path, relative_real_path
 from staticpages.models import StaticPage
 
 
@@ -110,7 +110,7 @@ class TranslationProjectManager(models.Manager):
         """Filters translation projects that belong to disabled projects."""
         return self.filter(project__disabled=True)
 
-    def for_user(self, user):
+    def for_user(self, user, select_related=None):
         """Filters translation projects for a specific user.
 
         - Admins always get all translation projects.
@@ -120,12 +120,17 @@ class TranslationProjectManager(models.Manager):
             retrieved for.
         :return: A filtered queryset with `TranslationProject`s for `user`.
         """
+        qs = self.live()
+        if select_related is not None:
+            qs = qs.select_related(*select_related)
+
         if user.is_superuser:
-            return self.live()
+            return qs
 
-        return self.live().filter(project__disabled=False)
+        return qs.filter(project__disabled=False)
 
-    def get_for_user(self, user, project_code, language_code):
+    def get_for_user(self, user, project_code, language_code,
+                     select_related=None):
         """Gets a `language_code`/`project_code` translation project
         for a specific `user`.
 
@@ -141,8 +146,10 @@ class TranslationProjectManager(models.Manager):
         :return: The `TranslationProject` matching the params, raises
             otherwise.
         """
-        return self.for_user(user).get(project__code=project_code,
-                                       language__code=language_code)
+        return self.for_user(
+            user, select_related).get(
+                project__code=project_code,
+                language__code=language_code)
 
 
 class TranslationProject(models.Model, CachedTreeItem):
@@ -287,7 +294,8 @@ class TranslationProject(models.Model, CachedTreeItem):
                     init_store_from_template(self, template_store)
 
             self.scan_files()
-            # If this TP has no stores cache should be updated forcibly.
+
+            # If this TP has no stores, cache should be updated forcibly.
             if self.stores.live().count() == 0:
                 self.update_all_cache()
 
@@ -308,15 +316,15 @@ class TranslationProject(models.Model, CachedTreeItem):
         directory.delete()
 
     def get_absolute_url(self):
-        lang, proj, dir, fn = split_pootle_path(self.pootle_path)
-        return reverse('pootle-tp-browse', args=[lang, proj, dir, fn])
+        return reverse(
+            'pootle-tp-browse',
+            args=split_pootle_path(self.pootle_path)[:-1])
 
     def get_translate_url(self, **kwargs):
-        lang, proj, dir, fn = split_pootle_path(self.pootle_path)
-        return u''.join([
-            reverse('pootle-tp-translate', args=[lang, proj, dir, fn]),
-            get_editor_filter(**kwargs),
-        ])
+        return u''.join(
+            [reverse("pootle-tp-translate",
+                     args=split_pootle_path(self.pootle_path)[:-1]),
+             get_editor_filter(**kwargs)])
 
     def get_announcement(self, user=None):
         """Return the related announcement, if any."""
@@ -345,7 +353,7 @@ class TranslationProject(models.Model, CachedTreeItem):
     def sync(self, conservative=True, skip_missing=False, only_newer=True):
         """Sync unsaved work on all stores to disk"""
         stores = self.stores.live().exclude(file='').filter(state__gte=PARSED)
-        for store in stores.iterator():
+        for store in stores.select_related("parent").iterator():
             store.sync(update_structure=not conservative,
                        conservative=conservative,
                        skip_missing=skip_missing, only_newer=only_newer)
@@ -355,7 +363,7 @@ class TranslationProject(models.Model, CachedTreeItem):
         return self.directory.children
 
     def get_cachekey(self):
-        return self.directory.pootle_path
+        return self.pootle_path
 
     def get_parents(self):
         return [self.project]

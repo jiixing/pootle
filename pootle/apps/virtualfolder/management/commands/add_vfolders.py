@@ -23,16 +23,19 @@ from virtualfolder.models import VirtualFolder
 class Command(BaseCommand):
     help = "Add virtual folders from file."
 
-    def handle(self, *args, **options):
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "vfolder",
+            nargs=1,
+            help="JSON vfolder configuration file",
+        )
+
+    def handle(self, **options):
         """Add virtual folders from file."""
 
-        if not args:
-            raise CommandError("You forgot to provide the mandatory filename.")
-
         try:
-            inputfile = open(args[0], "r")
-            vfolders = json.load(inputfile)
-            inputfile.close()
+            with open(options['vfolder'][0], "r") as inputfile:
+                vfolders = json.load(inputfile)
         except IOError as e:
             raise CommandError(e)
         except ValueError as e:
@@ -82,7 +85,7 @@ class Command(BaseCommand):
                 except ValidationError as e:
                     errored_count += 1
                     self.stdout.write('FAILED')
-                    self.stderr.write(e.message)
+                    self.stderr.write(e)
                 else:
                     self.stdout.write('DONE')
                     added_count += 1
@@ -129,7 +132,7 @@ class Command(BaseCommand):
                     except ValidationError as e:
                         errored_count += 1
                         self.stdout.write('FAILED')
-                        self.stderr.write(e.message)
+                        self.stderr.write(e)
                     else:
                         self.stdout.write('DONE')
                         updated_count += 1

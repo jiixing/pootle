@@ -20,7 +20,6 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext as _
 
 from pootle.core.utils.templates import get_template_source
-
 from pootle_store.fields import list_empty
 
 
@@ -237,4 +236,4 @@ def do_include_raw(parser, token):
 
     source, path = get_template_source(template_name)
 
-    return template.TextNode(source)
+    return template.base.TextNode(source)

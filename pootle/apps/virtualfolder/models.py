@@ -12,7 +12,7 @@ from django.core.urlresolvers import reverse
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 
-from pootle.core.markup import get_markup_filter_display_name, MarkupField
+from pootle.core.markup import MarkupField, get_markup_filter_display_name
 from pootle.core.mixins import CachedMethods, CachedTreeItem
 from pootle.core.mixins.treeitem import NoCachedStats
 from pootle.core.url_helpers import (get_all_pootle_paths, get_editor_filter,
@@ -22,12 +22,18 @@ from pootle_language.models import Language
 from pootle_project.models import Project
 from pootle_store.models import Store, Unit
 from pootle_store.util import OBSOLETE
+
 from .signals import vfolder_post_save
 
 
 class VirtualFolder(models.Model):
 
+    # any changes to the `name` field may require updating the schema
+    # see migration 0003_case_sensitive_schema.py
     name = models.CharField(_('Name'), blank=False, max_length=70)
+
+    # any changes to the `location` field may require updating the schema
+    # see migration 0003_case_sensitive_schema.py
     location = models.CharField(
         _('Location'),
         blank=False,
@@ -301,6 +307,8 @@ class VirtualFolderTreeItem(models.Model, CachedTreeItem):
         null=True,
         db_index=True,
     )
+    # any changes to the `pootle_path` field may require updating the schema
+    # see migration 0003_case_sensitive_schema.py
     pootle_path = models.CharField(
         max_length=255,
         null=False,
@@ -405,11 +413,10 @@ class VirtualFolderTreeItem(models.Model, CachedTreeItem):
             raise ValidationError(msg)
 
     def get_translate_url(self, **kwargs):
-        lang, proj, dp, fn = split_pootle_path(self.pootle_path)
         return u''.join([
-            reverse('pootle-tp-translate', args=[lang, proj, dp, fn]),
-            get_editor_filter(**kwargs),
-        ])
+            reverse("pootle-tp-translate",
+                    args=split_pootle_path(self.pootle_path)[:-1]),
+            get_editor_filter(**kwargs)])
 
     # # # TreeItem
 

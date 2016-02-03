@@ -21,7 +21,7 @@ from django.utils.translation import ugettext_lazy as _
 from pootle.core.cache import make_method_key
 from pootle.core.mixins import TreeItem
 from pootle.core.url_helpers import get_editor_filter
-from pootle.i18n.gettext import tr_lang, language_dir
+from pootle.i18n.gettext import language_dir, tr_lang
 from staticpages.models import StaticPage
 
 
@@ -61,6 +61,8 @@ class LiveLanguageManager(models.Manager):
 
 class Language(models.Model, TreeItem):
 
+    # any changes to the `code` field may require updating the schema
+    # see migration 0002_case_insensitive_schema.py
     code = models.CharField(
         max_length=50, null=False, unique=True, db_index=True,
         verbose_name=_("Code"),
@@ -122,6 +124,27 @@ class Language(models.Model, TreeItem):
 
     # # # # # # # # # # # # # #  Methods # # # # # # # # # # # # # # # # # # #
 
+    @classmethod
+    def get_canonical(cls, language_code):
+        """Returns the canonical `Language` object matching `language_code`.
+
+        If no language can be matched, `None` will be returned.
+
+        :param language_code: the code of the language to retrieve.
+        """
+        try:
+            return cls.objects.get(code__iexact=language_code)
+        except cls.DoesNotExist:
+            _lang_code = language_code
+            if "-" in language_code:
+                _lang_code = language_code.replace("-", "_")
+            elif "_" in language_code:
+                _lang_code = language_code.replace("_", "-")
+            try:
+                return cls.objects.get(code__iexact=_lang_code)
+            except cls.DoesNotExist:
+                return None
+
     def __unicode__(self):
         return u"%s - %s" % (self.name, self.code)
 
@@ -170,17 +193,14 @@ class Language(models.Model, TreeItem):
 
     def get_stats_for_user(self, user):
         self.set_children(self.get_children_for_user(user))
-
         return self.get_stats()
 
-    def get_children_for_user(self, user):
-        translation_projects = self.translationproject_set \
-                                   .for_user(user) \
-                                   .order_by('project__fullname')
-        user_tps = filter(lambda x: x.is_accessible_by(user),
-                          translation_projects)
-
-        return user_tps
+    def get_children_for_user(self, user, select_related=None):
+        tps = self.translationproject_set.for_user(
+            user, select_related=select_related).select_related("project")
+        return filter(
+            lambda x: x.is_accessible_by(user),
+            tps.order_by('project__fullname'))
 
     def get_announcement(self, user=None):
         """Return the related announcement, if any."""

@@ -7,17 +7,16 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
-from django.db import models
 from django.conf import settings
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
+from django.db import models
 from django.utils.encoding import iri_to_uri
 
 
 def get_permission_contenttype():
-    content_type = ContentType.objects.filter(name='pootle',
-                                              app_label='pootle_app',
+    content_type = ContentType.objects.filter(app_label='pootle_app',
                                               model="directory")[0]
     return content_type
 

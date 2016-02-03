@@ -1,9 +1,11 @@
 -r build.txt
 
-django-debug-toolbar>=1.2
+django-debug-toolbar>=1.4
 django-extensions
+flake8
 glue>=0.2.8.1
 ipython
+isort>=3.5.0,!=4.1.1
 pep257
 pep8<1.6
 pathlib

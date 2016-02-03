@@ -7,12 +7,13 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
-from django.conf.urls import patterns, url
+from django.conf.urls import url
+
+from .views import manage
 
 
-urlpatterns = patterns(
-    'pootle_terminology.views',
+urlpatterns = [
     url(r'^(?P<language_code>[^/]*)/(?P<project_code>[^/]*)/terminology/',
-        'manage',
+        manage,
         name='pootle-terminology-manage'),
-)
+]

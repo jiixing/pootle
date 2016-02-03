@@ -23,7 +23,7 @@ from pootle.core.views import SuperuserRequiredMixin
 from pootle_misc.util import ajax_required
 
 from .forms import agreement_form_factory
-from .models import AbstractPage, LegalPage, StaticPage, ANN_TYPE, ANN_VPATH
+from .models import ANN_TYPE, ANN_VPATH, AbstractPage, LegalPage, StaticPage
 
 
 class PageModelMixin(object):
@@ -57,7 +57,7 @@ class PageModelMixin(object):
         kwargs.update({'label_suffix': ''})
         return kwargs
 
-    def get_form(self, form_class):
+    def get_form(self, form_class=None):
         form = super(PageModelMixin, self).get_form(form_class)
 
         if self.page_type == ANN_TYPE:
@@ -128,7 +128,7 @@ class PageCreateView(SuperuserRequiredMixin, AdminCtxMixin, PageModelMixin,
 
         return initial
 
-    def get_form(self, form_class):
+    def get_form(self, form_class=None):
         form = super(PageCreateView, self).get_form(form_class)
 
         if self.page_type == ANN_TYPE:

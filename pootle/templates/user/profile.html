@@ -18,8 +18,8 @@
         {{ object.display_name }}
       {% endif %}
     </h1>
-    {% if user.is_superuser or request.permissions.administrate %}
-    <p><a href="mailto:{{ object.email }}">{{ object.email }}</a></p>
+    {% if user_is_manager %}
+    <p><a class="admin" href="mailto:{{ object.email }}">{{ object.email }}</a></p>
     {% endif %}
   </div>
 
@@ -62,6 +62,10 @@
     </div>
     {% endif %}
     {% endwith %}
+
+    <h3 class="user-detailed-stats">
+      <a href="{% url 'pootle-user-stats' object.username %}">{% trans 'Statistics' %}</a>
+    </h3>
   </div>
 
   {% if object.bio or object.has_contact_details or user == object %}

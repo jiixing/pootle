@@ -7,12 +7,13 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
-__all__ = ('UserManager', )
-
 from django.contrib.auth.models import BaseUserManager
 from django.utils import timezone
 
 from . import utils
+
+
+__all__ = ('UserManager', )
 
 
 class UserManager(BaseUserManager):
@@ -55,13 +56,6 @@ class UserManager(BaseUserManager):
     def create_superuser(self, username, email, password, **extra_fields):
         return self._create_user(username, email, password, True,
                                  **extra_fields)
-
-    def get_queryset(self):
-        # TODO: review if we really want to retrieve alternative source
-        # languages by default all the time
-        return super(UserManager, self).get_queryset().select_related(
-            'alt_src_langs',
-        )
 
     def get_default_user(self):
         return super(UserManager, self).get_queryset().get(username='default')
