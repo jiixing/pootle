@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+POOTLE_DIR=/home/pootle/pootle
+VIRTUALENV="/home/pootle/.pyenv/versions/pootle"
+source "$VIRTUALENV/bin/activate"
+
+trap 'kill $(jobs -p)' EXIT
+
+cd $POOTLE_DIR
+./manage.py rqworker &
+
+sleep 0.5
+
+./manage.py runserver 127.0.0.1:8088
