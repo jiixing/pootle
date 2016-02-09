@@ -11,6 +11,7 @@ from __future__ import absolute_import
 
 import logging
 
+import Levenshtein
 from django.utils.html import strip_tags
 
 try:
@@ -26,6 +27,42 @@ __all__ = ('ElasticSearchBackend',)
 
 
 logger = logging.getLogger(__name__)
+
+
+DEFAULT_MIN_SIMILARITY = 0.7
+
+
+def filter_hits_by_distance(hits, source_text,
+                            min_similarity=DEFAULT_MIN_SIMILARITY):
+    """Returns ES `hits` filtered according to their Levenshtein distance
+    to the `source_text`.
+
+    Any hits with a similarity value (0..1) lower than `min_similarity` will be
+    discarded. It's assumed that `hits` is already sorted from higher to lower
+    score.
+    """
+    if min_similarity <= 0 or min_similarity >= 1:
+        min_similarity = DEFAULT_MIN_SIMILARITY
+
+    filtered_hits = []
+    for hit in hits:
+        hit_source_text = hit['_source']['source']
+        distance = Levenshtein.distance(source_text, hit_source_text)
+        similarity = (
+            1 - distance / float(max(len(source_text), len(hit_source_text)))
+        )
+
+        logger.debug(
+            'Similarity: %.2f (distance: %d)\nOriginal:\t%s\nComparing with:\t%s',
+            similarity, distance, source_text, hit_source_text
+        )
+
+        if similarity < min_similarity:
+            break
+
+        filtered_hits.append(hit)
+
+    return filtered_hits
 
 
 class ElasticSearchBackend(SearchBackend):
@@ -76,7 +113,7 @@ class ElasticSearchBackend(SearchBackend):
                     "match": {
                         "source": {
                             "query": strip_tags(unit.source),
-                            "fuzziness": self._settings['MIN_SCORE'],
+                            "fuzziness": 'AUTO',
                         }
                     }
                 }
@@ -94,7 +131,13 @@ class ElasticSearchBackend(SearchBackend):
                          self._settings["PORT"], unit)
             return []
 
-        for hit in es_res['hits']['hits']:
+        hits = filter_hits_by_distance(
+            es_res['hits']['hits'],
+            unit.source,
+            min_similarity=self._settings.get('MIN_SIMILARITY',
+                                              DEFAULT_MIN_SIMILARITY)
+        )
+        for hit in hits:
             if self._is_valuable_hit(unit, hit):
                 body = hit['_source']
                 translation_pair = body['source'] + body['target']

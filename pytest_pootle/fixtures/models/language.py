@@ -28,20 +28,22 @@ def _require_language(code, fullname, plurals=2, plural_equation='(n != 1)'):
         'pluralequation': plural_equation,
     }
     language, created = Language.objects.get_or_create(**criteria)
-
+    if created:
+        language.save()
     return language
 
 
-@pytest.fixture
-def english(root):
+@pytest.fixture(scope="session")
+def english():
     """Require the English language."""
-    return _require_language('en', 'English')
+    from pootle_language.models import Language
+    return Language.objects.get(code="en")
 
 
 @pytest.fixture
-def templates(root):
+def templates():
     """Require the special Templates language."""
-    return _require_language('templates', 'Templates')
+    return _require_language("templates", "Templates")
 
 
 @pytest.fixture

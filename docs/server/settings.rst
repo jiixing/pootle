@@ -229,9 +229,9 @@ Configuration settings for applications used by Pootle.
   .. versionadded:: 2.7
 
   The graph of a user's activity, within reports, can be `marked
-  <https://code.google.com/p/flot-marks/>`_  to indicate events by using
-  this function. The setting must contain an import path to such a marking
-  function (string).
+  <https://code.google.com/archive/p/flot-marks/>`_  to indicate events by
+  using this function. The setting must contain an import path to such a
+  marking function (string).
 
   The function receives the user and graph ranges and returns an array of
   applicable marks.
@@ -312,8 +312,9 @@ Translation environment configuration settings.
 
   .. versionchanged:: 2.7.3
 
-     Added the :setting:`WEIGHT <POOTLE_TM_SERVER-WEIGHT>` option. Also added
-     another default TM used to import external translations from files.
+     Added the :setting:`WEIGHT <POOTLE_TM_SERVER-WEIGHT>` and
+     :setting:`MIN_SIMILARITY <POOTLE_TM_SERVER-MIN_SIMILARITY>` options. Also
+     added another default TM used to import external translations from files.
 
 
   Default: ``{}`` (empty dict)
@@ -329,7 +330,6 @@ Translation environment configuration settings.
             'PORT': 9200,
             'INDEX_NAME': 'translations',
             'WEIGHT': 1,
-            'MIN_SCORE': 'AUTO',
         },
         'external': {
             'ENGINE': 'pootle.core.search.backends.ElasticSearchBackend',
@@ -337,7 +337,6 @@ Translation environment configuration settings.
             'PORT': 9200,
             'INDEX_NAME': 'external-translations',
             'WEIGHT': 0.9,
-            'MIN_SCORE': 'AUTO',
         },
     }
 
@@ -345,12 +344,6 @@ Translation environment configuration settings.
   This is configured to access a standard Elasticsearch setup.  Change the
   settings for any non-standard setup.  Change ``HOST`` and ``PORT`` settings
   as required.
-
-  Use ``MIN_SCORE`` to set the Levenshtein Distance score.  Set it to ``AUTO``
-  so that Elasticsearch will adjust the required score depending on the length
-  of the string being translated. Elasticsearch documentation provides further
-  details on `Fuzzy matching
-  <https://www.elastic.co/guide/en/elasticsearch/reference/current/common-options.html#fuzziness>`_.
 
   The default ``local`` TM is automatically updated every time a new
   translation is submitted. The other TMs are not automatically updated so they
@@ -365,6 +358,15 @@ Translation environment configuration settings.
   ``WEIGHT`` provides a weighting factor to alter the final score for TM
   results from this TM server. Valid values are between ``0.0`` and ``1.0``,
   both included. Defaults to ``1.0`` if not provided.
+
+  .. setting:: POOTLE_TM_SERVER-MIN_SIMILARITY
+
+  ``MIN_SIMILARITY`` serves as a threshold value to filter out results that are
+  potentially too far from the source text. The Levenshtein distance is
+  considered when measuring how similar the text is from the source text, and
+  this represents a real value in the (0..1) range, 1 being 100% similarity.
+  The default value (0.7) should work fine in most cases, although your mileage
+  might vary.
 
 
 .. setting:: POOTLE_MT_BACKENDS

@@ -1975,7 +1975,8 @@ PTL.editor = {
       if (results[i].username === 'nobody') {
         results[i].fullname = gettext('some anonymous user');
       } else if (!results[i].fullname) {
-        results[i].fullname = gettext('someone');
+        results[i].fullname = (results[i].username ?
+                               results[i].username : gettext('someone'));
       }
       results[i].fullname = _.escape(results[i].fullname);
 

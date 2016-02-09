@@ -995,17 +995,6 @@ ul.errorlist
 }
 
 
-
-/*
- * NEWS FORM
- */
-
-.news
-{
-    margin: 2em 0;
-    float: left;
-}
-
 /*
  * CAPTCHA FORM
  */
@@ -1783,6 +1772,12 @@ html[dir="rtl"] #tabs li
 /*
  * MISC
  */
+
+.avatar
+{
+    display: inline-block;
+    overflow: hidden;
+}
 
 a.collapse,
 a.slide

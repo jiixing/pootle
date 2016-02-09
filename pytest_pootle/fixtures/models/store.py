@@ -206,13 +206,25 @@ def _require_store(tp, po_dir, name):
 
 
 def _create_submission_and_suggestion(store, user,
-                                      filename=TEST_UPDATE_PO,
+                                      filename=None,
+                                      units=None,
                                       suggestion="SUGGESTION"):
+
+    from pootle.core.models import Revision
 
     from tests.models.store import _update_from_upload_file
 
     # Update store as user
-    _update_from_upload_file(store, filename, user=user)
+    if filename:
+        _update_from_upload_file(store, filename, user=user)
+    else:
+        if units is None:
+            units = [("Hello, world", "Hello, world UPDATED")]
+        update_store(
+            store,
+            units,
+            user=user,
+            store_revision=Revision.get() + 1)
 
     # Add a suggestion
     unit = store.units[0]
@@ -416,11 +428,3 @@ def af_vfolder_test_browser_defines_po(settings, afrikaans_vfolder_test,
     return _require_store(afrikaans_vfolder_test,
                           settings.POOTLE_TRANSLATION_DIRECTORY,
                           'browser/defines.po')
-
-
-@pytest.fixture
-def templates_tutorial_pot(settings, templates_tutorial, system):
-    """Require the /templates/tutorial/tutorial.pot store."""
-    return _require_store(templates_tutorial,
-                          settings.POOTLE_TRANSLATION_DIRECTORY,
-                          'tutorial.pot')
