@@ -97,15 +97,15 @@ window.suttacentral = {
 
         if ($('.translation-text[lang=pi]').length) {
           let settings = {
-            selector: '.lookup',
             main: 'body',
-            lookupWorkerSrc: '/assets/js/lookup/lookup-worker-1.0.js',
+            lookupWorkerSrc: '/assets/js/lookup/lookup-worker-1.2.js',
             fromLang: 'pi',
             toLang: 'en',
             dataFile: '/assets/js/lookup/pi2en-entries-1.0.json',
-            glossaryFile: '/assets/js/lookup/pi2en-glossary-1.0.json'
+            glossaryFile: '/assets/js/lookup/pi2en-glossary-1.0.json',
+            selectorClass: 'lookup'
           }
-          $.ajax('/assets/js/lookup/lookup-1.0.js').then( () => {
+          $.ajax('/assets/js/lookup/lookup-1.2.js').then( () => {
             let lookupUtility = this.activatePaliLookup(settings);
             lookupUtility.ready.then( () => {
               this.activateGlossary(lookupUtility);
@@ -173,21 +173,14 @@ window.suttacentral = {
         }
     },
     activatePaliLookup: function(settings) {
-
+        console.log('Activating Power')
 
       this.lookupUtility = new LookupUtility(settings);
-
-      this.markupGenerator = new MarkupGenerator();
-      console.log(this.markupGenerator);
-
-      // this.markupGenerator.shouldExclude = function(node) {
-      //   if ($(node.parentNode).is('[class^=highlight]')) return true
-      //   return false
-      // }
-
-      this.markupGenerator.startMarkupOnDemand({
-          targetSelector: '.translate-focus .translation-text[lang=pi]',
-          exclusions: '[class^=highlight]'});
+      this.lookupUtility.ready.then(() => {
+         this.lookupUtility.markupGenerator.startMarkupOnDemand({
+             targetSelector: '.translate-focus .translation-text[lang=pi]',
+             exclusions: '.highlight, .hightlight-html'});
+       })
       return this.lookupUtility;
     },
     activateGlossary: function(lookupUtility) {

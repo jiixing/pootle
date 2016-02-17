@@ -4180,12 +4180,12 @@ var index$1 = __commonjs(function (module) {
 	};
 });
 
-var require$$1$2 = index$1 && (typeof index$1 === 'undefined' ? 'undefined' : babelHelpers_typeof(index$1)) === 'object' && 'default' in index$1 ? index$1['default'] : index$1;
+var require$$1$1 = index$1 && (typeof index$1 === 'undefined' ? 'undefined' : babelHelpers_typeof(index$1)) === 'object' && 'default' in index$1 ? index$1['default'] : index$1;
 
 var polyfill = __commonjs(function (module) {
 	'use strict';
 
-	var d = require$$1$2,
+	var d = require$$1$1,
 	    validateSymbol = require$$0$2,
 	    create = Object.create,
 	    defineProperties = Object.defineProperties,
@@ -4646,11 +4646,11 @@ var es6Extensions = __commonjs(function (module) {
   };
 });
 
-var require$$1$1 = es6Extensions && (typeof es6Extensions === 'undefined' ? 'undefined' : babelHelpers_typeof(es6Extensions)) === 'object' && 'default' in es6Extensions ? es6Extensions['default'] : es6Extensions;
+var require$$1$2 = es6Extensions && (typeof es6Extensions === 'undefined' ? 'undefined' : babelHelpers_typeof(es6Extensions)) === 'object' && 'default' in es6Extensions ? es6Extensions['default'] : es6Extensions;
 
 var runtime = __commonjs(function (module, exports, global) {
   var g = (typeof global === 'undefined' ? 'undefined' : babelHelpers_typeof(global)) === "object" ? global : (typeof window === 'undefined' ? 'undefined' : babelHelpers_typeof(window)) === "object" ? window : this;
-  var Promise = g.Promise || require$$1$1;
+  var Promise = g.Promise || require$$1$2;
   var Symbol = g.Symbol || require$$0;
 
   /**
@@ -5504,11 +5504,7 @@ var loadGlossaryData = function () {
         switch (_context3.prev = _context3.next) {
           case 0:
             _context3.next = 2;
-            return db.transaction('rw', db.glossary, function () {
-              db.glossary.where('origin').equals('system').each(function (entry) {
-                db.glossary.delete(entry.term);
-              });
-            });
+            return removeGlossaryEntries({ origin: 'system' });
 
           case 2:
             _context3.next = 4;
@@ -5596,17 +5592,106 @@ var addGlossaryEntry = function () {
   };
 }();
 
-var getGlossaryEntries = function () {
+var addGlossaryEntries = function () {
   var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee5(_ref) {
-    var term = _ref.term;
-    var terms = _ref.terms;
+    var entries = _ref.entries;
     var origin = _ref.origin;
-
-    var conjugated, _iteratorNormalCompletion2, _didIteratorError2, _iteratorError2, _iterator2, _step2, _term, _result, _iteratorNormalCompletion3, _didIteratorError3, _iteratorError3, _iterator3, _step3, _term2, count, clauses, matches, conjugatedMatches;
-
     return regeneratorRuntime.wrap(function _callee5$(_context5) {
       while (1) {
         switch (_context5.prev = _context5.next) {
+          case 0:
+            if (!origin) {
+              origin = 'user';
+            }
+            _context5.next = 3;
+            return db.transaction('rw', db.glossary, function () {
+              var _iteratorNormalCompletion2 = true;
+              var _didIteratorError2 = false;
+              var _iteratorError2 = undefined;
+
+              try {
+                for (var _iterator2 = entries[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                  entry = _step2.value;
+
+                  if (!entry.origin) {
+                    entry.origin = origin;
+                  }
+                  entry.id = makeGlossaryEntryId(entry);
+                  db.glossary.put(entry);
+                }
+              } catch (err) {
+                _didIteratorError2 = true;
+                _iteratorError2 = err;
+              } finally {
+                try {
+                  if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                    _iterator2.return();
+                  }
+                } finally {
+                  if (_didIteratorError2) {
+                    throw _iteratorError2;
+                  }
+                }
+              }
+            });
+
+          case 3:
+          case 'end':
+            return _context5.stop();
+        }
+      }
+    }, _callee5, this);
+  }));
+  return function addGlossaryEntries(_x7) {
+    return ref.apply(this, arguments);
+  };
+}();
+
+var removeGlossaryEntries = function () {
+  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee6(_ref2) {
+    var origin = _ref2.origin;
+    var deletedCount;
+    return regeneratorRuntime.wrap(function _callee6$(_context6) {
+      while (1) {
+        switch (_context6.prev = _context6.next) {
+          case 0:
+            console.log('removing entries');
+            deletedCount = 0;
+            _context6.next = 4;
+            return db.transaction('rw', db.glossary, function () {
+              db.glossary.where('origin').equals(origin).each(function (entry) {
+                console.log('deleting entry', entry);
+                db.glossary.delete(entry.id);
+                deletedCount += 1;
+              });
+            });
+
+          case 4:
+            return _context6.abrupt('return', { deletedCount: deletedCount });
+
+          case 5:
+          case 'end':
+            return _context6.stop();
+        }
+      }
+    }, _callee6, this);
+  }));
+  return function removeGlossaryEntries(_x8) {
+    return ref.apply(this, arguments);
+  };
+}();
+
+var getGlossaryEntries = function () {
+  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee7(_ref3) {
+    var term = _ref3.term;
+    var terms = _ref3.terms;
+    var origin = _ref3.origin;
+
+    var conjugated, _iteratorNormalCompletion3, _didIteratorError3, _iteratorError3, _iterator3, _step3, _term, _result, _iteratorNormalCompletion4, _didIteratorError4, _iteratorError4, _iterator4, _step4, _term2, count, clauses, matches, conjugatedMatches;
+
+    return regeneratorRuntime.wrap(function _callee7$(_context7) {
+      while (1) {
+        switch (_context7.prev = _context7.next) {
           case 0:
             if (term) {
               terms = [term];
@@ -5618,107 +5703,107 @@ var getGlossaryEntries = function () {
             conjugated = [];
 
             if (!(settings.fromLang == 'pi')) {
-              _context5.next = 45;
+              _context7.next = 45;
               break;
             }
 
             conjugated = [];
-            _iteratorNormalCompletion2 = true;
-            _didIteratorError2 = false;
-            _iteratorError2 = undefined;
-            _context5.prev = 8;
-            for (_iterator2 = terms[Symbol.iterator](); !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-              _term = _step2.value;
+            _iteratorNormalCompletion3 = true;
+            _didIteratorError3 = false;
+            _iteratorError3 = undefined;
+            _context7.prev = 8;
+            for (_iterator3 = terms[Symbol.iterator](); !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+              _term = _step3.value;
               _result = pi.conjugate(_term);
 
               conjugated = conjugated.concat(_result);
             }
-            _context5.next = 16;
+            _context7.next = 16;
             break;
 
           case 12:
-            _context5.prev = 12;
-            _context5.t0 = _context5['catch'](8);
-            _didIteratorError2 = true;
-            _iteratorError2 = _context5.t0;
+            _context7.prev = 12;
+            _context7.t0 = _context7['catch'](8);
+            _didIteratorError3 = true;
+            _iteratorError3 = _context7.t0;
 
           case 16:
-            _context5.prev = 16;
-            _context5.prev = 17;
-
-            if (!_iteratorNormalCompletion2 && _iterator2.return) {
-              _iterator2.return();
-            }
-
-          case 19:
-            _context5.prev = 19;
-
-            if (!_didIteratorError2) {
-              _context5.next = 22;
-              break;
-            }
-
-            throw _iteratorError2;
-
-          case 22:
-            return _context5.finish(19);
-
-          case 23:
-            return _context5.finish(16);
-
-          case 24:
-            conjugated = new Set(conjugated);
-            _iteratorNormalCompletion3 = true;
-            _didIteratorError3 = false;
-            _iteratorError3 = undefined;
-            _context5.prev = 28;
-            for (_iterator3 = terms[Symbol.iterator](); !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-              _term2 = _step3.value;
-
-              conjugated.delete(_term2);
-            }
-            _context5.next = 36;
-            break;
-
-          case 32:
-            _context5.prev = 32;
-            _context5.t1 = _context5['catch'](28);
-            _didIteratorError3 = true;
-            _iteratorError3 = _context5.t1;
-
-          case 36:
-            _context5.prev = 36;
-            _context5.prev = 37;
+            _context7.prev = 16;
+            _context7.prev = 17;
 
             if (!_iteratorNormalCompletion3 && _iterator3.return) {
               _iterator3.return();
             }
 
-          case 39:
-            _context5.prev = 39;
+          case 19:
+            _context7.prev = 19;
 
             if (!_didIteratorError3) {
-              _context5.next = 42;
+              _context7.next = 22;
               break;
             }
 
             throw _iteratorError3;
 
+          case 22:
+            return _context7.finish(19);
+
+          case 23:
+            return _context7.finish(16);
+
+          case 24:
+            conjugated = new Set(conjugated);
+            _iteratorNormalCompletion4 = true;
+            _didIteratorError4 = false;
+            _iteratorError4 = undefined;
+            _context7.prev = 28;
+            for (_iterator4 = terms[Symbol.iterator](); !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+              _term2 = _step4.value;
+
+              conjugated.delete(_term2);
+            }
+            _context7.next = 36;
+            break;
+
+          case 32:
+            _context7.prev = 32;
+            _context7.t1 = _context7['catch'](28);
+            _didIteratorError4 = true;
+            _iteratorError4 = _context7.t1;
+
+          case 36:
+            _context7.prev = 36;
+            _context7.prev = 37;
+
+            if (!_iteratorNormalCompletion4 && _iterator4.return) {
+              _iterator4.return();
+            }
+
+          case 39:
+            _context7.prev = 39;
+
+            if (!_didIteratorError4) {
+              _context7.next = 42;
+              break;
+            }
+
+            throw _iteratorError4;
+
           case 42:
-            return _context5.finish(39);
+            return _context7.finish(39);
 
           case 43:
-            return _context5.finish(36);
+            return _context7.finish(36);
 
           case 44:
             conjugated = [].concat(babelHelpers_toConsumableArray(conjugated));
 
           case 45:
-            _context5.next = 47;
+            _context7.next = 47;
             return db.glossary.count();
 
           case 47:
-            count = _context5.sent;
+            count = _context7.sent;
 
             //console.log(`Glossary has ${count} entries`);
             //console.log(`Searching glossary for ${JSON.stringify({terms, conjugated})}`);
@@ -5727,68 +5812,68 @@ var getGlossaryEntries = function () {
             if (origin) {
               clauses = clauses.where('origin').equals(origin);
             }
-            _context5.next = 52;
+            _context7.next = 52;
             return clauses.toArray();
 
           case 52:
-            matches = _context5.sent;
-            _context5.next = 55;
+            matches = _context7.sent;
+            _context7.next = 55;
             return db.glossary.where('term').anyOf(conjugated).toArray();
 
           case 55:
-            conjugatedMatches = _context5.sent;
+            conjugatedMatches = _context7.sent;
 
             // Exact matches come first, followed by
             out = [].concat(babelHelpers_toConsumableArray(matches), babelHelpers_toConsumableArray(conjugatedMatches));
             //console.log({matches, conjugatedMatches, out});
-            return _context5.abrupt('return', [].concat(babelHelpers_toConsumableArray(matches), babelHelpers_toConsumableArray(conjugatedMatches)));
+            return _context7.abrupt('return', [].concat(babelHelpers_toConsumableArray(matches), babelHelpers_toConsumableArray(conjugatedMatches)));
 
           case 58:
           case 'end':
-            return _context5.stop();
+            return _context7.stop();
         }
       }
-    }, _callee5, this, [[8, 12, 16, 24], [17,, 19, 23], [28, 32, 36, 44], [37,, 39, 43]]);
+    }, _callee7, this, [[8, 12, 16, 24], [17,, 19, 23], [28, 32, 36, 44], [37,, 39, 43]]);
   }));
-  return function getGlossaryEntries(_x7) {
+  return function getGlossaryEntries(_x9) {
     return ref.apply(this, arguments);
   };
 }();
 
 var getAllGlossaryEntries = function () {
-  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee6(_ref2) {
-    var origin = _ref2.origin;
+  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee8(_ref4) {
+    var origin = _ref4.origin;
     var result;
-    return regeneratorRuntime.wrap(function _callee6$(_context6) {
+    return regeneratorRuntime.wrap(function _callee8$(_context8) {
       while (1) {
-        switch (_context6.prev = _context6.next) {
+        switch (_context8.prev = _context8.next) {
           case 0:
-            _context6.next = 2;
+            _context8.next = 2;
             return db.glossary.where('origin').equals(origin).toArray();
 
           case 2:
-            result = _context6.sent;
-            return _context6.abrupt('return', result);
+            result = _context8.sent;
+            return _context8.abrupt('return', result);
 
           case 4:
           case 'end':
-            return _context6.stop();
+            return _context8.stop();
         }
       }
-    }, _callee6, this);
+    }, _callee8, this);
   }));
-  return function getAllGlossaryEntries(_x8) {
+  return function getAllGlossaryEntries(_x10) {
     return ref.apply(this, arguments);
   };
 }();
 
 var populateDatabase = function () {
-  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee7(db, data) {
-    var offset, chunkSize, chunks, _iteratorNormalCompletion4, _didIteratorError4, _iteratorError4, _iterator4, _step4, terms, termsFolded, _iteratorNormalCompletion5, _didIteratorError5, _iteratorError5, _iterator5, _step5, term, folded;
+  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee9(db, data) {
+    var offset, chunkSize, chunks, _iteratorNormalCompletion5, _didIteratorError5, _iteratorError5, _iterator5, _step5, terms, termsFolded, _iteratorNormalCompletion6, _didIteratorError6, _iteratorError6, _iterator6, _step6, term, folded;
 
-    return regeneratorRuntime.wrap(function _callee7$(_context7) {
+    return regeneratorRuntime.wrap(function _callee9$(_context9) {
       while (1) {
-        switch (_context7.prev = _context7.next) {
+        switch (_context9.prev = _context9.next) {
           case 0:
             offset = 0, chunkSize = Math.floor(1 + data.length / 100), chunks = [];
 
@@ -5797,22 +5882,22 @@ var populateDatabase = function () {
               offset += chunkSize;
             }
 
-            _iteratorNormalCompletion4 = true;
-            _didIteratorError4 = false;
-            _iteratorError4 = undefined;
-            _context7.prev = 5;
-            _iterator4 = chunks[Symbol.iterator]();
+            _iteratorNormalCompletion5 = true;
+            _didIteratorError5 = false;
+            _iteratorError5 = undefined;
+            _context9.prev = 5;
+            _iterator5 = chunks[Symbol.iterator]();
 
           case 7:
-            if (_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done) {
-              _context7.next = 15;
+            if (_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done) {
+              _context9.next = 15;
               break;
             }
 
-            chunk = _step4.value;
+            chunk = _step5.value;
 
             self.postMessage({ 'progress': 'initializing: ' + chunk[0].term + '…' });
-            _context7.next = 12;
+            _context9.next = 12;
             return db.transaction('rw', db.entries, function () {
               chunk.forEach(function (entry) {
                 db.entries.put(entry);
@@ -5820,56 +5905,56 @@ var populateDatabase = function () {
             });
 
           case 12:
-            _iteratorNormalCompletion4 = true;
-            _context7.next = 7;
+            _iteratorNormalCompletion5 = true;
+            _context9.next = 7;
             break;
 
           case 15:
-            _context7.next = 21;
+            _context9.next = 21;
             break;
 
           case 17:
-            _context7.prev = 17;
-            _context7.t0 = _context7['catch'](5);
-            _didIteratorError4 = true;
-            _iteratorError4 = _context7.t0;
+            _context9.prev = 17;
+            _context9.t0 = _context9['catch'](5);
+            _didIteratorError5 = true;
+            _iteratorError5 = _context9.t0;
 
           case 21:
-            _context7.prev = 21;
-            _context7.prev = 22;
+            _context9.prev = 21;
+            _context9.prev = 22;
 
-            if (!_iteratorNormalCompletion4 && _iterator4.return) {
-              _iterator4.return();
+            if (!_iteratorNormalCompletion5 && _iterator5.return) {
+              _iterator5.return();
             }
 
           case 24:
-            _context7.prev = 24;
+            _context9.prev = 24;
 
-            if (!_didIteratorError4) {
-              _context7.next = 27;
+            if (!_didIteratorError5) {
+              _context9.next = 27;
               break;
             }
 
-            throw _iteratorError4;
+            throw _iteratorError5;
 
           case 27:
-            return _context7.finish(24);
+            return _context9.finish(24);
 
           case 28:
-            return _context7.finish(21);
+            return _context9.finish(21);
 
           case 29:
             terms = new Set(data.map(function (entry) {
               return entry.term;
             }));
             termsFolded = new Map();
-            _iteratorNormalCompletion5 = true;
-            _didIteratorError5 = false;
-            _iteratorError5 = undefined;
-            _context7.prev = 34;
+            _iteratorNormalCompletion6 = true;
+            _didIteratorError6 = false;
+            _iteratorError6 = undefined;
+            _context9.prev = 34;
 
-            for (_iterator5 = terms[Symbol.iterator](); !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-              term = _step5.value;
+            for (_iterator6 = terms[Symbol.iterator](); !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+              term = _step6.value;
               folded = asciify(term);
 
               if (termsFolded.has(folded)) {
@@ -5878,41 +5963,41 @@ var populateDatabase = function () {
                 termsFolded.set(folded, [term]);
               }
             }
-            _context7.next = 42;
+            _context9.next = 42;
             break;
 
           case 38:
-            _context7.prev = 38;
-            _context7.t1 = _context7['catch'](34);
-            _didIteratorError5 = true;
-            _iteratorError5 = _context7.t1;
+            _context9.prev = 38;
+            _context9.t1 = _context9['catch'](34);
+            _didIteratorError6 = true;
+            _iteratorError6 = _context9.t1;
 
           case 42:
-            _context7.prev = 42;
-            _context7.prev = 43;
+            _context9.prev = 42;
+            _context9.prev = 43;
 
-            if (!_iteratorNormalCompletion5 && _iterator5.return) {
-              _iterator5.return();
+            if (!_iteratorNormalCompletion6 && _iterator6.return) {
+              _iterator6.return();
             }
 
           case 45:
-            _context7.prev = 45;
+            _context9.prev = 45;
 
-            if (!_didIteratorError5) {
-              _context7.next = 48;
+            if (!_didIteratorError6) {
+              _context9.next = 48;
               break;
             }
 
-            throw _iteratorError5;
+            throw _iteratorError6;
 
           case 48:
-            return _context7.finish(45);
+            return _context9.finish(45);
 
           case 49:
-            return _context7.finish(42);
+            return _context9.finish(42);
 
           case 50:
-            _context7.next = 52;
+            _context9.next = 52;
             return db.transaction('rw', db.meta, function () {
               db.meta.put({ key: 'terms', value: terms });
               db.meta.put({ key: 'termsFolded', value: termsFolded });
@@ -5921,12 +6006,12 @@ var populateDatabase = function () {
 
           case 52:
           case 'end':
-            return _context7.stop();
+            return _context9.stop();
         }
       }
-    }, _callee7, this, [[5, 17, 21, 29], [22,, 24, 28], [34, 38, 42, 50], [43,, 45, 49]]);
+    }, _callee9, this, [[5, 17, 21, 29], [22,, 24, 28], [34, 38, 42, 50], [43,, 45, 49]]);
   }));
-  return function populateDatabase(_x9, _x10) {
+  return function populateDatabase(_x11, _x12) {
     return ref.apply(this, arguments);
   };
 }();
@@ -5934,34 +6019,34 @@ var populateDatabase = function () {
 var _cache = {};
 
 var getTerms = function () {
-  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee8() {
+  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee10() {
     var req;
-    return regeneratorRuntime.wrap(function _callee8$(_context8) {
+    return regeneratorRuntime.wrap(function _callee10$(_context10) {
       while (1) {
-        switch (_context8.prev = _context8.next) {
+        switch (_context10.prev = _context10.next) {
           case 0:
             if (!(_cache._terms === undefined)) {
-              _context8.next = 5;
+              _context10.next = 5;
               break;
             }
 
-            _context8.next = 3;
+            _context10.next = 3;
             return db.meta.get('terms');
 
           case 3:
-            req = _context8.sent;
+            req = _context10.sent;
 
             _cache._terms = req.value;
 
           case 5:
-            return _context8.abrupt('return', _cache._terms);
+            return _context10.abrupt('return', _cache._terms);
 
           case 6:
           case 'end':
-            return _context8.stop();
+            return _context10.stop();
         }
       }
-    }, _callee8, this);
+    }, _callee10, this);
   }));
   return function getTerms() {
     return ref.apply(this, arguments);
@@ -5969,91 +6054,28 @@ var getTerms = function () {
 }();
 
 var getTermsFolded = function () {
-  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee9() {
+  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee11() {
     var _req;
 
-    return regeneratorRuntime.wrap(function _callee9$(_context9) {
-      while (1) {
-        switch (_context9.prev = _context9.next) {
-          case 0:
-            if (!(_cache._foldedTerms === undefined)) {
-              _context9.next = 5;
-              break;
-            }
-
-            _context9.next = 3;
-            return db.meta.get('termsFolded');
-
-          case 3:
-            _req = _context9.sent;
-
-            _cache._foldedTerms = _req.value;
-
-          case 5:
-            return _context9.abrupt('return', _cache._foldedTerms);
-
-          case 6:
-          case 'end':
-            return _context9.stop();
-        }
-      }
-    }, _callee9, this);
-  }));
-  return function getTermsFolded() {
-    return ref.apply(this, arguments);
-  };
-}();
-
-var getTermBodies = function () {
-  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee10(terms) {
-    var results;
-    return regeneratorRuntime.wrap(function _callee10$(_context10) {
-      while (1) {
-        switch (_context10.prev = _context10.next) {
-          case 0:
-            terms = [].concat(babelHelpers_toConsumableArray(terms));
-            _context10.next = 3;
-            return db.entries.where('term').anyOf(terms).toArray();
-
-          case 3:
-            results = _context10.sent;
-            return _context10.abrupt('return', results);
-
-          case 5:
-          case 'end':
-            return _context10.stop();
-        }
-      }
-    }, _callee10, this);
-  }));
-  return function getTermBodies(_x11) {
-    return ref.apply(this, arguments);
-  };
-}();
-
-var getEntry = function () {
-  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee11(_ref3) {
-    var term = _ref3.term;
-    var results;
     return regeneratorRuntime.wrap(function _callee11$(_context11) {
       while (1) {
         switch (_context11.prev = _context11.next) {
           case 0:
-            _context11.next = 2;
-            return getTermBodies([term]);
-
-          case 2:
-            results = _context11.sent;
-
-            if (!results.length) {
+            if (!(_cache._foldedTerms === undefined)) {
               _context11.next = 5;
               break;
             }
 
-            return _context11.abrupt('return', results[0]);
+            _context11.next = 3;
+            return db.meta.get('termsFolded');
+
+          case 3:
+            _req = _context11.sent;
+
+            _cache._foldedTerms = _req.value;
 
           case 5:
-            return _context11.abrupt('return', null);
+            return _context11.abrupt('return', _cache._foldedTerms);
 
           case 6:
           case 'end':
@@ -6062,78 +6084,141 @@ var getEntry = function () {
       }
     }, _callee11, this);
   }));
-  return function getEntry(_x12) {
+  return function getTermsFolded() {
+    return ref.apply(this, arguments);
+  };
+}();
+
+var getTermBodies = function () {
+  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee12(terms) {
+    var results;
+    return regeneratorRuntime.wrap(function _callee12$(_context12) {
+      while (1) {
+        switch (_context12.prev = _context12.next) {
+          case 0:
+            terms = [].concat(babelHelpers_toConsumableArray(terms));
+            _context12.next = 3;
+            return db.entries.where('term').anyOf(terms).toArray();
+
+          case 3:
+            results = _context12.sent;
+            return _context12.abrupt('return', results);
+
+          case 5:
+          case 'end':
+            return _context12.stop();
+        }
+      }
+    }, _callee12, this);
+  }));
+  return function getTermBodies(_x13) {
+    return ref.apply(this, arguments);
+  };
+}();
+
+var getEntry = function () {
+  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee13(_ref5) {
+    var term = _ref5.term;
+    var results;
+    return regeneratorRuntime.wrap(function _callee13$(_context13) {
+      while (1) {
+        switch (_context13.prev = _context13.next) {
+          case 0:
+            _context13.next = 2;
+            return getTermBodies([term]);
+
+          case 2:
+            results = _context13.sent;
+
+            if (!results.length) {
+              _context13.next = 5;
+              break;
+            }
+
+            return _context13.abrupt('return', results[0]);
+
+          case 5:
+            return _context13.abrupt('return', null);
+
+          case 6:
+          case 'end':
+            return _context13.stop();
+        }
+      }
+    }, _callee13, this);
+  }));
+  return function getEntry(_x14) {
     return ref.apply(this, arguments);
   };
 }();
 
 var getAndRankMatches = function () {
-  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee12(_ref4) {
-    var term = _ref4.term;
-    var terms = _ref4.terms;
-    var priorityTerms = _ref4.priorityTerms;
-    var indeclinables = _ref4.indeclinables;
-    var conjugated = _ref4.conjugated;
-    var excludeFuzzy = _ref4.excludeFuzzy;
+  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee14(_ref6) {
+    var term = _ref6.term;
+    var terms = _ref6.terms;
+    var priorityTerms = _ref6.priorityTerms;
+    var indeclinables = _ref6.indeclinables;
+    var conjugated = _ref6.conjugated;
+    var excludeFuzzy = _ref6.excludeFuzzy;
 
-    var _iteratorNormalCompletion6, _didIteratorError6, _iteratorError6, _iterator6, _step6, _term3, _result2, matchingTerms, matchingTermsIndeclinable, matchingTermsFolded, matchingTermsConjugated, matchingTermsConjugatedFolded, matchingTermsFuzzy, allMatchingTerms, scores, _iteratorNormalCompletion7, _didIteratorError7, _iteratorError7, _iterator7, _step7, score, priorityTermsIndex, fuzzyDistance, _iteratorNormalCompletion9, _didIteratorError9, _iteratorError9, _iterator9, _step9, results, _iteratorNormalCompletion8, _didIteratorError8, _iteratorError8, _iterator8, _step8;
+    var _iteratorNormalCompletion7, _didIteratorError7, _iteratorError7, _iterator7, _step7, _term3, _result2, matchingTerms, matchingTermsIndeclinable, matchingTermsFolded, matchingTermsConjugated, matchingTermsConjugatedFolded, matchingTermsFuzzy, allMatchingTerms, scores, _iteratorNormalCompletion8, _didIteratorError8, _iteratorError8, _iterator8, _step8, score, priorityTermsIndex, fuzzyDistance, _iteratorNormalCompletion10, _didIteratorError10, _iteratorError10, _iterator10, _step10, results, _iteratorNormalCompletion9, _didIteratorError9, _iteratorError9, _iterator9, _step9;
 
-    return regeneratorRuntime.wrap(function _callee12$(_context12) {
+    return regeneratorRuntime.wrap(function _callee14$(_context14) {
       while (1) {
-        switch (_context12.prev = _context12.next) {
+        switch (_context14.prev = _context14.next) {
           case 0:
             if (!terms && term) {
               terms = [term];
             }
 
             if (!(!conjugated && settings.fromLang == 'pi')) {
-              _context12.next = 23;
+              _context14.next = 23;
               break;
             }
 
             conjugated = [];
-            _iteratorNormalCompletion6 = true;
-            _didIteratorError6 = false;
-            _iteratorError6 = undefined;
-            _context12.prev = 6;
-            for (_iterator6 = terms[Symbol.iterator](); !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-              _term3 = _step6.value;
+            _iteratorNormalCompletion7 = true;
+            _didIteratorError7 = false;
+            _iteratorError7 = undefined;
+            _context14.prev = 6;
+            for (_iterator7 = terms[Symbol.iterator](); !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+              _term3 = _step7.value;
               _result2 = pi.conjugate(_term3);
 
               conjugated = conjugated.concat(_result2);
             }
-            _context12.next = 14;
+            _context14.next = 14;
             break;
 
           case 10:
-            _context12.prev = 10;
-            _context12.t0 = _context12['catch'](6);
-            _didIteratorError6 = true;
-            _iteratorError6 = _context12.t0;
+            _context14.prev = 10;
+            _context14.t0 = _context14['catch'](6);
+            _didIteratorError7 = true;
+            _iteratorError7 = _context14.t0;
 
           case 14:
-            _context12.prev = 14;
-            _context12.prev = 15;
+            _context14.prev = 14;
+            _context14.prev = 15;
 
-            if (!_iteratorNormalCompletion6 && _iterator6.return) {
-              _iterator6.return();
+            if (!_iteratorNormalCompletion7 && _iterator7.return) {
+              _iterator7.return();
             }
 
           case 17:
-            _context12.prev = 17;
+            _context14.prev = 17;
 
-            if (!_didIteratorError6) {
-              _context12.next = 20;
+            if (!_didIteratorError7) {
+              _context14.next = 20;
               break;
             }
 
-            throw _iteratorError6;
+            throw _iteratorError7;
 
           case 20:
-            return _context12.finish(17);
+            return _context14.finish(17);
 
           case 21:
-            return _context12.finish(14);
+            return _context14.finish(14);
 
           case 22:
             conjugated = [].concat(babelHelpers_toConsumableArray(new Set(conjugated)));
@@ -6148,71 +6233,71 @@ var getAndRankMatches = function () {
               priorityTerms = [];
             }
 
-            _context12.next = 27;
+            _context14.next = 27;
             return getMatchingTerms(terms);
 
           case 27:
-            matchingTerms = _context12.sent;
+            matchingTerms = _context14.sent;
             matchingTermsIndeclinable = new Set();
 
             if (!indeclinables) {
-              _context12.next = 33;
+              _context14.next = 33;
               break;
             }
 
-            _context12.next = 32;
+            _context14.next = 32;
             return getMatchingTerms(indeclinables);
 
           case 32:
-            matchingTermsIndeclinable = _context12.sent;
+            matchingTermsIndeclinable = _context14.sent;
 
           case 33:
-            _context12.next = 35;
+            _context14.next = 35;
             return getMatchingTermsFolded(terms);
 
           case 35:
-            matchingTermsFolded = _context12.sent;
-            _context12.next = 38;
+            matchingTermsFolded = _context14.sent;
+            _context14.next = 38;
             return getMatchingTerms(conjugated);
 
           case 38:
-            matchingTermsConjugated = _context12.sent;
-            _context12.next = 41;
+            matchingTermsConjugated = _context14.sent;
+            _context14.next = 41;
             return getMatchingTermsFolded(conjugated);
 
           case 41:
-            matchingTermsConjugatedFolded = _context12.sent;
+            matchingTermsConjugatedFolded = _context14.sent;
             matchingTermsFuzzy = new Set();
 
             if (excludeFuzzy) {
-              _context12.next = 47;
+              _context14.next = 47;
               break;
             }
 
-            _context12.next = 46;
+            _context14.next = 46;
             return getMatchingTermsFuzzy(terms);
 
           case 46:
-            machingTermsFuzzy = _context12.sent;
+            machingTermsFuzzy = _context14.sent;
 
           case 47:
 
             console.log({ matchingTerms: matchingTerms, matchingTermsIndeclinable: matchingTermsIndeclinable, matchingTermsFolded: matchingTermsFolded, matchingTermsConjugated: matchingTermsConjugated, matchingTermsConjugatedFolded: matchingTermsConjugatedFolded, matchingTermsFuzzy: matchingTermsFuzzy });
             allMatchingTerms = new Set([].concat(babelHelpers_toConsumableArray(priorityTerms), babelHelpers_toConsumableArray(matchingTerms), babelHelpers_toConsumableArray(matchingTermsIndeclinable), babelHelpers_toConsumableArray(matchingTermsFolded), babelHelpers_toConsumableArray(matchingTermsConjugated), babelHelpers_toConsumableArray(matchingTermsConjugatedFolded), babelHelpers_toConsumableArray(matchingTermsFuzzy)));
             scores = {};
-            _iteratorNormalCompletion7 = true;
-            _didIteratorError7 = false;
-            _iteratorError7 = undefined;
-            _context12.prev = 53;
-            _iterator7 = allMatchingTerms[Symbol.iterator]();
+            _iteratorNormalCompletion8 = true;
+            _didIteratorError8 = false;
+            _iteratorError8 = undefined;
+            _context14.prev = 53;
+            _iterator8 = allMatchingTerms[Symbol.iterator]();
 
           case 55:
-            if (_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done) {
-              _context12.next = 90;
+            if (_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done) {
+              _context14.next = 90;
               break;
             }
 
-            term = _step7.value;
+            term = _step8.value;
             score = 0;
             priorityTermsIndex = priorityTerms.indexOf(term);
 
@@ -6236,54 +6321,54 @@ var getAndRankMatches = function () {
             }
 
             if (!matchingTermsFuzzy.has(term)) {
-              _context12.next = 86;
+              _context14.next = 86;
               break;
             }
 
             fuzzyDistance = 0;
-            _iteratorNormalCompletion9 = true;
-            _didIteratorError9 = false;
-            _iteratorError9 = undefined;
-            _context12.prev = 68;
+            _iteratorNormalCompletion10 = true;
+            _didIteratorError10 = false;
+            _iteratorError10 = undefined;
+            _context14.prev = 68;
 
-            for (_iterator9 = terms[Symbol.iterator](); !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
-              originalTerm = _step9.value;
+            for (_iterator10 = terms[Symbol.iterator](); !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+              originalTerm = _step10.value;
 
               fuzzyDistance += Levenshtein.get(term, originalTerm);
               fuzzyDistance += Levenshtein.get(asciify(term), asciify(originalTerm));
             }
-            _context12.next = 76;
+            _context14.next = 76;
             break;
 
           case 72:
-            _context12.prev = 72;
-            _context12.t1 = _context12['catch'](68);
-            _didIteratorError9 = true;
-            _iteratorError9 = _context12.t1;
+            _context14.prev = 72;
+            _context14.t1 = _context14['catch'](68);
+            _didIteratorError10 = true;
+            _iteratorError10 = _context14.t1;
 
           case 76:
-            _context12.prev = 76;
-            _context12.prev = 77;
+            _context14.prev = 76;
+            _context14.prev = 77;
 
-            if (!_iteratorNormalCompletion9 && _iterator9.return) {
-              _iterator9.return();
+            if (!_iteratorNormalCompletion10 && _iterator10.return) {
+              _iterator10.return();
             }
 
           case 79:
-            _context12.prev = 79;
+            _context14.prev = 79;
 
-            if (!_didIteratorError9) {
-              _context12.next = 82;
+            if (!_didIteratorError10) {
+              _context14.next = 82;
               break;
             }
 
-            throw _iteratorError9;
+            throw _iteratorError10;
 
           case 82:
-            return _context12.finish(79);
+            return _context14.finish(79);
 
           case 83:
-            return _context12.finish(76);
+            return _context14.finish(76);
 
           case 84:
             fuzzyDistance /= 0.0 + terms.length;
@@ -6293,66 +6378,66 @@ var getAndRankMatches = function () {
             scores[term] = score;
 
           case 87:
-            _iteratorNormalCompletion7 = true;
-            _context12.next = 55;
+            _iteratorNormalCompletion8 = true;
+            _context14.next = 55;
             break;
 
           case 90:
-            _context12.next = 96;
+            _context14.next = 96;
             break;
 
           case 92:
-            _context12.prev = 92;
-            _context12.t2 = _context12['catch'](53);
-            _didIteratorError7 = true;
-            _iteratorError7 = _context12.t2;
+            _context14.prev = 92;
+            _context14.t2 = _context14['catch'](53);
+            _didIteratorError8 = true;
+            _iteratorError8 = _context14.t2;
 
           case 96:
-            _context12.prev = 96;
-            _context12.prev = 97;
+            _context14.prev = 96;
+            _context14.prev = 97;
 
-            if (!_iteratorNormalCompletion7 && _iterator7.return) {
-              _iterator7.return();
+            if (!_iteratorNormalCompletion8 && _iterator8.return) {
+              _iterator8.return();
             }
 
           case 99:
-            _context12.prev = 99;
+            _context14.prev = 99;
 
-            if (!_didIteratorError7) {
-              _context12.next = 102;
+            if (!_didIteratorError8) {
+              _context14.next = 102;
               break;
             }
 
-            throw _iteratorError7;
+            throw _iteratorError8;
 
           case 102:
-            return _context12.finish(99);
+            return _context14.finish(99);
 
           case 103:
-            return _context12.finish(96);
+            return _context14.finish(96);
 
           case 104:
-            _context12.next = 106;
+            _context14.next = 106;
             return getTermBodies(allMatchingTerms);
 
           case 106:
-            results = _context12.sent;
-            _iteratorNormalCompletion8 = true;
-            _didIteratorError8 = false;
-            _iteratorError8 = undefined;
-            _context12.prev = 110;
-            _iterator8 = results[Symbol.iterator]();
+            results = _context14.sent;
+            _iteratorNormalCompletion9 = true;
+            _didIteratorError9 = false;
+            _iteratorError9 = undefined;
+            _context14.prev = 110;
+            _iterator9 = results[Symbol.iterator]();
 
           case 112:
-            if (_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done) {
-              _context12.next = 121;
+            if (_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done) {
+              _context14.next = 121;
               break;
             }
 
-            result = _step8.value;
+            result = _step9.value;
 
             if (result.term in scores) {
-              _context12.next = 116;
+              _context14.next = 116;
               break;
             }
 
@@ -6363,43 +6448,43 @@ var getAndRankMatches = function () {
             delete scores[result.term];
 
           case 118:
-            _iteratorNormalCompletion8 = true;
-            _context12.next = 112;
+            _iteratorNormalCompletion9 = true;
+            _context14.next = 112;
             break;
 
           case 121:
-            _context12.next = 127;
+            _context14.next = 127;
             break;
 
           case 123:
-            _context12.prev = 123;
-            _context12.t3 = _context12['catch'](110);
-            _didIteratorError8 = true;
-            _iteratorError8 = _context12.t3;
+            _context14.prev = 123;
+            _context14.t3 = _context14['catch'](110);
+            _didIteratorError9 = true;
+            _iteratorError9 = _context14.t3;
 
           case 127:
-            _context12.prev = 127;
-            _context12.prev = 128;
+            _context14.prev = 127;
+            _context14.prev = 128;
 
-            if (!_iteratorNormalCompletion8 && _iterator8.return) {
-              _iterator8.return();
+            if (!_iteratorNormalCompletion9 && _iterator9.return) {
+              _iterator9.return();
             }
 
           case 130:
-            _context12.prev = 130;
+            _context14.prev = 130;
 
-            if (!_didIteratorError8) {
-              _context12.next = 133;
+            if (!_didIteratorError9) {
+              _context14.next = 133;
               break;
             }
 
-            throw _iteratorError8;
+            throw _iteratorError9;
 
           case 133:
-            return _context12.finish(130);
+            return _context14.finish(130);
 
           case 134:
-            return _context12.finish(127);
+            return _context14.finish(127);
 
           case 135:
 
@@ -6410,25 +6495,25 @@ var getAndRankMatches = function () {
             results.sort(function (a, b) {
               return b.score - a.score;
             });
-            return _context12.abrupt('return', results);
+            return _context14.abrupt('return', results);
 
           case 138:
           case 'end':
-            return _context12.stop();
+            return _context14.stop();
         }
       }
-    }, _callee12, this, [[6, 10, 14, 22], [15,, 17, 21], [53, 92, 96, 104], [68, 72, 76, 84], [77,, 79, 83], [97,, 99, 103], [110, 123, 127, 135], [128,, 130, 134]]);
+    }, _callee14, this, [[6, 10, 14, 22], [15,, 17, 21], [53, 92, 96, 104], [68, 72, 76, 84], [77,, 79, 83], [97,, 99, 103], [110, 123, 127, 135], [128,, 130, 134]]);
   }));
-  return function getAndRankMatches(_x13) {
+  return function getAndRankMatches(_x15) {
     return ref.apply(this, arguments);
   };
 }();
 
 function intersection(a, b) {
   if (b.length > a.length) {
-    var _ref5 = [b, a];
-    a = _ref5[0];
-    b = _ref5[1];
+    var _ref7 = [b, a];
+    a = _ref7[0];
+    b = _ref7[1];
   }
   return new Set([].concat(babelHelpers_toConsumableArray(a)).filter(function (value) {
     return b.has(value);
@@ -6436,44 +6521,44 @@ function intersection(a, b) {
 }
 
 var getMatchingTerms = function () {
-  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee13(terms) {
+  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee15(terms) {
     var allTerms;
-    return regeneratorRuntime.wrap(function _callee13$(_context13) {
+    return regeneratorRuntime.wrap(function _callee15$(_context15) {
       while (1) {
-        switch (_context13.prev = _context13.next) {
+        switch (_context15.prev = _context15.next) {
           case 0:
-            _context13.next = 2;
+            _context15.next = 2;
             return getTerms();
 
           case 2:
-            allTerms = _context13.sent;
-            return _context13.abrupt('return', intersection(terms, allTerms));
+            allTerms = _context15.sent;
+            return _context15.abrupt('return', intersection(terms, allTerms));
 
           case 4:
           case 'end':
-            return _context13.stop();
+            return _context15.stop();
         }
       }
-    }, _callee13, this);
+    }, _callee15, this);
   }));
-  return function getMatchingTerms(_x14) {
+  return function getMatchingTerms(_x16) {
     return ref.apply(this, arguments);
   };
 }();
 
 var getMatchingTermsFolded = function () {
-  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee14(terms) {
-    var allFoldedTerms, foldedTerms, result, matches, _iteratorNormalCompletion10, _didIteratorError10, _iteratorError10, _iterator10, _step10;
+  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee16(terms) {
+    var allFoldedTerms, foldedTerms, result, matches, _iteratorNormalCompletion11, _didIteratorError11, _iteratorError11, _iterator11, _step11;
 
-    return regeneratorRuntime.wrap(function _callee14$(_context14) {
+    return regeneratorRuntime.wrap(function _callee16$(_context16) {
       while (1) {
-        switch (_context14.prev = _context14.next) {
+        switch (_context16.prev = _context16.next) {
           case 0:
-            _context14.next = 2;
+            _context16.next = 2;
             return getTermsFolded();
 
           case 2:
-            allFoldedTerms = _context14.sent;
+            allFoldedTerms = _context16.sent;
             foldedTerms = terms.map(asciify);
             result = [];
             matches = intersection(foldedTerms, allFoldedTerms);
@@ -6481,290 +6566,290 @@ var getMatchingTermsFolded = function () {
             // asi = ["āsi", "asi"]
             // Flatten these arrays
 
-            _iteratorNormalCompletion10 = true;
-            _didIteratorError10 = false;
-            _iteratorError10 = undefined;
-            _context14.prev = 9;
-            for (_iterator10 = matches[Symbol.iterator](); !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
-              match = _step10.value;
+            _iteratorNormalCompletion11 = true;
+            _didIteratorError11 = false;
+            _iteratorError11 = undefined;
+            _context16.prev = 9;
+            for (_iterator11 = matches[Symbol.iterator](); !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
+              match = _step11.value;
 
               result.push.apply(result, babelHelpers_toConsumableArray(allFoldedTerms.get(match)));
             }
-            _context14.next = 17;
+            _context16.next = 17;
             break;
 
           case 13:
-            _context14.prev = 13;
-            _context14.t0 = _context14['catch'](9);
-            _didIteratorError10 = true;
-            _iteratorError10 = _context14.t0;
+            _context16.prev = 13;
+            _context16.t0 = _context16['catch'](9);
+            _didIteratorError11 = true;
+            _iteratorError11 = _context16.t0;
 
           case 17:
-            _context14.prev = 17;
-            _context14.prev = 18;
+            _context16.prev = 17;
+            _context16.prev = 18;
 
-            if (!_iteratorNormalCompletion10 && _iterator10.return) {
-              _iterator10.return();
+            if (!_iteratorNormalCompletion11 && _iterator11.return) {
+              _iterator11.return();
             }
 
           case 20:
-            _context14.prev = 20;
+            _context16.prev = 20;
 
-            if (!_didIteratorError10) {
-              _context14.next = 23;
+            if (!_didIteratorError11) {
+              _context16.next = 23;
               break;
             }
 
-            throw _iteratorError10;
+            throw _iteratorError11;
 
           case 23:
-            return _context14.finish(20);
+            return _context16.finish(20);
 
           case 24:
-            return _context14.finish(17);
+            return _context16.finish(17);
 
           case 25:
-            return _context14.abrupt('return', new Set(result));
+            return _context16.abrupt('return', new Set(result));
 
           case 26:
           case 'end':
-            return _context14.stop();
+            return _context16.stop();
         }
       }
-    }, _callee14, this, [[9, 13, 17, 25], [18,, 20, 24]]);
+    }, _callee16, this, [[9, 13, 17, 25], [18,, 20, 24]]);
   }));
-  return function getMatchingTermsFolded(_x15) {
+  return function getMatchingTermsFolded(_x17) {
     return ref.apply(this, arguments);
   };
 }();
 
 var getMatchingTermsFuzzy = function () {
-  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee15(terms) {
-    var results, foldedTerms, _iteratorNormalCompletion11, _didIteratorError11, _iteratorError11, _iterator11, _step11, term, foldedTerm, prefixLength, maxEditDistance, rex, thisTermSuffix, _iteratorNormalCompletion12, _didIteratorError12, _iteratorError12, _iterator12, _step12, _step12$value, otherTerm, originalTerms, otherTermSuffix, editDistance, _iteratorNormalCompletion13, _didIteratorError13, _iteratorError13, _iterator13, _step13, _originalTerm;
+  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee17(terms) {
+    var results, foldedTerms, _iteratorNormalCompletion12, _didIteratorError12, _iteratorError12, _iterator12, _step12, term, foldedTerm, prefixLength, maxEditDistance, rex, thisTermSuffix, _iteratorNormalCompletion13, _didIteratorError13, _iteratorError13, _iterator13, _step13, _step13$value, otherTerm, originalTerms, otherTermSuffix, editDistance, _iteratorNormalCompletion14, _didIteratorError14, _iteratorError14, _iterator14, _step14, _originalTerm;
 
-    return regeneratorRuntime.wrap(function _callee15$(_context15) {
+    return regeneratorRuntime.wrap(function _callee17$(_context17) {
       while (1) {
-        switch (_context15.prev = _context15.next) {
+        switch (_context17.prev = _context17.next) {
           case 0:
             results = new Set();
-            _context15.next = 3;
+            _context17.next = 3;
             return getTermsFolded();
 
           case 3:
-            foldedTerms = _context15.sent;
-            _iteratorNormalCompletion11 = true;
-            _didIteratorError11 = false;
-            _iteratorError11 = undefined;
-            _context15.prev = 7;
-            _iterator11 = terms[Symbol.iterator]();
+            foldedTerms = _context17.sent;
+            _iteratorNormalCompletion12 = true;
+            _didIteratorError12 = false;
+            _iteratorError12 = undefined;
+            _context17.prev = 7;
+            _iterator12 = terms[Symbol.iterator]();
 
           case 9:
-            if (_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done) {
-              _context15.next = 72;
+            if (_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done) {
+              _context17.next = 72;
               break;
             }
 
-            term = _step11.value;
+            term = _step12.value;
             foldedTerm = asciify(term);
             prefixLength = 2 + Math.floor(term.length / 5);
             maxEditDistance = term.length < 5 ? 0 : term.length < 10 ? 1 : 2;
 
             if (!(maxEditDistance == 0)) {
-              _context15.next = 16;
+              _context17.next = 16;
               break;
             }
 
-            return _context15.abrupt('continue', 69);
+            return _context17.abrupt('continue', 69);
 
           case 16:
             rex = RegExp('^' + foldedTerm.slice(0, prefixLength));
             thisTermSuffix = foldedTerm.slice(prefixLength);
-            _iteratorNormalCompletion12 = true;
-            _didIteratorError12 = false;
-            _iteratorError12 = undefined;
-            _context15.prev = 21;
-            _iterator12 = foldedTerms.entries()[Symbol.iterator]();
+            _iteratorNormalCompletion13 = true;
+            _didIteratorError13 = false;
+            _iteratorError13 = undefined;
+            _context17.prev = 21;
+            _iterator13 = foldedTerms.entries()[Symbol.iterator]();
 
           case 23:
-            if (_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done) {
-              _context15.next = 55;
+            if (_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done) {
+              _context17.next = 55;
               break;
             }
 
-            _step12$value = babelHelpers_slicedToArray(_step12.value, 2);
-            otherTerm = _step12$value[0];
-            originalTerms = _step12$value[1];
+            _step13$value = babelHelpers_slicedToArray(_step13.value, 2);
+            otherTerm = _step13$value[0];
+            originalTerms = _step13$value[1];
 
             if (!rex.test(otherTerm)) {
-              _context15.next = 52;
+              _context17.next = 52;
               break;
             }
 
             otherTermSuffix = otherTerm.slice(prefixLength);
 
             if (!(Math.abs(thisTermSuffix.length - otherTermSuffix.length) > maxEditDistance)) {
-              _context15.next = 31;
+              _context17.next = 31;
               break;
             }
 
-            return _context15.abrupt('continue', 52);
+            return _context17.abrupt('continue', 52);
 
           case 31:
             editDistance = Levenshtein.get(thisTermSuffix, otherTermSuffix);
 
             if (!(editDistance <= maxEditDistance)) {
-              _context15.next = 52;
+              _context17.next = 52;
               break;
             }
 
-            _iteratorNormalCompletion13 = true;
-            _didIteratorError13 = false;
-            _iteratorError13 = undefined;
-            _context15.prev = 36;
+            _iteratorNormalCompletion14 = true;
+            _didIteratorError14 = false;
+            _iteratorError14 = undefined;
+            _context17.prev = 36;
 
-            for (_iterator13 = originalTerms[Symbol.iterator](); !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
-              _originalTerm = _step13.value;
+            for (_iterator14 = originalTerms[Symbol.iterator](); !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
+              _originalTerm = _step14.value;
 
               results.add(_originalTerm);
             }
-            _context15.next = 44;
+            _context17.next = 44;
             break;
 
           case 40:
-            _context15.prev = 40;
-            _context15.t0 = _context15['catch'](36);
-            _didIteratorError13 = true;
-            _iteratorError13 = _context15.t0;
+            _context17.prev = 40;
+            _context17.t0 = _context17['catch'](36);
+            _didIteratorError14 = true;
+            _iteratorError14 = _context17.t0;
 
           case 44:
-            _context15.prev = 44;
-            _context15.prev = 45;
+            _context17.prev = 44;
+            _context17.prev = 45;
+
+            if (!_iteratorNormalCompletion14 && _iterator14.return) {
+              _iterator14.return();
+            }
+
+          case 47:
+            _context17.prev = 47;
+
+            if (!_didIteratorError14) {
+              _context17.next = 50;
+              break;
+            }
+
+            throw _iteratorError14;
+
+          case 50:
+            return _context17.finish(47);
+
+          case 51:
+            return _context17.finish(44);
+
+          case 52:
+            _iteratorNormalCompletion13 = true;
+            _context17.next = 23;
+            break;
+
+          case 55:
+            _context17.next = 61;
+            break;
+
+          case 57:
+            _context17.prev = 57;
+            _context17.t1 = _context17['catch'](21);
+            _didIteratorError13 = true;
+            _iteratorError13 = _context17.t1;
+
+          case 61:
+            _context17.prev = 61;
+            _context17.prev = 62;
 
             if (!_iteratorNormalCompletion13 && _iterator13.return) {
               _iterator13.return();
             }
 
-          case 47:
-            _context15.prev = 47;
+          case 64:
+            _context17.prev = 64;
 
             if (!_didIteratorError13) {
-              _context15.next = 50;
+              _context17.next = 67;
               break;
             }
 
             throw _iteratorError13;
 
-          case 50:
-            return _context15.finish(47);
+          case 67:
+            return _context17.finish(64);
 
-          case 51:
-            return _context15.finish(44);
+          case 68:
+            return _context17.finish(61);
 
-          case 52:
+          case 69:
             _iteratorNormalCompletion12 = true;
-            _context15.next = 23;
+            _context17.next = 9;
             break;
 
-          case 55:
-            _context15.next = 61;
+          case 72:
+            _context17.next = 78;
             break;
 
-          case 57:
-            _context15.prev = 57;
-            _context15.t1 = _context15['catch'](21);
+          case 74:
+            _context17.prev = 74;
+            _context17.t2 = _context17['catch'](7);
             _didIteratorError12 = true;
-            _iteratorError12 = _context15.t1;
+            _iteratorError12 = _context17.t2;
 
-          case 61:
-            _context15.prev = 61;
-            _context15.prev = 62;
+          case 78:
+            _context17.prev = 78;
+            _context17.prev = 79;
 
             if (!_iteratorNormalCompletion12 && _iterator12.return) {
               _iterator12.return();
             }
 
-          case 64:
-            _context15.prev = 64;
+          case 81:
+            _context17.prev = 81;
 
             if (!_didIteratorError12) {
-              _context15.next = 67;
+              _context17.next = 84;
               break;
             }
 
             throw _iteratorError12;
 
-          case 67:
-            return _context15.finish(64);
-
-          case 68:
-            return _context15.finish(61);
-
-          case 69:
-            _iteratorNormalCompletion11 = true;
-            _context15.next = 9;
-            break;
-
-          case 72:
-            _context15.next = 78;
-            break;
-
-          case 74:
-            _context15.prev = 74;
-            _context15.t2 = _context15['catch'](7);
-            _didIteratorError11 = true;
-            _iteratorError11 = _context15.t2;
-
-          case 78:
-            _context15.prev = 78;
-            _context15.prev = 79;
-
-            if (!_iteratorNormalCompletion11 && _iterator11.return) {
-              _iterator11.return();
-            }
-
-          case 81:
-            _context15.prev = 81;
-
-            if (!_didIteratorError11) {
-              _context15.next = 84;
-              break;
-            }
-
-            throw _iteratorError11;
-
           case 84:
-            return _context15.finish(81);
+            return _context17.finish(81);
 
           case 85:
-            return _context15.finish(78);
+            return _context17.finish(78);
 
           case 86:
-            return _context15.abrupt('return', results);
+            return _context17.abrupt('return', results);
 
           case 87:
           case 'end':
-            return _context15.stop();
+            return _context17.stop();
         }
       }
-    }, _callee15, this, [[7, 74, 78, 86], [21, 57, 61, 69], [36, 40, 44, 52], [45,, 47, 51], [62,, 64, 68], [79,, 81, 85]]);
+    }, _callee17, this, [[7, 74, 78, 86], [21, 57, 61, 69], [36, 40, 44, 52], [45,, 47, 51], [62,, 64, 68], [79,, 81, 85]]);
   }));
-  return function getMatchingTermsFuzzy(_x16) {
+  return function getMatchingTermsFuzzy(_x18) {
     return ref.apply(this, arguments);
   };
 }();
 
 var messageHandler = function () {
-  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee16(message) {
+  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee18(message) {
     var msgstr, _message$init, fromLang, toLang, dataFile, glossaryFile, dbname, result;
 
-    return regeneratorRuntime.wrap(function _callee16$(_context16) {
+    return regeneratorRuntime.wrap(function _callee18$(_context18) {
       while (1) {
-        switch (_context16.prev = _context16.next) {
+        switch (_context18.prev = _context18.next) {
           case 0:
             msgstr = JSON.stringify(message);
 
             if (!(typeof message == "string")) {
-              _context16.next = 3;
+              _context18.next = 3;
               break;
             }
 
@@ -6772,7 +6857,7 @@ var messageHandler = function () {
 
           case 3:
             if (!(Object.keys(message).length > 1)) {
-              _context16.next = 5;
+              _context18.next = 5;
               break;
             }
 
@@ -6780,7 +6865,7 @@ var messageHandler = function () {
 
           case 5:
             if (!('init' in message)) {
-              _context16.next = 16;
+              _context18.next = 16;
               break;
             }
 
@@ -6792,129 +6877,157 @@ var messageHandler = function () {
             dbname = _message$init.dbname;
 
             Object.assign(settings, { fromLang: fromLang, toLang: toLang, dbname: dbname, dataFile: dataFile });
-            _context16.next = 15;
+            _context18.next = 15;
             return initDexie(dbname, dataFile, glossaryFile);
 
           case 15:
-            return _context16.abrupt('return', { status: 'success' });
+            return _context18.abrupt('return', { status: 'success' });
 
           case 16:
             result = null;
 
             if (!('store' in message)) {
-              _context16.next = 23;
+              _context18.next = 23;
               break;
             }
 
-            _context16.next = 20;
+            _context18.next = 20;
             return db.user.put(message.store);
 
           case 20:
             result = { status: 'success' };
-            _context16.next = 60;
+            _context18.next = 72;
             break;
 
           case 23:
             if (!('retrieve' in message)) {
-              _context16.next = 29;
+              _context18.next = 29;
               break;
             }
 
-            _context16.next = 26;
+            _context18.next = 26;
             return db.user.get(message.retrieve.key);
 
           case 26:
-            result = _context16.sent;
-            _context16.next = 60;
+            result = _context18.sent;
+            _context18.next = 72;
             break;
 
           case 29:
             if (!('rank' in message)) {
-              _context16.next = 35;
+              _context18.next = 35;
               break;
             }
 
-            _context16.next = 32;
+            _context18.next = 32;
             return getAndRankMatches(message.rank);
 
           case 32:
-            result = _context16.sent;
-            _context16.next = 60;
+            result = _context18.sent;
+            _context18.next = 72;
             break;
 
           case 35:
             if (!('getEntry' in message)) {
-              _context16.next = 41;
+              _context18.next = 41;
               break;
             }
 
-            _context16.next = 38;
+            _context18.next = 38;
             return getEntry(message.getEntry);
 
           case 38:
-            result = _context16.sent;
-            _context16.next = 60;
+            result = _context18.sent;
+            _context18.next = 72;
             break;
 
           case 41:
-            if (!('addGlossaryEntry' in message)) {
-              _context16.next = 47;
+            if (!('getGlossaryEntries' in message)) {
+              _context18.next = 47;
               break;
             }
 
-            _context16.next = 44;
-            return addGlossaryEntry(message.addGlossaryEntry);
+            _context18.next = 44;
+            return getGlossaryEntries(message.getGlossaryEntries);
 
           case 44:
-            result = _context16.sent;
-            _context16.next = 60;
+            result = _context18.sent;
+            _context18.next = 72;
             break;
 
           case 47:
-            if (!('getGlossaryEntries' in message)) {
-              _context16.next = 53;
+            if (!('getAllGlossaryEntries' in message)) {
+              _context18.next = 53;
               break;
             }
 
-            _context16.next = 50;
-            return getGlossaryEntries(message.getGlossaryEntries);
+            _context18.next = 50;
+            return getAllGlossaryEntries(message.getAllGlossaryEntries);
 
           case 50:
-            result = _context16.sent;
-            _context16.next = 60;
+            result = _context18.sent;
+            _context18.next = 72;
             break;
 
           case 53:
-            if (!('getAllGlossaryEntries' in message)) {
-              _context16.next = 59;
+            if (!('addGlossaryEntry' in message)) {
+              _context18.next = 59;
               break;
             }
 
-            _context16.next = 56;
-            return getAllGlossaryEntries(message.getAllGlossaryEntries);
+            _context18.next = 56;
+            return addGlossaryEntry(message.addGlossaryEntry);
 
           case 56:
-            result = _context16.sent;
-            _context16.next = 60;
+            result = _context18.sent;
+            _context18.next = 72;
             break;
 
           case 59:
+            if (!('addGlossaryEntries' in message)) {
+              _context18.next = 65;
+              break;
+            }
+
+            _context18.next = 62;
+            return addGlossaryEntries(message.addGlossaryEntries);
+
+          case 62:
+            result = _context18.sent;
+            _context18.next = 72;
+            break;
+
+          case 65:
+            if (!('removeGlossaryEntries' in message)) {
+              _context18.next = 71;
+              break;
+            }
+
+            _context18.next = 68;
+            return removeGlossaryEntries(message.removeGlossaryEntries);
+
+          case 68:
+            result = _context18.sent;
+            _context18.next = 72;
+            break;
+
+          case 71:
             throw new Error('Message invalid, no action found: ' + JSON.stringify(message));
 
-          case 60:
-            return _context16.abrupt('return', result);
+          case 72:
+            return _context18.abrupt('return', result);
 
-          case 61:
+          case 73:
           case 'end':
-            return _context16.stop();
+            return _context18.stop();
         }
       }
-    }, _callee16, this);
+    }, _callee18, this);
   }));
-  return function messageHandler(_x17) {
+  return function messageHandler(_x19) {
     return ref.apply(this, arguments);
   };
 }();
 
 setMessageHandler(self, messageHandler);
-//# sourceMappingURL=lookup-worker-1.0.js.map
+//# sourceMappingURL=lookup-worker-1.2.js.map

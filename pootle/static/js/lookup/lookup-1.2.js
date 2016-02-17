@@ -1482,6 +1482,7 @@ var Popup = function () {
     var _this = this;
 
     var absoluteLocation = _ref.absoluteLocation;
+    var fixedLocation = _ref.fixedLocation;
     var parent = _ref.parent;
     var content = _ref.content;
     var protect = _ref.protect;
@@ -1489,6 +1490,7 @@ var Popup = function () {
     babelHelpers_classCallCheck(this, Popup);
 
     this.absoluteLocation = absoluteLocation;
+    this.fixedLocation = fixedLocation;
     this.isAbsolute = false;
     this.markupTarget = $('main, body').first();
     this.entered = false;
@@ -1684,7 +1686,12 @@ var Popup = function () {
           location = $(document.body);
 
       element.removeAttr('style');
-      if (this.absoluteLocation) {
+      if (this.fixedLocation) {
+        offset = this.fixedLocation;
+        location = document.body;
+        isFixed = true;
+        this.element.css({ position: 'fixed' });
+      } else if (this.absoluteLocation) {
         offset = this.absoluteLocation;
         offset.left = offset.left || 0;
         offset.top = offset.top || 0;
@@ -1712,7 +1719,7 @@ var Popup = function () {
       //The reason for the duplicity is because if you realize the
       //actual popup and measure that, then any transition effects
       //cause it to zip from it's original position...
-      if (!this.absoluteLocation) {
+      if (!this.absoluteLocation && !this.fixedLocation) {
         offset.top += location.innerHeight() - popupHeight - location.outerHeight();
         offset.left -= popupWidth / 2;
       }
@@ -1725,7 +1732,12 @@ var Popup = function () {
       if (offset.left + popupWidth + 5 > docWidth) {
         offset.left = docWidth - (popupWidth + 5);
       }
-      element.offset(offset);
+
+      if (this.fixedLocation) {
+        element.css({ top: offset.top, left: offset.left });
+      } else {
+        element.offset(offset);
+      }
       this.markupTarget.append(element);
       if (offset.top < 0) {
         element.height(element.height() + offset.top);
@@ -2058,11 +2070,6 @@ var LookupWorker = function () {
       return this.postMessage({ rank: query });
     }
   }, {
-    key: 'addGlossaryEntry',
-    value: function addGlossaryEntry(entry) {
-      return this.postMessage({ addGlossaryEntry: entry });
-    }
-  }, {
     key: 'getGlossaryEntries',
     value: function getGlossaryEntries(_ref4) {
       var term = _ref4.term;
@@ -2086,6 +2093,26 @@ var LookupWorker = function () {
       var origin = _ref5.origin;
 
       return this.postMessage({ getAllGlossaryEntries: { origin: origin } });
+    }
+  }, {
+    key: 'addGlossaryEntry',
+    value: function addGlossaryEntry(entry) {
+      return this.postMessage({ addGlossaryEntry: entry });
+    }
+  }, {
+    key: 'addGlossaryEntries',
+    value: function addGlossaryEntries(_ref6) {
+      var entries = _ref6.entries;
+      var origin = _ref6.origin;
+
+      return this.postMessage({ addGlossaryEntries: { entries: entries, origin: origin } });
+    }
+  }, {
+    key: 'removeGlossaryEntries',
+    value: function removeGlossaryEntries(_ref7) {
+      var origin = _ref7.origin;
+
+      return this.postMessage({ removeGlossaryEntries: { origin: origin } });
     }
   }]);
   return LookupWorker;
@@ -2123,6 +2150,41 @@ function textNodes(elements, filter) {
     return result;
 };
 
+/**
+ * Return a timestamp with the format "m/d/yy h:MM:ss TT"
+ * @type {Date}
+ */
+
+function timeStamp() {
+  // Create a date object with the current time
+  var now = new Date();
+
+  // Create an array with the current month, day and time
+  var date = [now.getFullYear(), now.getMonth() + 1, now.getDate()];
+
+  // Create an array with the current hour, minute and second
+  var time = [now.getHours(), now.getMinutes(), now.getSeconds()];
+
+  // Determine AM or PM suffix based on the hour
+  var suffix = time[0] < 12 ? "AM" : "PM";
+
+  // Convert hour from military time
+  time[0] = time[0] < 12 ? time[0] : time[0] - 12;
+
+  // If hour is 0, set it to 12
+  time[0] = time[0] || 12;
+
+  // If seconds and minutes are less than 10, add a zero
+  for (var i = 1; i < 3; i++) {
+    if (time[i] < 10) {
+      time[i] = "0" + time[i];
+    }
+  }
+
+  // Return the formatted string
+  return date.join("/") + " " + time.join(":") + " " + suffix;
+}
+
 var defaultSources = {
   cped: {
     'brief': 'CPD',
@@ -2155,10 +2217,12 @@ var LookupUtility = function () {
     var toLang = _ref.toLang;
     var dataFile = _ref.dataFile;
     var glossaryFile = _ref.glossaryFile;
+    var includeSettings = _ref.includeSettings;
     babelHelpers_classCallCheck(this, LookupUtility);
 
     this.popups = [];
     this.popupClass = popupClass || Popup;
+    this.includeSettings = includeSettings === false ? false : true;
 
     this.selectorClass = selectorClass;
     this.main = $(main || this.getDefaultMain());
@@ -2363,6 +2427,9 @@ var LookupUtility = function () {
                   protected: false });
 
                 if (popup) {
+                  if (this.includeSettings) {
+                    this.addSettings({ popup: popup });
+                  }
                   popup.element.find('li').addClass('expandable');
                   popup.element.on('click', 'li', function (event) {
                     $(_this4).addClass('clicked');
@@ -2391,9 +2458,90 @@ var LookupUtility = function () {
       };
     }()
   }, {
+    key: 'addSettings',
+    value: function addSettings(_ref6) {
+      var _this5 = this;
+
+      var popup = _ref6.popup;
+
+      //$(popup.element).find('table').prepend('<thead><tr><td colspan=0><div class="settings-wrap"><div title="Lookup Settings" class="settings-cog">\u2699</div></div></td></tr></thead>');
+
+      if ($(popup.element).find('tbody tr').length == 0) {
+        return;
+      }
+
+      $('<div class="settings-wrap"><div title="Lookup Settings" class="settings-cog">⚙</div></div>').prependTo(popup.element).on('click', function (e) {
+        return _this5.makeSettingsPopup();
+      });
+    }
+  }, {
+    key: 'makeSettingsPopup',
+    value: function makeSettingsPopup() {
+      var _this6 = this;
+
+      var content = $('\n      <aside class="settings">\n        <div class="settings-darkness"></div>\n        <div class="inner">\n          <h3>Settings</h3>\n<ul>\n\n          <li id="download-data"><label>Download User Data <button type="button" id="get-download-link">Get Link</button></label>\n\n          <li id="upload-data"><label>Upload User Data <input type="file" id="upload-data-file" name="upload-data-file"/></label>\n\n          <li id="clear-data"><label>Clear User Data <label>(I\'m sure <input type="checkbox" id="clear-sure" name="clear-sure">)</label> <button type="button" id="clear-user-data" disabled=disabled>Boom</button></label>\n</ul>\n        </div>\n      </aside>');
+      var popup = new Popup({ fixedLocation: { left: '2em', top: '2em' }, content: content, protect: true });
+      popup.element.find('.settings-darkness').on('click', function (e) {
+        return popup.remove();
+      });
+      popup.element.css({ 'max-width': 'inherit' });
+      // Download using data URL
+      var getDownloadLink = popup.element.find('#get-download-link');
+      getDownloadLink.on('click', function (e) {
+        e.preventDefault();
+        _this6.dumpUserData().then(function (data) {
+          console.log(data);
+          var dataString = "text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
+          var timestamp = timeStamp();
+          var filename = 'lookup-user-data-' + timestamp + '.json';
+          $(' <a href="data:' + dataString + '" download="' + filename + '">download as JSON</a>').appendTo($('#download-data'));
+          getDownloadLink.attr('disabled', 'disabled');
+        });
+      });
+
+      // Boom (Clear data)
+      var clearSure = popup.element.find('#clear-sure');
+      var clearUserData = popup.element.find('#clear-user-data');
+      clearSure.on('change', function (e) {
+        console.log(clearSure.prop('checked'));
+        if (clearSure.prop('checked')) {
+          clearUserData.removeAttr('disabled');
+        } else {
+          clearUserData.attr('disabled', 'disabled');
+        }
+      });
+
+      clearUserData.on('click', function (e) {
+        e.preventDefault();
+        _this6.clearUserData();
+        setTimeout(function () {
+          return clearUserData.attr('disabled', 'disabled');
+        }, 50);
+      });
+
+      // Upload data using File API
+
+      var uploadDataFile = popup.element.find('#upload-data-file');
+
+      uploadDataFile.on('change', function (e) {
+        var files = e.target.files;
+        var file = files[0];
+        if (!file) return;
+
+        var reader = new FileReader();
+        reader.onload = function () {
+          var data = JSON.parse(reader.result);
+          _this6.loadUserData({ data: data });
+          popup.element.find('#upload-data').append(' <i>… uploaded.</i>');
+          uploadDataFile.attr('disabled', 'disabled');
+        };
+        reader.readAsText(file);
+      });
+    }
+  }, {
     key: 'makeSourceTag',
-    value: function makeSourceTag(_ref6) {
-      var source = _ref6.source;
+    value: function makeSourceTag(_ref7) {
+      var source = _ref7.source;
 
       return '<span class="source" data-source="' + source + '" title="' + this.sources[source].name + '">' + this.sources[source].brief + '</span>';
     }
@@ -2405,10 +2553,10 @@ var LookupUtility = function () {
     }
   }, {
     key: 'addUnhideBar',
-    value: function addUnhideBar(_ref7) {
-      var _this5 = this;
+    value: function addUnhideBar(_ref8) {
+      var _this7 = this;
 
-      var popup = _ref7.popup;
+      var popup = _ref8.popup;
 
       var table = popup.element.find('table');
       var hiddenCount = table.find('tr.hide td.term').length;
@@ -2426,7 +2574,7 @@ var LookupUtility = function () {
             event.preventDefault();
             table.find('tr.hide').slice(0, hiddenCount == 5 ? 5 : 4).removeClass('hide');
             tr.remove();
-            _this5.addUnhideBar({ popup: popup });
+            _this7.addUnhideBar({ popup: popup });
             popup.align();
             popup.align();
           });
@@ -2436,9 +2584,9 @@ var LookupUtility = function () {
   }, {
     key: 'retrieveEntry',
     value: function () {
-      var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee3(_ref8) {
-        var term = _ref8.term;
-        var source = _ref8.source;
+      var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee3(_ref9) {
+        var term = _ref9.term;
+        var source = _ref9.source;
 
         var result, _iteratorNormalCompletion, _didIteratorError, _iteratorError, _iterator, _step;
 
@@ -2537,11 +2685,11 @@ var LookupUtility = function () {
     }()
   }, {
     key: 'expandEntry',
-    value: function expandEntry(_ref9) {
-      var _this6 = this;
+    value: function expandEntry(_ref10) {
+      var _this8 = this;
 
-      var entry = _ref9.entry;
-      var popup = _ref9.popup;
+      var entry = _ref10.entry;
+      var popup = _ref10.popup;
 
       ////console.log('Expanding Entry', {entry, popup});
 
@@ -2571,14 +2719,14 @@ var LookupUtility = function () {
         var term = $(event.target).text();
         var source = textField.find('[data-source]').attr('data-source');
 
-        _this6.retrieveEntry({ term: term, source: source }).then(function (entry) {
+        _this8.retrieveEntry({ term: term, source: source }).then(function (entry) {
           if (entry == null) return;
           ////console.log('Expanding entry', {entry, popup});
           textField.remove();
           var content = $('<div class="content"/>').html(entry.html_content);
-          _this6.massageEntryContent(content);
-          content.prepend(_this6.makeSourceTag({ source: entry.source }));
-          _this6.expandEntry({ entry: content, popup: popup });
+          _this8.massageEntryContent(content);
+          content.prepend(_this8.makeSourceTag({ source: entry.source }));
+          _this8.expandEntry({ entry: content, popup: popup });
         });
       });
     }
@@ -2594,7 +2742,7 @@ var LookupUtility = function () {
   }, {
     key: 'decomposeMode',
     value: function decomposeMode(node) {
-      var _this7 = this;
+      var _this9 = this;
 
       Popup.removeAll({ removeProtected: true });
       var term = this.getTerm(node);
@@ -2631,12 +2779,12 @@ var LookupUtility = function () {
         var out = letters.map(function (i, e) {
           return $(e).text();
         }).get().join('');
-        out = _this7.sanitizeTerm(out);
+        out = _this9.sanitizeTerm(out);
         Popup.removeAll({ exclude: decomposePopup });
 
-        var decomposed = _this7.decompose({ term: out, charRex: charRex$$ });
+        var decomposed = _this9.decompose({ term: out, charRex: charRex$$ });
         ////console.log({out, decomposed});
-        _this7.lookup({ node: node,
+        _this9.lookup({ node: node,
           term: out,
           indeclinables: decomposed,
           excludeFuzzy: true,
@@ -2646,7 +2794,7 @@ var LookupUtility = function () {
               var tr = $(element),
                   td = $('<td class="accept">✓</td>'),
                   thisTerm = tr.children('.term').text();
-              if ((_this7.termBreakCache.retrieve(term) || []).indexOf(thisTerm) != -1) {
+              if ((_this9.termBreakCache.retrieve(term) || []).indexOf(thisTerm) != -1) {
                 td.addClass('accepted');
               }
               tr.append(td);
@@ -2656,9 +2804,9 @@ var LookupUtility = function () {
               var thisTerm = target.siblings('.term').text();
               if (target.hasClass('accepted')) {
                 target.removeClass('accepted');
-                _this7.termBreakCache.unstore(term, thisTerm);
+                _this9.termBreakCache.unstore(term, thisTerm);
               } else {
-                _this7.termBreakCache.store(term, thisTerm);
+                _this9.termBreakCache.store(term, thisTerm);
                 target.addClass('accepted');
               }
             });
@@ -2704,9 +2852,9 @@ var LookupUtility = function () {
     }
   }, {
     key: 'decompose',
-    value: function decompose(_ref10) {
-      var term = _ref10.term;
-      var charRex$$ = _ref10.charRex;
+    value: function decompose(_ref11) {
+      var term = _ref11.term;
+      var charRex$$ = _ref11.charRex;
 
       var out = [],
           chars = term.match(charRex$$);
@@ -2718,13 +2866,92 @@ var LookupUtility = function () {
       }
       return out;
     }
+  }, {
+    key: 'dumpUserData',
+    value: function () {
+      var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee4() {
+        var glossaryData, termBreakData;
+        return regeneratorRuntime.wrap(function _callee4$(_context4) {
+          while (1) {
+            switch (_context4.prev = _context4.next) {
+              case 0:
+                _context4.next = 2;
+                return this.glossary.getAllUserEntries();
+
+              case 2:
+                glossaryData = _context4.sent;
+                termBreakData = this.termBreakCache.storage;
+                return _context4.abrupt('return', { glossaryData: glossaryData, termBreakData: termBreakData });
+
+              case 5:
+              case 'end':
+                return _context4.stop();
+            }
+          }
+        }, _callee4, this);
+      }));
+      return function dumpUserData() {
+        return ref.apply(this, arguments);
+      };
+    }()
+  }, {
+    key: 'loadUserData',
+    value: function () {
+      var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee5(_ref12) {
+        var data = _ref12.data;
+        return regeneratorRuntime.wrap(function _callee5$(_context5) {
+          while (1) {
+            switch (_context5.prev = _context5.next) {
+              case 0:
+                this.termBreakCache.storage = data.termBreakData;
+                this.termBreakCache.updateMapping();
+                this.termBreakCache.saveToServer();
+
+                this.glossary.lookupWorker.addGlossaryEntries({ entries: data.glossaryData, origin: 'user' });
+
+              case 4:
+              case 'end':
+                return _context5.stop();
+            }
+          }
+        }, _callee5, this);
+      }));
+      return function loadUserData(_x4) {
+        return ref.apply(this, arguments);
+      };
+    }()
+  }, {
+    key: 'clearUserData',
+    value: function () {
+      var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee6() {
+        return regeneratorRuntime.wrap(function _callee6$(_context6) {
+          while (1) {
+            switch (_context6.prev = _context6.next) {
+              case 0:
+                this.termBreakCache.storage = {};
+                this.termBreakCache.mapping = {};
+                this.termBreakCache.saveToServer();
+
+                this.glossary.lookupWorker.removeGlossaryEntries({ origin: 'user' });
+
+              case 4:
+              case 'end':
+                return _context6.stop();
+            }
+          }
+        }, _callee6, this);
+      }));
+      return function clearUserData() {
+        return ref.apply(this, arguments);
+      };
+    }()
   }]);
   return LookupUtility;
 }();
 
 var TermBreakCache = function () {
-  function TermBreakCache(_ref11) {
-    var lookupWorker = _ref11.lookupWorker;
+  function TermBreakCache(_ref13) {
+    var lookupWorker = _ref13.lookupWorker;
     babelHelpers_classCallCheck(this, TermBreakCache);
 
     this.storage = {};
@@ -2735,36 +2962,54 @@ var TermBreakCache = function () {
   babelHelpers_createClass(TermBreakCache, [{
     key: 'updateMapping',
     value: function updateMapping(key) {
-      var _this8 = this;
-
       if (key === undefined) {
-        _.each(this.storage, function (value, key) {
-          _this8.updateMapping(key);
-        });
-        return;
-      }
+        var _iteratorNormalCompletion2 = true;
+        var _didIteratorError2 = false;
+        var _iteratorError2 = undefined;
 
-      var _iteratorNormalCompletion2 = true;
-      var _didIteratorError2 = false;
-      var _iteratorError2 = undefined;
-
-      try {
-        for (var _iterator2 = conjugate(key)[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-          term = _step2.value;
-
-          this.mapping[term] = key;
-        }
-      } catch (err) {
-        _didIteratorError2 = true;
-        _iteratorError2 = err;
-      } finally {
         try {
-          if (!_iteratorNormalCompletion2 && _iterator2.return) {
-            _iterator2.return();
+          for (var _iterator2 = Object.keys(this.storage)[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+            key = _step2.value;
+
+            this.updateMapping(key);
           }
+        } catch (err) {
+          _didIteratorError2 = true;
+          _iteratorError2 = err;
         } finally {
-          if (_didIteratorError2) {
-            throw _iteratorError2;
+          try {
+            if (!_iteratorNormalCompletion2 && _iterator2.return) {
+              _iterator2.return();
+            }
+          } finally {
+            if (_didIteratorError2) {
+              throw _iteratorError2;
+            }
+          }
+        }
+      } else {
+        var _iteratorNormalCompletion3 = true;
+        var _didIteratorError3 = false;
+        var _iteratorError3 = undefined;
+
+        try {
+          for (var _iterator3 = conjugate(key)[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+            term = _step3.value;
+
+            this.mapping[term] = key;
+          }
+        } catch (err) {
+          _didIteratorError3 = true;
+          _iteratorError3 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion3 && _iterator3.return) {
+              _iterator3.return();
+            }
+          } finally {
+            if (_didIteratorError3) {
+              throw _iteratorError3;
+            }
           }
         }
       }
@@ -2827,30 +3072,31 @@ var TermBreakCache = function () {
   }, {
     key: 'loadFromServer',
     value: function () {
-      var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee4() {
+      var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee7() {
         var result;
-        return regeneratorRuntime.wrap(function _callee4$(_context4) {
+        return regeneratorRuntime.wrap(function _callee7$(_context7) {
           while (1) {
-            switch (_context4.prev = _context4.next) {
+            switch (_context7.prev = _context7.next) {
               case 0:
-                _context4.next = 2;
+                _context7.next = 2;
                 return this.lookupWorker.retrieve({ key: 'termBreakCache.user' });
 
               case 2:
-                result = _context4.sent;
+                result = _context7.sent;
 
                 if (result && result.value) {
                   this.storage = result.value;
+                  this.updateMapping();
                 } else {
                   this.storage = {};
                 }
 
               case 4:
               case 'end':
-                return _context4.stop();
+                return _context7.stop();
             }
           }
-        }, _callee4, this);
+        }, _callee7, this);
       }));
       return function loadFromServer() {
         return ref.apply(this, arguments);
@@ -2861,8 +3107,8 @@ var TermBreakCache = function () {
 }();
 
 var Glossary = function () {
-  function Glossary(_ref12) {
-    var lookupUtility = _ref12.lookupUtility;
+  function Glossary(_ref14) {
+    var lookupUtility = _ref14.lookupUtility;
     babelHelpers_classCallCheck(this, Glossary);
 
     this.lookupUtility = lookupUtility;
@@ -2871,12 +3117,12 @@ var Glossary = function () {
 
   babelHelpers_createClass(Glossary, [{
     key: 'addEntry',
-    value: function addEntry(_ref13) {
-      var term = _ref13.term;
-      var context = _ref13.context;
-      var gloss = _ref13.gloss;
-      var comment = _ref13.comment;
-      var origin = _ref13.origin;
+    value: function addEntry(_ref15) {
+      var term = _ref15.term;
+      var context = _ref15.context;
+      var gloss = _ref15.gloss;
+      var comment = _ref15.comment;
+      var origin = _ref15.origin;
 
       return this.lookupWorker.addGlossaryEntry({ term: term, context: context, gloss: gloss, comment: comment, origin: origin });
     }
@@ -2903,7 +3149,7 @@ var Glossary = function () {
   }, {
     key: 'createInputBar',
     value: function createInputBar(term) {
-      var _this9 = this;
+      var _this10 = this;
 
       term = this.normalizeTerm(term);
       var form = $('<form disabled class="add-glossary-entry">\n    <input name="term" title="term" value="' + term + '" required>\n    <input name="gloss" title="gloss" placeholder="gloss" value="">\n    <input name="context" title="context" placeholder="context" value="">\n    <input name="comment" title="comment" placeholder="comment">\n    <input name="origin" type="hidden" value="user">\n    <button>+</button>\n    </form>');
@@ -2911,23 +3157,23 @@ var Glossary = function () {
       this.getEntry(term).then(function (results) {
         console.log({ form: form, results: results });
         if (results.length > 0) {
-          var _iteratorNormalCompletion3 = true;
-          var _didIteratorError3 = false;
-          var _iteratorError3 = undefined;
+          var _iteratorNormalCompletion4 = true;
+          var _didIteratorError4 = false;
+          var _iteratorError4 = undefined;
 
           try {
-            for (var _iterator3 = results[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-              result = _step3.value;
+            for (var _iterator4 = results[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+              result = _step4.value;
 
               //console.log({result});
               if (result.origin == 'user') {
-                var _iteratorNormalCompletion4 = true;
-                var _didIteratorError4 = false;
-                var _iteratorError4 = undefined;
+                var _iteratorNormalCompletion5 = true;
+                var _didIteratorError5 = false;
+                var _iteratorError5 = undefined;
 
                 try {
-                  for (var _iterator4 = Object.keys(result)[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-                    var name = _step4.value;
+                  for (var _iterator5 = Object.keys(result)[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+                    var name = _step5.value;
 
                     var e = form.find('[name=' + name + ']');
                     var value = result[name];
@@ -2938,32 +3184,32 @@ var Glossary = function () {
                     }
                   }
                 } catch (err) {
-                  _didIteratorError4 = true;
-                  _iteratorError4 = err;
+                  _didIteratorError5 = true;
+                  _iteratorError5 = err;
                 } finally {
                   try {
-                    if (!_iteratorNormalCompletion4 && _iterator4.return) {
-                      _iterator4.return();
+                    if (!_iteratorNormalCompletion5 && _iterator5.return) {
+                      _iterator5.return();
                     }
                   } finally {
-                    if (_didIteratorError4) {
-                      throw _iteratorError4;
+                    if (_didIteratorError5) {
+                      throw _iteratorError5;
                     }
                   }
                 }
               }
             }
           } catch (err) {
-            _didIteratorError3 = true;
-            _iteratorError3 = err;
+            _didIteratorError4 = true;
+            _iteratorError4 = err;
           } finally {
             try {
-              if (!_iteratorNormalCompletion3 && _iterator3.return) {
-                _iterator3.return();
+              if (!_iteratorNormalCompletion4 && _iterator4.return) {
+                _iterator4.return();
               }
             } finally {
-              if (_didIteratorError3) {
-                throw _iteratorError3;
+              if (_didIteratorError4) {
+                throw _iteratorError4;
               }
             }
           }
@@ -2975,29 +3221,29 @@ var Glossary = function () {
 
         var items = {};
 
-        var _iteratorNormalCompletion5 = true;
-        var _didIteratorError5 = false;
-        var _iteratorError5 = undefined;
+        var _iteratorNormalCompletion6 = true;
+        var _didIteratorError6 = false;
+        var _iteratorError6 = undefined;
 
         try {
-          for (var _iterator5 = form.serializeArray()[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-            var _step5$value = _step5.value;
-            var name = _step5$value.name;
-            var value = _step5$value.value;
+          for (var _iterator6 = form.serializeArray()[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+            var _step6$value = _step6.value;
+            var name = _step6$value.name;
+            var value = _step6$value.value;
 
             items[name] = value;
           }
         } catch (err) {
-          _didIteratorError5 = true;
-          _iteratorError5 = err;
+          _didIteratorError6 = true;
+          _iteratorError6 = err;
         } finally {
           try {
-            if (!_iteratorNormalCompletion5 && _iterator5.return) {
-              _iterator5.return();
+            if (!_iteratorNormalCompletion6 && _iterator6.return) {
+              _iterator6.return();
             }
           } finally {
-            if (_didIteratorError5) {
-              throw _iteratorError5;
+            if (_didIteratorError6) {
+              throw _iteratorError6;
             }
           }
         }
@@ -3009,7 +3255,7 @@ var Glossary = function () {
         items.term = items.term.toLowerCase();
 
         form.children().attr('disabled', 'disabled');
-        _this9.addEntry(items).then(function () {
+        _this10.addEntry(items).then(function () {
           form.find('button').text('✓');
         });
       });
@@ -3021,12 +3267,12 @@ var Glossary = function () {
 
 var MarkupGenerator = function () {
   function MarkupGenerator() {
-    var _ref14 = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+    var _ref16 = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
 
-    var alphaRex = _ref14.alphaRex;
-    var wordRex = _ref14.wordRex;
-    var splitRex = _ref14.splitRex;
-    var selectorClass = _ref14.selectorClass;
+    var alphaRex = _ref16.alphaRex;
+    var wordRex = _ref16.wordRex;
+    var splitRex = _ref16.splitRex;
+    var selectorClass = _ref16.selectorClass;
     babelHelpers_classCallCheck(this, MarkupGenerator);
 
     this.alphaRex = alphaRex || /([aiueokgcjtdnpbmyrlvshāīūṭḍṅṇṃñḷ])/i;
@@ -3063,20 +3309,20 @@ var MarkupGenerator = function () {
   }, {
     key: 'wrapWords',
     value: function wrapWords(node) {
-      var _this10 = this;
+      var _this11 = this;
 
       var nodes = textNodes($(node));
-      var _iteratorNormalCompletion6 = true;
-      var _didIteratorError6 = false;
-      var _iteratorError6 = undefined;
+      var _iteratorNormalCompletion7 = true;
+      var _didIteratorError7 = false;
+      var _iteratorError7 = undefined;
 
       try {
         var _loop = function _loop() {
-          var textNode = _step6.value;
+          var textNode = _step7.value;
 
-          var markupOpen = _this10.markupOpen;
-          var markupClose = _this10.markupClose;
-          if (_this10.shouldExclude(textNode)) {
+          var markupOpen = _this11.markupOpen;
+          var markupClose = _this11.markupClose;
+          if (_this11.shouldExclude(textNode)) {
             return {
               v: undefined
             };
@@ -3090,7 +3336,7 @@ var MarkupGenerator = function () {
             };
           }
 
-          newHtml = text.replace(_this10.wordRex, function (m, word) {
+          newHtml = text.replace(_this11.wordRex, function (m, word) {
             return markupOpen + word + markupClose;
           });
           proxy = $('<span/>')[0];
@@ -3099,7 +3345,7 @@ var MarkupGenerator = function () {
           proxy.outerHTML = newHtml;
         };
 
-        for (var _iterator6 = nodes[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+        for (var _iterator7 = nodes[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
           var text;
           var newHtml;
           var proxy;
@@ -3109,27 +3355,27 @@ var MarkupGenerator = function () {
           if ((typeof _ret2 === 'undefined' ? 'undefined' : babelHelpers_typeof(_ret2)) === "object") return _ret2.v;
         }
       } catch (err) {
-        _didIteratorError6 = true;
-        _iteratorError6 = err;
+        _didIteratorError7 = true;
+        _iteratorError7 = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion6 && _iterator6.return) {
-            _iterator6.return();
+          if (!_iteratorNormalCompletion7 && _iterator7.return) {
+            _iterator7.return();
           }
         } finally {
-          if (_didIteratorError6) {
-            throw _iteratorError6;
+          if (_didIteratorError7) {
+            throw _iteratorError7;
           }
         }
       }
     }
   }, {
     key: 'startMarkupOnDemand',
-    value: function startMarkupOnDemand(_ref15) {
-      var _this11 = this;
+    value: function startMarkupOnDemand(_ref17) {
+      var _this12 = this;
 
-      var targetSelector = _ref15.targetSelector;
-      var exclusions = _ref15.exclusions;
+      var targetSelector = _ref17.targetSelector;
+      var exclusions = _ref17.exclusions;
 
       ////console.log({targetSelector})
       $('body').on('mouseover.lookupMarkup', targetSelector, function (event) {
@@ -3146,7 +3392,7 @@ var MarkupGenerator = function () {
           return;
         }
 
-        _this11.wrapWords(target);
+        _this12.wrapWords(target);
 
         target.addClass('lookup-marked-up');
       });
@@ -3161,20 +3407,20 @@ var MarkupGenerator = function () {
 }();
 
 var LoadingPopup = function () {
-  function LoadingPopup(_ref16) {
-    var _this12 = this;
+  function LoadingPopup(_ref18) {
+    var _this13 = this;
 
-    var lookupUtility = _ref16.lookupUtility;
+    var lookupUtility = _ref18.lookupUtility;
     babelHelpers_classCallCheck(this, LoadingPopup);
 
     this.lookupUtility = lookupUtility;
     this.popup = this.createPopup();
     this.progressElement = this.popup.element.find('#progress');
     this.handle = lookupUtility.lookupWorker.setMessageHandler(function (event) {
-      return _this12.progressHandler(event);
+      return _this13.progressHandler(event);
     });
     lookupUtility.ready.then(function () {
-      return _this12.popup.remove(500);
+      return _this13.popup.remove(500);
     });
   }
 
@@ -3241,4 +3487,6 @@ var smartInit = function () {
     return ref.apply(this, arguments);
   };
 }();
-//# sourceMappingURL=lookup-1.0.js.map
+
+window.smartInit = smartInit;
+//# sourceMappingURL=lookup-1.2.js.map
