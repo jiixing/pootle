@@ -9,12 +9,15 @@
 
 from __future__ import absolute_import
 
+from django.core.exceptions import ValidationError
+
 import pytest
 
 from pytest_pootle.factories import VirtualFolderFactory
 
 from pootle_store.models import Unit
 from pootle_store.util import OBSOLETE, TRANSLATED
+from virtualfolder.models import VirtualFolder, VirtualFolderTreeItem
 
 
 @pytest.mark.django_db
@@ -24,9 +27,6 @@ def test_vfolder_directory_clash(af_vfolder_test_browser_defines_po):
 
     References #3905.
     """
-    from django.core.exceptions import ValidationError
-
-    from virtualfolder.models import VirtualFolder
 
     vfolder_item = {
         'name': "browser",
@@ -50,9 +50,6 @@ def test_vfolder_priority_not_greater_than_zero():
     """Tests that the creation of a virtual folder fails if the provided
     priority is not greater than zero.
     """
-    from django.core.exceptions import ValidationError
-
-    from virtualfolder.models import VirtualFolder
 
     # Test priority less than zero.
     vfolder_item = {
@@ -84,9 +81,6 @@ def test_vfolder_root_location():
     """Tests that the creation of a virtual folder fails if it uses location /
     instead of /{LANG}/{PROJ}/.
     """
-    from django.core.exceptions import ValidationError
-
-    from virtualfolder.models import VirtualFolder
 
     vfolder_item = {
         'name': "whatever",
@@ -109,9 +103,6 @@ def test_vfolder_location_starts_with_projects():
     """Tests that the creation of a virtual folder fails if it uses a location
     that starts with /projects/.
     """
-    from django.core.exceptions import ValidationError
-
-    from virtualfolder.models import VirtualFolder
 
     # Test just /projects/ location.
     vfolder_item = {
@@ -145,9 +136,6 @@ def test_vfolder_with_no_filter_rules():
     """Tests that the creation of a virtual folder fails if it doesn't have any
     filter rules.
     """
-    from django.core.exceptions import ValidationError
-
-    from virtualfolder.models import VirtualFolder
 
     vfolder_item = {
         'name': "whatever",
@@ -215,7 +203,6 @@ def test_vfolder_membership():
 
 @pytest.mark.django_db
 def test_vfolder_unit_priorities():
-    from virtualfolder.models import VirtualFolder
 
     # remove the default vfolders and update units to reset priorities
     VirtualFolder.objects.all().delete()
@@ -275,3 +262,19 @@ def test_vfolder_unit_priorities():
         for priority
         in Unit.objects.filter(vfolders__isnull=True)
                        .values_list("priority", flat=True))
+
+
+@pytest.mark.django_db
+def test_virtualfolder_repr():
+    vf = VirtualFolder.objects.first()
+    assert (
+        "<VirtualFolder: %s: %s>" % (vf.name, vf.location)
+        == repr(vf))
+
+
+@pytest.mark.django_db
+def test_virtualfoldertreeitem_repr():
+    vfti = VirtualFolderTreeItem.objects.first()
+    assert (
+        "<VirtualFolderTreeItem: %s>" % vfti.pootle_path
+        == repr(vfti))

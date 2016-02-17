@@ -6,7 +6,6 @@
  * AUTHORS file for copyright and authorship information.
  */
 
-import Backbone from 'backbone';
 import React from 'react';
 
 import Dialog from 'components/Dialog';
@@ -19,7 +18,6 @@ const UserProfileEdit = React.createClass({
 
   propTypes: {
     appRoot: React.PropTypes.string.isRequired,
-    router: React.PropTypes.object.isRequired,
     user: React.PropTypes.object.isRequired,
   },
 
@@ -27,31 +25,15 @@ const UserProfileEdit = React.createClass({
 
   getInitialState() {
     return {
-      editing: false,
+      editing: /\/edit\/?$/.test(window.location),
       confirmClose: false,
       isDirty: false,
     };
   },
 
-  componentWillMount() {
-    this.setupRoutes(this.props.router);
-    Backbone.history.start({ pushState: true, root: this.props.appRoot });
-  },
-
   componentWillUpdate(nextProps, nextState) {
     this.handleURL(nextState);
   },
-
-  setupRoutes(router) {
-    router.on('route:main', () => {
-      this.setState({ editing: false });
-    });
-
-    router.on('route:edit', () => {
-      this.setState({ editing: true });
-    });
-  },
-
 
   /* State-changing handlers */
 
@@ -59,8 +41,8 @@ const UserProfileEdit = React.createClass({
     this.setState({ editing: true });
   },
 
-  handleClose(opts = {}) {
-    const forceClose = opts.forceClose || false;
+  handleClose(opts = { forceClose: false }) {
+    const { forceClose } = opts;
 
     if (this.state.isDirty && !forceClose) {
       this.setState({ confirmClose: true });
@@ -94,8 +76,9 @@ const UserProfileEdit = React.createClass({
   /* Handlers */
 
   handleURL(newState) {
-    const newURL = newState.editing ? '/edit/' : '/';
-    this.props.router.navigate(newURL);
+    const { appRoot } = this.props;
+    const newURL = newState.editing ? `${appRoot}edit/` : appRoot;
+    window.history.pushState({}, '', newURL);
   },
 
 
@@ -105,8 +88,10 @@ const UserProfileEdit = React.createClass({
     return (
       <div>
         <div className="edit-profile-btn">
-          <button className="btn btn-primary"
-                  onClick={this.handleEdit}>
+          <button
+            className="btn btn-primary"
+            onClick={this.handleEdit}
+          >
             {gettext('Edit My Public Profile')}
           </button>
         </div>
@@ -114,11 +99,14 @@ const UserProfileEdit = React.createClass({
         <Modal
           className="user-edit"
           onClose={this.handleClose}
-          title={gettext('My Public Profile')}>
+          title={gettext('My Public Profile')}
+        >
           <div id="user-edit">
-            <UserProfileForm model={this.props.user}
-                             onDirty={this.handleDirtyFlag}
-                             onSuccess={this.handleSave} />
+            <UserProfileForm
+              model={this.props.user}
+              onDirty={this.handleDirtyFlag}
+              onSuccess={this.handleSave}
+            />
           </div>
         </Modal>}
       {this.state.confirmClose &&
@@ -128,7 +116,8 @@ const UserProfileEdit = React.createClass({
           onClose={this.handleDlgCancel}
           title={gettext('Discard changes.')}
           okLabel={gettext('Yes')}
-          cancelLabel={gettext('No')}>
+          cancelLabel={gettext('No')}
+        >
           {gettext('There are unsaved changes. Do you want to discard them?')}
         </Dialog>}
       </div>

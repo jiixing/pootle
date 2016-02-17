@@ -45,10 +45,11 @@ from .decorators import get_unit_context
 from .fields import to_python
 from .forms import (highlight_whitespace, unit_comment_form_factory,
                     unit_form_factory)
-from .models import SuggestionStates, Unit
+from .models import Unit
 from .templatetags.store_tags import (highlight_diffs, pluralize_source,
                                       pluralize_target)
-from .util import FUZZY, STATES_MAP, TRANSLATED, UNTRANSLATED, find_altsrcs
+from .unit.filters import UnitSearchFilter, UnitTextSearch
+from .util import STATES_MAP, find_altsrcs
 
 
 #: Mapping of allowed sorting criteria.
@@ -111,81 +112,6 @@ def get_alt_src_langs(request, user, translation_project):
     return langs
 
 
-def get_search_query(form, units_queryset):
-    words = form.cleaned_data['search'].split()
-    result = units_queryset.none()
-
-    if 'source' in form.cleaned_data['sfields']:
-        subresult = units_queryset
-        for word in words:
-            subresult = subresult.filter(source_f__icontains=word)
-        result = result | subresult
-
-    if 'target' in form.cleaned_data['sfields']:
-        subresult = units_queryset
-        for word in words:
-            subresult = subresult.filter(target_f__icontains=word)
-        result = result | subresult
-
-    if 'notes' in form.cleaned_data['sfields']:
-        translator_subresult = units_queryset
-        developer_subresult = units_queryset
-        for word in words:
-            translator_subresult = translator_subresult.filter(
-                translator_comment__icontains=word,
-            )
-            developer_subresult = developer_subresult.filter(
-                developer_comment__icontains=word,
-            )
-        result = result | translator_subresult | developer_subresult
-
-    if 'locations' in form.cleaned_data['sfields']:
-        subresult = units_queryset
-        for word in words:
-            subresult = subresult.filter(locations__icontains=word)
-        result = result | subresult
-
-    return result
-
-
-def get_search_exact_query(form, units_queryset):
-    phrase = form.cleaned_data['search']
-    result = units_queryset.none()
-
-    if 'source' in form.cleaned_data['sfields']:
-        subresult = units_queryset.filter(source_f__contains=phrase)
-        result = result | subresult
-
-    if 'target' in form.cleaned_data['sfields']:
-        subresult = units_queryset.filter(target_f__contains=phrase)
-        result = result | subresult
-
-    if 'notes' in form.cleaned_data['sfields']:
-        translator_subresult = units_queryset
-        developer_subresult = units_queryset
-        translator_subresult = translator_subresult.filter(
-            translator_comment__contains=phrase,
-        )
-        developer_subresult = developer_subresult.filter(
-            developer_comment__contains=phrase,
-        )
-        result = result | translator_subresult | developer_subresult
-
-    if 'locations' in form.cleaned_data['sfields']:
-        subresult = units_queryset.filter(locations__contains=phrase)
-        result = result | subresult
-
-    return result
-
-
-def get_search_step_query(form, units_queryset):
-    """Narrows down units query to units matching search string."""
-    if 'exact' in form.cleaned_data['soptions']:
-        return get_search_exact_query(form, units_queryset)
-
-    return get_search_query(form, units_queryset)
-
-
 def get_step_query(request, units_queryset):
     """Narrows down unit query to units matching conditions in GET."""
     if 'filter' in request.GET:
@@ -205,71 +131,22 @@ def get_step_query(request, units_queryset):
                 pass
 
         if unit_filter:
-            match_queryset = units_queryset.none()
-
-            if unit_filter == 'all':
-                match_queryset = units_queryset
-            elif unit_filter == 'translated':
-                match_queryset = units_queryset.filter(state=TRANSLATED)
-            elif unit_filter == 'untranslated':
-                match_queryset = units_queryset.filter(state=UNTRANSLATED)
-            elif unit_filter == 'fuzzy':
-                match_queryset = units_queryset.filter(state=FUZZY)
-            elif unit_filter == 'incomplete':
-                match_queryset = units_queryset.filter(
-                    Q(state=UNTRANSLATED) | Q(state=FUZZY),
-                )
-            elif unit_filter == 'suggestions':
-                match_queryset = units_queryset.filter(
-                    suggestion__state=SuggestionStates.PENDING).distinct()
-            elif unit_filter in ('my-suggestions', 'user-suggestions'):
-                match_queryset = units_queryset.filter(
-                    suggestion__state=SuggestionStates.PENDING,
-                    suggestion__user=user,
-                ).distinct()
-                sort_on = 'suggestions'
-            elif unit_filter == 'user-suggestions-accepted':
-                match_queryset = units_queryset.filter(
-                    suggestion__state=SuggestionStates.ACCEPTED,
-                    suggestion__user=user,
-                ).distinct()
-            elif unit_filter == 'user-suggestions-rejected':
-                match_queryset = units_queryset.filter(
-                    suggestion__state=SuggestionStates.REJECTED,
-                    suggestion__user=user,
-                ).distinct()
-            elif unit_filter in ('my-submissions', 'user-submissions'):
-                match_queryset = units_queryset.filter(
-                    submission__submitter=user,
-                    submission__type__in=SubmissionTypes.EDIT_TYPES,
-                ).distinct()
-                sort_on = 'submissions'
-            elif (unit_filter in ('my-submissions-overwritten',
-                                  'user-submissions-overwritten')):
-                match_queryset = units_queryset.filter(
-                    submission__submitter=user,
-                    submission__type__in=SubmissionTypes.EDIT_TYPES,
-                ).exclude(submitted_by=user).distinct()
-            elif unit_filter == 'checks':
+            checks = None
+            category = None
+            if unit_filter == "checks":
                 if 'checks' in request.GET:
                     checks = request.GET['checks'].split(',')
-
-                    if checks:
-                        match_queryset = units_queryset.filter(
-                            qualitycheck__false_positive=False,
-                            qualitycheck__name__in=checks,
-                        ).distinct()
                 elif 'category' in request.GET:
                     category_name = request.GET['category']
-                    try:
-                        category = get_category_id(category_name)
-                    except KeyError:
-                        raise Http404
+                    category = get_category_id(category_name)
+            elif unit_filter in ["my-suggestions", "user-suggestions"]:
+                sort_on = "suggestions"
+            elif unit_filter in ["my-submissions", "user-submissions"]:
+                sort_on = "submissions"
 
-                    match_queryset = units_queryset.filter(
-                        qualitycheck__false_positive=False,
-                        qualitycheck__category=category,
-                    ).distinct()
+            match_queryset = UnitSearchFilter().filter(
+                units_queryset, unit_filter,
+                user=user, checks=checks, category=category)
 
             if modified_since is not None:
                 datetime_obj = parse_datetime(modified_since)
@@ -288,7 +165,8 @@ def get_step_query(request, units_queryset):
             sort_by = ALLOWED_SORTS[sort_on].get(sort_by_param, None)
             if sort_by is not None:
                 if sort_on in SIMPLY_SORTED:
-                    match_queryset = match_queryset.order_by(sort_by)
+                    match_queryset = match_queryset.order_by(
+                        sort_by, "store__pootle_path", "index")
                 else:
                     # Omit leading `-` sign
                     if sort_by[0] == '-':
@@ -303,7 +181,7 @@ def get_step_query(request, units_queryset):
                     # (unless PostreSQL is used and `distinct(field_name)`)
                     match_queryset = match_queryset \
                         .annotate(sort_by_field=Max(max_field)) \
-                        .order_by(sort_order)
+                        .order_by(sort_order, "store__pootle_path", "index")
 
             units_queryset = match_queryset
 
@@ -318,7 +196,11 @@ def get_step_query(request, units_queryset):
         search_form = make_search_form(GET)
 
         if search_form.is_valid():
-            units_queryset = get_search_step_query(search_form, units_queryset)
+            exact = 'exact' in search_form.cleaned_data['soptions']
+            text = search_form.cleaned_data['search']
+            sfields = GET.getlist("sfields")
+            units_queryset = UnitTextSearch(
+                units_queryset).search(text, sfields, exact=exact)
 
     return units_queryset
 
@@ -493,7 +375,7 @@ def get_units(request):
 
     if is_initial_request:
         sort_by_field = None
-        if len(step_queryset.query.order_by) == 1:
+        if len(step_queryset.query.order_by) > 2:
             sort_by_field = step_queryset.query.order_by[0]
 
         sort_on = None
@@ -503,25 +385,10 @@ def get_units(request):
                 break
 
         if sort_by_field is None or sort_on == 'units':
-            # Since `extra()` has been used before, it's necessary to
-            # explicitly request the `store__pootle_path` field. This is a
-            # subtetly in Django's ORM.
-            uid_list = [u['id'] for u
-                        in step_queryset.values('id', 'store__pootle_path')]
+            uid_list = list(step_queryset.values_list('id', flat=True))
         else:
-            # Not using `values_list()` here because it doesn't know about all
-            # existing relations when `extra()` has been used before in the
-            # queryset. This affects annotated names such as those ending in
-            # `__max`, where Django thinks we're trying to lookup a field on a
-            # relationship field. That's why `sort_by_field` alias for `__max`
-            # is used here. This alias must be queried in
-            # `values('sort_by_field', 'id')` with `id` otherwise
-            # Django looks for `sort_by_field` field in the initial table.
-            # https://code.djangoproject.com/ticket/19434
             uid_list = [u['id'] for u
-                        in step_queryset.values('id', 'sort_by_field',
-                                                'store__pootle_path')]
-
+                        in step_queryset.values('id', 'sort_by_field')]
         if len(uids) == 1:
             try:
                 uid = uids[0]
@@ -529,6 +396,7 @@ def get_units(request):
                 begin = max(index - chunk_size, 0)
                 end = min(index + chunk_size + 1, len(uid_list))
                 uids = uid_list[begin:end]
+                units = step_queryset[begin:end]
             except ValueError:
                 raise Http404  # `uid` not found in `uid_list`
         else:

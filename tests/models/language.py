@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -8,11 +9,12 @@
 
 import pytest
 
+from pootle_language.models import Language
+
 
 @pytest.mark.django_db
-def test_views_bad(bad_views):
-    path, response, test = bad_views
-    assert response.status_code == test["code"]
-    if test.get("location"):
-        location = "http://testserver/%s" % test["location"].lstrip("/")
-        assert response.get("location") == location
+def test_language_repr():
+    language = Language.objects.first()
+    assert (
+        "<Language: %s>" % language.name
+        == repr(language))

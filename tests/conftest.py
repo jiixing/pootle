@@ -12,6 +12,10 @@ import os
 from django import setup
 from django.conf import settings
 
+import logging
+
+logging.getLogger("factory").setLevel(logging.WARN)
+
 
 def pytest_configure():
     if not settings.configured:
@@ -22,3 +26,6 @@ def pytest_configure():
         os.environ['POOTLE_SETTINGS'] = os.path.join(WORKING_DIR,
                                                      'settings.py')
         setup()  # Required until pytest-dev/pytest-django#146 is fixed
+
+
+pytest_plugins = 'pytest_pootle.plugin'

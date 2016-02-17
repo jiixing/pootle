@@ -6,11 +6,31 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
-import os
-import shutil
 from datetime import datetime, timedelta
 
-from django.utils.functional import cached_property
+
+TEST_USERS = {
+    'nobody': dict(
+        fullname='Nobody',
+        password=''),
+    'system': dict(
+        fullname='System',
+        password=''),
+    'default': dict(
+        fullname='Default',
+        password=''),
+    'admin': dict(
+        fullname='Admin',
+        password='admin',
+        is_superuser=True,
+        email="admin@poot.le"),
+    'member': dict(
+        fullname='Member',
+        password=''),
+    'member2': dict(
+        fullname='Member2',
+        password=''),
+}
 
 
 class PootleTestEnv(object):
@@ -23,24 +43,10 @@ class PootleTestEnv(object):
     def __init__(self, request):
         self.request = request
 
-    @cached_property
-    def dirs(self):
-        from pootle_app.models import Directory
-
-        dirs = Directory.objects
-
-        # create root and projects directories, first clear the class cache
-        if "root" in dirs.__dict__:
-            del dirs.__dict__['root']
-        if "projects" in dirs.__dict__:
-            del dirs.__dict__['projects']
-        return dirs
-
     def setup(self):
         [getattr(self, "setup_%s" % method)()
          for method
          in self.methods]
-        self.request.addfinalizer(self.teardown)
 
     def setup_announcements(self):
         from pytest_pootle.factories import AnnouncementFactory
@@ -227,22 +233,8 @@ class PootleTestEnv(object):
     def setup_system_users(self):
         from .fixtures.models.user import _require_user
 
-        _require_user('nobody', 'Nobody')
-        _require_user('system', 'System')
-        _require_user(
-            'default', 'Default', password='')
-
-        _require_user(
-            'admin', 'Admin',
-            password='admin',
-            is_superuser=True,
-            email="admin@poot.le")
-        _require_user(
-            'member', 'Member',
-            password='')
-        _require_user(
-            'member2', 'Member 2',
-            password='')
+        for username, user_params in TEST_USERS.items():
+            _require_user(username=username, **user_params)
 
     def setup_site_permissions(self):
         from django.contrib.auth import get_user_model
@@ -308,20 +300,6 @@ class PootleTestEnv(object):
         for unit in Unit.objects.all():
             self._add_submissions(unit, year_ago)
 
-    def teardown(self):
-        from django.conf import settings
-
-        if "root" in self.dirs.__dict__:
-            del self.dirs.__dict__['root']
-        if "projects" in self.dirs.__dict__:
-            del self.dirs.__dict__['projects']
-        # required to get clean slate 8/
-        for trans_dir in os.listdir(settings.POOTLE_TRANSLATION_DIRECTORY):
-            if trans_dir.startswith("project"):
-                shutil.rmtree(
-                    os.path.join(
-                        settings.POOTLE_TRANSLATION_DIRECTORY, trans_dir))
-
     def setup_tps(self):
         from pootle_project.models import Project
         from pootle_language.models import Language
@@ -382,6 +360,7 @@ class PootleTestEnv(object):
         submissions.update(creation_time=update_time)
 
     def _add_submissions(self, unit, created):
+        from pootle_statistics.models import SubmissionTypes
         from pootle_store.models import UNTRANSLATED, FUZZY, OBSOLETE, Unit
 
         from django.contrib.auth import get_user_model
@@ -398,7 +377,7 @@ class PootleTestEnv(object):
 
         # add suggestion at first_modified
         suggestion, _ = unit.add_suggestion(
-            "Suggestion for %s" % unit.source,
+            "Suggestion for %s" % (unit.target or unit.source),
             user=member,
             touch=False)
         self._update_submission_times(first_modified, created)
@@ -418,7 +397,7 @@ class PootleTestEnv(object):
 
         # add another suggestion as different user 7 days later
         suggestion2, _ = unit.add_suggestion(
-            "Suggestion 2 for %s" % unit.source,
+            "Suggestion 2 for %s" % (unit.target or unit.source),
             user=member2,
             touch=False)
         self._update_submission_times(
@@ -430,5 +409,19 @@ class PootleTestEnv(object):
             unit.markfuzzy()
 
         # mark OBSOLETE
-        if original_state == OBSOLETE:
+        elif original_state == OBSOLETE:
             unit.makeobsolete()
+
+        elif unit.target:
+            # Re-edit units with translations, adding some submissions
+            # of SubmissionTypes.EDIT_TYPES
+            old_target = unit.target
+            old_state = unit.state
+            current_time = datetime.now() - timedelta(days=14)
+
+            unit.target_f = "Updated %s" % old_target
+            unit._target_updated = True
+            unit.store.record_submissions(
+                unit, old_target, old_state,
+                current_time, member, SubmissionTypes.NORMAL)
+            unit.save()

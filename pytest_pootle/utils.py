@@ -57,20 +57,16 @@ def create_store(pootle_path=None, store_revision=None, units=None):
     return getclass(io_store)(io_store.read())
 
 
-def formset_dict(data):
-    """Convert human readable POST dictionary into brain dead django
-    formset dictionary.
+def get_translated_uids(offset=0, count=1):
+    """Returns a list translated unit uids from ~middle of
+    translated units dataset
     """
-    new_data = {
-        'form-TOTAL_FORMS': len(data),
-        'form-INITIAL_FORMS': 0,
-    }
+    from pootle_store.models import Unit
+    from pootle_store.util import TRANSLATED
 
-    for i in range(len(data)):
-        for key, value in data[i].iteritems():
-            new_data["form-%d-%s" % (i, key)] = value
-
-    return new_data
+    units = Unit.objects.filter(state=TRANSLATED)
+    begin = (units.count() / 2) + offset
+    return list(units[begin: begin + count].values_list("pk", flat=True))
 
 
 def items_equal(left, right):

@@ -6,17 +6,12 @@
  * AUTHORS file for copyright and authorship information.
  */
 
-import Backbone from 'backbone';
-
-
-const UserProfileRouter = Backbone.Router.extend({
-
-  routes: {
-    '': 'main',
-    'edit(/)': 'edit',
-  },
-
-});
-
-
-export default UserProfileRouter;
+/**
+ * Decodes HTML entities
+ * Refs. https://stackoverflow.com/a/1395954/783019
+ */
+export function decodeEntities(encodedString) {
+  const textarea = document.createElement('textarea');
+  textarea.innerHTML = encodedString;
+  return textarea.textContent;
+}

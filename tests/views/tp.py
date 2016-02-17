@@ -119,7 +119,7 @@ def _test_browse_view(tp, request, response, kwargs):
         translation_project=tp,
         language=tp.language,
         project=tp.project,
-        is_admin=False,
+        is_admin=check_permission('administrate', request),
         is_store=(kwargs.get("filename") and True or False),
         browser_extends="translation_projects/base.html",
         pootle_path=pootle_path,
@@ -144,10 +144,14 @@ def _test_browse_view(tp, request, response, kwargs):
     view_context_test(ctx, **assertions)
     if vfolders:
         for vfolder in ctx["vfolders"]["items"]:
-            assert vfolder["is_grayed"] is False
+            assert (vfolder["is_grayed"] and not ctx["is_admin"]) is False
         assert (
             ctx["vfolders"]["items"]
             == vfolders)
+
+    assert (('display_download' in ctx and ctx['display_download']) ==
+            (request.user.is_authenticated()
+             and check_permission('translate', request)))
 
 
 def _test_translate_view(tp, request, response, kwargs, settings):
@@ -171,7 +175,7 @@ def _test_translate_view(tp, request, response, kwargs, settings):
         translation_project=tp,
         language=tp.language,
         project=tp.project,
-        is_admin=False,
+        is_admin=check_permission('administrate', request),
         profile=request.profile,
         ctx_path=tp.pootle_path,
         pootle_path=request_path,
@@ -245,3 +249,9 @@ def test_view_user_choice(client):
     response = client.get("/foo/bar/baz")
     assert response.status_code == 404
     assert "user-choice" not in response
+
+
+@pytest.mark.django_db
+def test_uploads_tp(tp_uploads):
+    tp, request, response, kwargs = tp_uploads
+    assert response.status_code == 200

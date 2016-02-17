@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -8,11 +9,12 @@
 
 import pytest
 
+from staticpages.models import StaticPage
+
 
 @pytest.mark.django_db
-def test_views_bad(bad_views):
-    path, response, test = bad_views
-    assert response.status_code == test["code"]
-    if test.get("location"):
-        location = "http://testserver/%s" % test["location"].lstrip("/")
-        assert response.get("location") == location
+def test_staticpage_repr():
+    staticpage = StaticPage.objects.first()
+    assert (
+        "<StaticPage: %s>" % staticpage.virtual_path
+        == repr(staticpage))
