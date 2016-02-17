@@ -2323,6 +2323,7 @@ var LookupUtility = function () {
         var absoluteLocation = _ref5.absoluteLocation;
         var useTermBreak = _ref5.useTermBreak;
         var includeGlossary = _ref5.includeGlossary;
+        var includeSettings = _ref5.includeSettings;
         var excludeFuzzy = _ref5.excludeFuzzy;
         var preFn = _ref5.preFn;
         var terms, termBreak, results, contentHtml, content, popup;
@@ -2392,10 +2393,11 @@ var LookupUtility = function () {
                 popup = new Popup({ absoluteLocation: absoluteLocation,
                   parent: node,
                   content: content,
-                  protected: false });
+                  protected: false,
+                  includeSettings: includeSettings });
 
                 if (popup) {
-                  if (this.includeSettings) {
+                  if (this.includeSettings && includeSettings !== false) {
                     this.addSettings({ popup: popup });
                   }
                   popup.element.find('li').addClass('expandable');
@@ -2758,6 +2760,7 @@ var LookupUtility = function () {
           indeclinables: decomposed,
           excludeFuzzy: true,
           parent: decomposePopup,
+          includeSettings: false,
           preFn: function preFn(content) {
             content.find('tr').each(function (i, element) {
               var tr = $(element),
@@ -2872,13 +2875,10 @@ var LookupUtility = function () {
           while (1) {
             switch (_context5.prev = _context5.next) {
               case 0:
-                this.termBreakCache.storage = data.termBreakData;
-                this.termBreakCache.updateMapping();
-                this.termBreakCache.saveToServer();
-
+                this.termBreakCache.mergeEntries(data.termBreakData);
                 this.glossary.lookupWorker.addGlossaryEntries({ entries: data.glossaryData, origin: 'user' });
 
-              case 4:
+              case 2:
               case 'end':
                 return _context5.stop();
             }
@@ -2929,6 +2929,13 @@ var TermBreakCache = function () {
   }
 
   babelHelpers_createClass(TermBreakCache, [{
+    key: 'mergeEntries',
+    value: function mergeEntries(termBreakData) {
+      Object.assign(this.storage, termBreakData);
+      this.updateMapping();
+      this.saveToServer();
+    }
+  }, {
     key: 'updateMapping',
     value: function updateMapping(key) {
       if (key === undefined) {
