@@ -2118,38 +2118,6 @@ var LookupWorker = function () {
   return LookupWorker;
 }();
 
-// Returns a flattened array of descendent textNodes
-// optionally filtered by *filter*, which should return
-// true to include an element.
-function textNodes(elements, filter) {
-    var result = [];
-    function iterNodes(node) {
-        if (filter && $.proxy(filter, node)(node) == false) return;
-
-        if (node.nodeType == 3) {
-            result.push(node);
-        } else {
-            var _arr = [].concat(babelHelpers_toConsumableArray(node.childNodes));
-
-            for (var _i = 0; _i < _arr.length; _i++) {
-                child = _arr[_i];
-
-                iterNodes(child);
-            }
-        }
-    }
-
-    var _arr2 = [].concat(babelHelpers_toConsumableArray(elements));
-
-    for (var _i2 = 0; _i2 < _arr2.length; _i2++) {
-        node = _arr2[_i2];
-
-        iterNodes(node);
-    }
-
-    return result;
-};
-
 /**
  * Return a timestamp with the format "m/d/yy h:MM:ss TT"
  * @type {Date}
@@ -2444,9 +2412,10 @@ var LookupUtility = function () {
                   }
                   this.addUnhideBar({ popup: popup });
                 }
+                popup.align();
                 $(node).removeClass('lookup-in-progress');
 
-              case 22:
+              case 23:
               case 'end':
                 return _context2.stop();
             }
@@ -3279,8 +3248,6 @@ var MarkupGenerator = function () {
     this.wordRex = wordRex || /([aiueokgcjtdnpbmyrlvshāīūṭḍṅṇṃñḷ’­”]+)/ig;
     this.splitRex = splitRex || /(&[a-z]+;|<\??[a-z]+[^>]*>|[^  \n,.– —:;?!"'“‘\/\-]+)/i;
     this.selectorClass = selectorClass;
-    this.markupOpen = this.getMarkupOpen();
-    this.markupClose = this.getMarkupClose();
   }
 
   babelHelpers_createClass(MarkupGenerator, [{
@@ -3295,11 +3262,11 @@ var MarkupGenerator = function () {
     }
   }, {
     key: 'shouldExclude',
-    value: function shouldExclude(node) {
-      var parent = $(node).parent();
-      if (!parent.is(':lang(pi)')) return true;
-      if (parent.is('a')) {
-        if (parent.parents('h1,h2,h3,h4,h5').length == 0) {
+    value: function shouldExclude(element) {
+      element = $(element);
+      if (!element.is(':lang(pi)')) return true;
+      if (element.is('a')) {
+        if (element.parents('h1,h2,h3,h4,h5').length == 0) {
           return false;
         }
         return true;
@@ -3309,50 +3276,19 @@ var MarkupGenerator = function () {
   }, {
     key: 'wrapWords',
     value: function wrapWords(node) {
-      var _this11 = this;
-
-      var nodes = textNodes($(node));
+      if (node.jquery) {
+        node = node[0];
+      }
+      var wrappedTextNodes = this.wrapTextNodes(node);
       var _iteratorNormalCompletion7 = true;
       var _didIteratorError7 = false;
       var _iteratorError7 = undefined;
 
       try {
-        var _loop = function _loop() {
-          var textNode = _step7.value;
+        for (var _iterator7 = wrappedTextNodes[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+          wrappedTextNode = _step7.value;
 
-          var markupOpen = _this11.markupOpen;
-          var markupClose = _this11.markupClose;
-          if (_this11.shouldExclude(textNode)) {
-            return {
-              v: undefined
-            };
-          }
-
-          text = textNode.nodeValue;
-
-          if (text.search(self.alphaRex) == -1) {
-            return {
-              v: undefined
-            };
-          }
-
-          newHtml = text.replace(_this11.wordRex, function (m, word) {
-            return markupOpen + word + markupClose;
-          });
-          proxy = $('<span/>')[0];
-
-          textNode.parentNode.replaceChild(proxy, textNode);
-          proxy.outerHTML = newHtml;
-        };
-
-        for (var _iterator7 = nodes[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-          var text;
-          var newHtml;
-          var proxy;
-
-          var _ret2 = _loop();
-
-          if ((typeof _ret2 === 'undefined' ? 'undefined' : babelHelpers_typeof(_ret2)) === "object") return _ret2.v;
+          this.breakTextNodeIntoWords(wrappedTextNode);
         }
       } catch (err) {
         _didIteratorError7 = true;
@@ -3370,9 +3306,49 @@ var MarkupGenerator = function () {
       }
     }
   }, {
+    key: 'wrapTextNodes',
+    value: function wrapTextNodes(node) {
+      var result = [];
+      var stack = [node];
+
+      while (stack.length) {
+        var currentNode = stack.pop();
+        if (currentNode.nodeType == document.ELEMENT_NODE) {
+          if (!this.shouldExclude(currentNode)) {
+            stack.push.apply(stack, babelHelpers_toConsumableArray(currentNode.childNodes));
+          }
+        } else if (currentNode.nodeType == document.TEXT_NODE) {
+          var parent = currentNode.parentNode;
+          var span = document.createElement('span');
+          parent.replaceChild(span, currentNode);
+          span.appendChild(currentNode);
+          result.push(span);
+        }
+      }
+      return result;
+    }
+  }, {
+    key: 'breakTextNodeIntoWords',
+    value: function breakTextNodeIntoWords(wrappedTextNode) {
+      var markupOpen = this.getMarkupOpen();
+      var markupClose = this.getMarkupClose();
+
+      var text = wrappedTextNode.firstChild.nodeValue;
+      if (text.search(self.alphaRex) == -1) {
+        return;
+      }
+
+      var newHtml = text.replace(this.wordRex, function (m, word) {
+        if (word.search(/[0-9]/) != -1) return m;
+        return markupOpen + word + markupClose;
+      });
+
+      wrappedTextNode.innerHTML = newHtml;
+    }
+  }, {
     key: 'startMarkupOnDemand',
     value: function startMarkupOnDemand(_ref17) {
-      var _this12 = this;
+      var _this11 = this;
 
       var targetSelector = _ref17.targetSelector;
       var exclusions = _ref17.exclusions;
@@ -3392,7 +3368,7 @@ var MarkupGenerator = function () {
           return;
         }
 
-        _this12.wrapWords(target);
+        _this11.wrapWords(target);
 
         target.addClass('lookup-marked-up');
       });
@@ -3408,7 +3384,7 @@ var MarkupGenerator = function () {
 
 var LoadingPopup = function () {
   function LoadingPopup(_ref18) {
-    var _this13 = this;
+    var _this12 = this;
 
     var lookupUtility = _ref18.lookupUtility;
     babelHelpers_classCallCheck(this, LoadingPopup);
@@ -3417,10 +3393,10 @@ var LoadingPopup = function () {
     this.popup = this.createPopup();
     this.progressElement = this.popup.element.find('#progress');
     this.handle = lookupUtility.lookupWorker.setMessageHandler(function (event) {
-      return _this13.progressHandler(event);
+      return _this12.progressHandler(event);
     });
     lookupUtility.ready.then(function () {
-      return _this13.popup.remove(500);
+      return _this12.popup.remove(500);
     });
   }
 
@@ -3442,7 +3418,8 @@ var LoadingPopup = function () {
 }();
 
 var smartInit = function () {
-  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee() {
+  var ref = babelHelpers_asyncToGenerator(regeneratorRuntime.mark(function _callee(_ref) {
+    var workerScript = _ref.workerScript;
     var mouseoverTarget, targetSelector, lookupUtility;
     return regeneratorRuntime.wrap(function _callee$(_context) {
       while (1) {
@@ -3454,7 +3431,8 @@ var smartInit = function () {
             console.time('init');
             lookupUtility = new LookupUtility({ selectorClass: 'lookup',
               fromLang: 'pi',
-              toLang: 'en' });
+              toLang: 'en',
+              lookupWorkerSrc: workerScript });
 
             console.log({ lookupUtility: lookupUtility });
 
@@ -3483,7 +3461,7 @@ var smartInit = function () {
       }
     }, _callee, this);
   }));
-  return function smartInit() {
+  return function smartInit(_x) {
     return ref.apply(this, arguments);
   };
 }();

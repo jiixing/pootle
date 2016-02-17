@@ -84,7 +84,7 @@ return function comparePaliAlphabet(a,b) {
 function debugmsg(msg){
     console.log('SuttaCentral: ' + msg);
 }
-debugmsg('Loading Module');
+
 window.suttacentral = {
     paliLookupFetchPromise: null,
     init: function() {
@@ -96,27 +96,31 @@ window.suttacentral = {
         let dev = false;
 
         if ($('.translation-text[lang=pi]').length) {
-          let settings = {
-            main: 'body',
-            lookupWorkerSrc: '/assets/js/lookup/lookup-worker-1.2.js',
-            fromLang: 'pi',
-            toLang: 'en',
-            dataFile: '/assets/js/lookup/pi2en-entries-1.0.json',
-            glossaryFile: '/assets/js/lookup/pi2en-glossary-1.0.json',
-            selectorClass: 'lookup'
-          }
-          $.ajax('/assets/js/lookup/lookup-1.2.js').then( () => {
-            let lookupUtility = this.activatePaliLookup(settings);
-            lookupUtility.ready.then( () => {
-              this.activateGlossary(lookupUtility);
-              $('body').on('click', '.view-row, input', function(e){
-                if ($(e.currentTarget).parents('.text-popup')) {
-                  return
-                }
-                lookupUtility.popupClass.removeAllNow();
+          if (suttacentral.lookupUtility) {
+            suttacentral.lookupUtility.popupClass.removeAllNow({removeProtected: true});
+            this.activateGlossary(suttacentral.lookupUtility);
+          } else {
+            let settings = {
+              main: 'body',
+              lookupWorkerSrc: '/assets/js/lookup/lookup-worker-1.2.js',
+              fromLang: 'pi',
+              toLang: 'en',
+              dataFile: '/assets/js/lookup/pi2en-entries-1.0.json',
+              glossaryFile: '/assets/js/lookup/pi2en-glossary-1.0.json',
+              selectorClass: 'lookup'
+            }
+            $.ajax('/assets/js/lookup/lookup-1.2.js').then( () => {
+              let lookupUtility = this.activatePaliLookup(settings);
+              lookupUtility.ready.then( () => {
+                this.activateGlossary(lookupUtility);
+                $('body').on('click', '.view-row, input', function(e){
+                  if ($(e.currentTarget).parents('.text-popup')) {
+                    return
+                  }
+                })
               })
             })
-          })
+          }
 
         }
 
@@ -173,10 +177,12 @@ window.suttacentral = {
         }
     },
     activatePaliLookup: function(settings) {
-        console.log('Activating Power')
-
       this.lookupUtility = new LookupUtility(settings);
       this.lookupUtility.ready.then(() => {
+        this.lookupUtility.markupGenerator.shouldExclude = function(element) {
+          if (!$(element).is(':lang(pi)')) return true
+          if ($(element).is('.highlight, .highlight-html')) return true
+        }
          this.lookupUtility.markupGenerator.startMarkupOnDemand({
              targetSelector: '.translate-focus .translation-text[lang=pi]',
              exclusions: '.highlight, .hightlight-html'});

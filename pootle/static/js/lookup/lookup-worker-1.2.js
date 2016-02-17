@@ -4180,12 +4180,12 @@ var index$1 = __commonjs(function (module) {
 	};
 });
 
-var require$$1$1 = index$1 && (typeof index$1 === 'undefined' ? 'undefined' : babelHelpers_typeof(index$1)) === 'object' && 'default' in index$1 ? index$1['default'] : index$1;
+var require$$1$2 = index$1 && (typeof index$1 === 'undefined' ? 'undefined' : babelHelpers_typeof(index$1)) === 'object' && 'default' in index$1 ? index$1['default'] : index$1;
 
 var polyfill = __commonjs(function (module) {
 	'use strict';
 
-	var d = require$$1$1,
+	var d = require$$1$2,
 	    validateSymbol = require$$0$2,
 	    create = Object.create,
 	    defineProperties = Object.defineProperties,
@@ -4646,11 +4646,11 @@ var es6Extensions = __commonjs(function (module) {
   };
 });
 
-var require$$1$2 = es6Extensions && (typeof es6Extensions === 'undefined' ? 'undefined' : babelHelpers_typeof(es6Extensions)) === 'object' && 'default' in es6Extensions ? es6Extensions['default'] : es6Extensions;
+var require$$1$1 = es6Extensions && (typeof es6Extensions === 'undefined' ? 'undefined' : babelHelpers_typeof(es6Extensions)) === 'object' && 'default' in es6Extensions ? es6Extensions['default'] : es6Extensions;
 
 var runtime = __commonjs(function (module, exports, global) {
   var g = (typeof global === 'undefined' ? 'undefined' : babelHelpers_typeof(global)) === "object" ? global : (typeof window === 'undefined' ? 'undefined' : babelHelpers_typeof(window)) === "object" ? window : this;
-  var Promise = g.Promise || require$$1$2;
+  var Promise = g.Promise || require$$1$1;
   var Symbol = g.Symbol || require$$0;
 
   /**

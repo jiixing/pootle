@@ -7,7 +7,7 @@
   position: absolute;
   display: inline-block;
   background: #F7D1C2;
-  z-index: 103;
+  z-index: 500;
   padding: 1px;
   border: 1px solid #ccc;
   border-radius: 3px;
@@ -201,4 +201,4 @@ td.unhide {
 tr.glossary td {
   padding: 2px;
   box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5); }
-
+/*# sourceMappingURL=lookup.css.map */
