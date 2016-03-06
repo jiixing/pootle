@@ -11,10 +11,11 @@ from itertools import groupby
 
 from translate.lang import data
 
+from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
-from django.core.urlresolvers import resolve, reverse, Resolver404
+from django.core.urlresolvers import reverse
 from django.db.models import Max, Q
 from django.http import Http404
 from django.shortcuts import redirect
@@ -36,20 +37,20 @@ from pootle_app.models.permissions import (check_permission,
                                            check_user_permission)
 from pootle_misc.checks import check_names, get_category_id
 from pootle_misc.forms import make_search_form
-from pootle_misc.util import ajax_required, get_date_interval, to_int
+from pootle_misc.util import ajax_required, get_date_interval
 from pootle_statistics.models import (Submission, SubmissionFields,
                                       SubmissionTypes)
-from virtualfolder.models import VirtualFolderTreeItem
 
 from .decorators import get_unit_context
 from .fields import to_python
-from .forms import (highlight_whitespace, unit_comment_form_factory,
-                    unit_form_factory)
+from .forms import (
+    highlight_whitespace, unit_comment_form_factory,
+    unit_form_factory, UnitSearchForm)
 from .models import Unit
 from .templatetags.store_tags import (highlight_diffs, pluralize_source,
                                       pluralize_target)
 from .unit.filters import UnitSearchFilter, UnitTextSearch
-from .util import STATES_MAP, find_altsrcs
+from .util import STATES_MAP, find_altsrcs, get_search_backend
 
 
 #: Mapping of allowed sorting criteria.
@@ -122,7 +123,7 @@ def get_step_query(request, units_queryset):
         sort_by_param = request.GET.get('sort', None)
         sort_on = 'units'
 
-        user = request.profile
+        user = request.user
         if username is not None:
             User = get_user_model()
             try:
@@ -298,7 +299,7 @@ def _get_critical_checks_snippet(request, unit):
     if not unit.has_critical_checks():
         return None
 
-    can_review = check_user_permission(request.profile, 'review',
+    can_review = check_user_permission(request.user, 'review',
                                        unit.store.parent)
     ctx = {
         'canreview': can_review,
@@ -321,101 +322,36 @@ def get_units(request):
         When the `initial` GET parameter is present, a sorted list of
         the result set ids will be returned too.
     """
-    pootle_path = request.GET.get('path', None)
-    if pootle_path is None:
-        raise Http400(_('Arguments missing.'))
-    elif len(pootle_path) > 2048:
-        raise Http400(_('Path too long.'))
+    search_form = UnitSearchForm(request.GET, user=request.user)
 
-    User = get_user_model()
-    request.profile = User.get(request.user)
-    limit = request.profile.get_unit_rows()
-    vfolder = None
+    if not search_form.is_valid():
+        errors = search_form.errors.as_data()
+        if "path" in errors:
+            for error in errors["path"]:
+                if error.code == "max_length":
+                    raise Http400(_('Path too long.'))
+                elif error.code == "required":
+                    raise Http400(_('Arguments missing.'))
+        raise Http404(forms.ValidationError(search_form.errors).messages)
 
-    if 'virtualfolder' in settings.INSTALLED_APPS:
-        from virtualfolder.helpers import extract_vfolder_from_path
+    uid_list, units_qs = get_search_backend()(
+        request.user, **search_form.cleaned_data).search()
 
-        vfolder, pootle_path = extract_vfolder_from_path(
-            pootle_path,
-            vfti=VirtualFolderTreeItem.objects.select_related(
-                "directory", "vfolder"))
+    bad_uid = (
+        len(search_form.cleaned_data["uids"]) == 1
+        and search_form.cleaned_data["uids"][0] not in uid_list)
+    if bad_uid:
+        raise Http404
 
-    path_keys = [
-        "project_code", "language_code", "dir_path", "filename"]
-    try:
-        path_kwargs = {
-            k: v
-            for k, v in resolve(pootle_path).kwargs.items()
-            if k in path_keys}
-    except Resolver404:
-        raise Http404('Unrecognised path')
-
-    units_qs = Unit.objects.get_translatable(
-        user=request.profile,
-        **path_kwargs)
-    units_qs = units_qs.order_by("store", "index")
-
-    if vfolder is not None:
-        units_qs = units_qs.filter(vfolders=vfolder)
-
-    units_qs = units_qs.select_related(
-        'store__translation_project__project',
-        'store__translation_project__language',
-    )
-    step_queryset = get_step_query(request, units_qs)
-
-    is_initial_request = request.GET.get('initial', False)
-    chunk_size = request.GET.get('count', limit)
-    uids_param = filter(None, request.GET.get('uids', '').split(u','))
-    uids = filter(None, map(to_int, uids_param))
-
-    units = []
     unit_groups = []
-    uid_list = []
-
-    if is_initial_request:
-        sort_by_field = None
-        if len(step_queryset.query.order_by) > 2:
-            sort_by_field = step_queryset.query.order_by[0]
-
-        sort_on = None
-        for key, item in ALLOWED_SORTS.items():
-            if sort_by_field in item.values():
-                sort_on = key
-                break
-
-        if sort_by_field is None or sort_on == 'units':
-            uid_list = list(step_queryset.values_list('id', flat=True))
-        else:
-            uid_list = [u['id'] for u
-                        in step_queryset.values('id', 'sort_by_field')]
-        if len(uids) == 1:
-            try:
-                uid = uids[0]
-                index = uid_list.index(uid)
-                begin = max(index - chunk_size, 0)
-                end = min(index + chunk_size + 1, len(uid_list))
-                uids = uid_list[begin:end]
-                units = step_queryset[begin:end]
-            except ValueError:
-                raise Http404  # `uid` not found in `uid_list`
-        else:
-            count = 2 * chunk_size
-            uids = uid_list[:count]
-
-    if not units and uids:
-        units = step_queryset.filter(id__in=uids)
-
-    units_by_path = groupby(units, lambda x: x.store.pootle_path)
+    units_by_path = groupby(
+        units_qs,
+        lambda x: x.store.pootle_path)
     for pootle_path, units in units_by_path:
         unit_groups.append(_path_units_with_meta(pootle_path, units))
-
-    response = {
-        'unitGroups': unit_groups,
-    }
+    response = {'unitGroups': unit_groups}
     if uid_list:
         response['uIds'] = uid_list
-
     return JsonResponse(response)
 
 
@@ -576,7 +512,7 @@ def save_comment(request, unit):
              An error message is returned otherwise.
     """
     # Update current unit instance's attributes
-    unit.commented_by = request.profile
+    unit.commented_by = request.user
     unit.commented_on = timezone.now().replace(microsecond=0)
 
     language = request.translation_project.language
@@ -632,7 +568,7 @@ def get_edit_unit(request, unit):
 
     store = unit.store
     directory = store.parent
-    user = request.profile
+    user = request.user
     project = translation_project.project
 
     alt_src_langs = get_alt_src_langs(request, user, translation_project)
@@ -675,8 +611,7 @@ def get_edit_unit(request, unit):
         'priority': priority,
         'store': store,
         'directory': directory,
-        'profile': user,
-        'user': request.user,
+        'user': user,
         'project': project,
         'language': language,
         'source_language': source_language,
@@ -766,7 +701,7 @@ def submit(request, unit):
                 sub = Submission(
                     creation_time=current_time,
                     translation_project=translation_project,
-                    submitter=request.profile,
+                    submitter=request.user,
                     unit=unit,
                     store=unit.store,
                     field=field,
@@ -782,18 +717,18 @@ def submit(request, unit):
             # important to set these attributes after saving Submission
             # because we need to access the unit's state before it was saved
             if SubmissionFields.TARGET in (f[0] for f in form.updated_fields):
-                form.instance.submitted_by = request.profile
+                form.instance.submitted_by = request.user
                 form.instance.submitted_on = current_time
                 form.instance.reviewed_by = None
                 form.instance.reviewed_on = None
 
-            form.instance._log_user = request.profile
+            form.instance._log_user = request.user
 
             form.save()
 
             json['checks'] = _get_critical_checks_snippet(request, unit)
 
-        json['user_score'] = request.profile.public_score
+        json['user_score'] = request.user.public_score
 
         return JsonResponse(json)
 
@@ -829,12 +764,12 @@ def suggest(request, unit):
             unit = Unit.objects.get(id=unit.id)
             unit.add_suggestion(
                 form.cleaned_data['target_f'],
-                user=request.profile,
+                user=request.user,
                 similarity=form.cleaned_data['similarity'],
                 mt_similarity=form.cleaned_data['mt_similarity'],
             )
 
-            json['user_score'] = request.profile.public_score
+            json['user_score'] = request.user.public_score
 
         return JsonResponse(json)
 
@@ -870,10 +805,9 @@ def reject_suggestion(request, unit, suggid):
         (request.user.is_anonymous() or request.user != sugg.user)):
         raise PermissionDenied(_('Insufficient rights to access review mode.'))
 
-    unit.reject_suggestion(sugg, request.translation_project,
-                           request.profile)
+    unit.reject_suggestion(sugg, request.translation_project, request.user)
 
-    json['user_score'] = request.profile.public_score
+    json['user_score'] = request.user.public_score
 
     return JsonResponse(json)
 
@@ -890,10 +824,9 @@ def accept_suggestion(request, unit, suggid):
     except ObjectDoesNotExist:
         raise Http404
 
-    unit.accept_suggestion(suggestion, request.translation_project,
-                           request.profile)
+    unit.accept_suggestion(suggestion, request.translation_project, request.user)
 
-    json['user_score'] = request.profile.public_score
+    json['user_score'] = request.user.public_score
     json['newtargets'] = [highlight_whitespace(target)
                           for target in unit.target.strings]
     json['newdiffs'] = {}
@@ -912,7 +845,7 @@ def accept_suggestion(request, unit, suggid):
 def toggle_qualitycheck(request, unit, check_id):
     try:
         unit.toggle_qualitycheck(check_id, bool(request.POST.get('mute')),
-                                 request.profile)
+                                 request.user)
     except ObjectDoesNotExist:
         raise Http404
 

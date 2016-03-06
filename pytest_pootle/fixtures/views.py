@@ -257,19 +257,12 @@ def project_views(request, client):
 
 
 @pytest.fixture(params=TP_VIEW_TESTS.keys())
-def tp_view_test_names(request):
-    return request.param
-
-
-@pytest.fixture(params=(None, 'member', 'admin'))
-def tp_view_usernames(request):
-    return request.param
-
-
-@pytest.fixture
-def tp_views(tp_view_test_names, tp_view_usernames, client):
+def tp_views(request, client, request_users):
     from pootle.core.helpers import SIDEBAR_COOKIE_NAME
     from pootle_translationproject.models import TranslationProject
+
+    tp_view_test_names = request.param
+    user = request_users["user"]
 
     test_type = tp_view_test_names.split("_")[0]
     tp = TranslationProject.objects.all()[0]
@@ -286,9 +279,12 @@ def tp_views(tp_view_test_names, tp_view_usernames, client):
     else:
         del kwargs["filename"]
     view_name = "%s-%s" % (tp_view, test_type)
-    if tp_view_usernames is not None:
-        password = TEST_USERS[tp_view_usernames]['password']
-        client.login(username=tp_view_usernames, password=password)
+
+    if user.username != "nobody":
+        client.login(
+            username=user.username,
+            password=request_users["password"])
+
     response = client.get(reverse(view_name, kwargs=kwargs))
     kwargs["filename"] = kwargs.get("filename", "")
     return test_type, tp, response.wsgi_request, response, kwargs

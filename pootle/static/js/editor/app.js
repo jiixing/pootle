@@ -741,7 +741,7 @@ PTL.editor = {
     $('.js-translation-area').each(function setDefaultValue() {
       this.defaultValue = this.value;
     });
-    const checkbox = $('#id_state')[0];
+    const checkbox = document.querySelector('#id_state');
     checkbox.defaultChecked = checkbox.checked;
     this.handleTranslationChange();
   },
@@ -758,13 +758,13 @@ PTL.editor = {
     const commentChanged = comment !== null ?
                            comment.value !== comment.defaultValue : false;
 
-    const submit = $('.js-submit')[0];
-    const suggest = $('.js-suggest')[0];
+    const submit = document.querySelector('.js-submit');
+    const suggest = document.querySelector('.js-suggest');
     const translations = $('.js-translation-area').get();
     const suggestions = $('.js-user-suggestion').map(function getSuggestions() {
       return $(this).data('translation-aid');
     }).get();
-    const checkbox = $('#id_state')[0];
+    const checkbox = document.querySelector('#id_state');
     const stateChanged = checkbox.defaultChecked !== checkbox.checked;
 
     let areaChanged = false;
@@ -792,10 +792,10 @@ PTL.editor = {
     // Store dirty state for the current unit
     this.isUnitDirty = areaChanged || stateChanged || commentChanged;
 
-    if (submit !== undefined) {
+    if (submit !== null) {
       submit.disabled = !(stateChanged || areaChanged) || needsReview;
     }
-    if (suggest !== undefined) {
+    if (suggest !== null) {
       suggest.disabled = !areaChanged || suggestionExists;
     }
   },
