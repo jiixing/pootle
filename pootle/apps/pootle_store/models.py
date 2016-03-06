@@ -1628,6 +1628,7 @@ class Store(models.Model, CachedTreeItem, base.TranslationStore):
                               and store_revision < unit.revision
                               and (unit.target != newunit.target
                                    or unit.source != newunit.source))
+            conflict_found = False
 
             # FIXME: `old_unit = copy.copy(unit)?`
             old_target = unit.target_f
