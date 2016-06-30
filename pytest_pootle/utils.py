@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -11,6 +10,7 @@
 
 import io
 import json
+from uuid import uuid4
 
 from translate.storage.factory import getclass
 
@@ -41,6 +41,22 @@ msgstr "%(target)s"
 """
 
 
+def setup_store(pootle_path):
+    from pootle.core.url_helpers import split_pootle_path
+    from pootle_translationproject.models import TranslationProject
+
+    from .factories import StoreDBFactory
+
+    (lang_code, proj_code,
+     dir_path, filename) = split_pootle_path(pootle_path)
+    tp = TranslationProject.objects.get(
+        language__code=lang_code, project__code=proj_code)
+    directory = tp.directory.get_relative(dir_path)
+
+    return StoreDBFactory(
+        translation_project=tp, parent=directory, name=filename)
+
+
 def create_store(pootle_path=None, store_revision=None, units=None):
     _units = []
     for src, target in units or []:
@@ -57,14 +73,14 @@ def create_store(pootle_path=None, store_revision=None, units=None):
     return getclass(io_store)(io_store.read())
 
 
-def get_translated_uids(offset=0, count=1):
+def get_test_uids(offset=0, count=1, pootle_path="^/language0/"):
     """Returns a list translated unit uids from ~middle of
     translated units dataset
     """
-    from pootle_store.models import Unit
-    from pootle_store.util import TRANSLATED
+    from pootle_store.models import TRANSLATED, Unit
 
-    units = Unit.objects.filter(state=TRANSLATED)
+    units = Unit.objects.filter(
+        store__pootle_path__regex=pootle_path).filter(state=TRANSLATED)
     begin = (units.count() / 2) + offset
     return list(units[begin: begin + count].values_list("pk", flat=True))
 
@@ -107,3 +123,33 @@ def update_store(store, units=None, store_revision=None, add_headers=False,
                  store_revision=store_revision,
                  user=user, submission_type=submission_type,
                  resolve_conflict=resolve_conflict)
+
+
+def get_translated_storefile(store, pootle_path=None):
+    """Returns file store with added translations for untranslated units."""
+    storeclass = store.get_file_class()
+    filestore = store.convert(storeclass)
+    for i, unit in enumerate(filestore.units):
+        if not unit.istranslated():
+            unit.target = "Translation of %s" % unit.source
+
+    path = pootle_path if pootle_path is not None else store.pootle_path
+    filestore.updateheader(add=True, X_Pootle_Path=path)
+    filestore.updateheader(add=True,
+                           X_Pootle_Revision=store.get_max_unit_revision())
+
+    return filestore
+
+
+def add_store_fs(store, fs_path, synced=False):
+    from pootle_fs.models import StoreFS
+
+    if synced:
+        return StoreFS.objects.create(
+            store=store,
+            path=fs_path,
+            last_sync_hash=uuid4().hex,
+            last_sync_revision=store.get_max_unit_revision())
+    return StoreFS.objects.create(
+        store=store,
+        path=fs_path)

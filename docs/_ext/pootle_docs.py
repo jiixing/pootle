@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -8,6 +7,9 @@
 # AUTHORS file for copyright and authorship information.
 
 """Sphinx extension with custom stuff for Pootle docs."""
+
+from sphinx import addnodes
+from sphinx.domains.std import Cmdoption
 
 
 def setup(app):
@@ -21,6 +23,16 @@ def setup(app):
         directivename="django-admin",
         rolename="djadmin",
         indextemplate="pair: %s; django-admin command",
+        parse_node=parse_django_admin_node,
     )
 
+    app.add_directive('django-admin-option', Cmdoption)
+
     return {"parallel_read_safe": True}
+
+
+def parse_django_admin_node(env, sig, signode):
+    command = sig.split(' ')[0]
+    env.ref_context['std:program'] = command
+    signode += addnodes.desc_name(sig, sig)
+    return command

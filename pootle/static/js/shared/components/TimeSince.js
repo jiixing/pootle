@@ -34,7 +34,7 @@ const TimeSince = React.createClass({
     }
   },
 
-  componentWillUnMount() {
+  componentWillUnmount() {
     this.cleanup();
   },
 
@@ -77,6 +77,7 @@ const TimeSince = React.createClass({
         className="extra-item-meta"
         title={this.props.title}
         dateTime={this.props.dateTime}
+        {...this.props}
       >
         {displayTime}
       </time>

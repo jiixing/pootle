@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -19,6 +18,7 @@ register = template.Library()
 @register.inclusion_tag('browser/_table.html', takes_context=True)
 def display_table(context, table):
     return {
+        'can_translate': context["can_translate"],
         'table': table,
     }
 
@@ -62,7 +62,7 @@ def top_scorers(*args, **kwargs):
     User = get_user_model()
     allowed_kwargs = ('days', 'language', 'project', 'limit')
     lookup_kwargs = dict(
-        (k, v) for (k, v) in kwargs.iteritems() if k in allowed_kwargs
+        (k, v) for (k, v) in kwargs.iteritems() if k in allowed_kwargs and v
     )
 
     return {

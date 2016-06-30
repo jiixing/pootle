@@ -10,12 +10,13 @@
         {{ th.display_name }}
       </th>
       {% endfor %}
+      <span class="js-mnt-visibility-toggle"></span>
     </tr>
   </thead>
-  <tbody class="stats">
+  <tbody class="stats js-browsing-table">
     {% for item in table.items %}
 
-    <tr class="item{% if item.is_disabled %} is-disabled{% endif %}{% if item.is_grayed %} is-grayed{% endif %}">
+    <tr class="item is-visible{% if item.is_disabled %} is-disabled{% endif %}{% if item.is_grayed %} is-grayed{% endif %}">
 
       {% if 'name' in table.fields %}
       <td class="stats-name {{ item.icon }}"{% if item.description %} title="{{ item.description|striptags }}"{% endif %}>
@@ -42,7 +43,11 @@
 
       {% if 'total' in table.fields %}
       <td id="total-words-{{ item.code|cssid }}" class="stats-number total not-inited">
-        <a class="non-zero" href="{{ item.href_all }}"></a>
+        {% if can_translate %}
+        <a class="stats-data non-zero" href="{{ item.href_all }}"></a>
+        {% else %}
+        <span class="stats-data non-zero"></span>
+        {% endif %}
         <span class="zero muted">0</span>
         <span class="not-inited muted">—</span>
       </td>
@@ -54,9 +59,13 @@
       </td>
       {% endif %}
 
-      {% if 'need-translation' in table.fields %}
-      <td id="need-translation-{{ item.code|cssid }}" class="stats-number need-translation not-inited">
-        <a class="non-zero" href="{{ item.href_todo }}"></a>
+      {% if 'critical' in table.fields %}
+      <td id="critical-{{ item.code|cssid }}" class="stats-number critical not-inited">
+        {% if can_translate %}
+        <a class="stats-data non-zero" href="{{ item.href_critical }}"></a>
+        {% else %}
+        <span class="stats-data non-zero"></span>
+        {% endif %}
         <span class="zero muted">0</span>
         <span class="not-inited muted">—</span>
       </td>
@@ -64,15 +73,23 @@
 
       {% if 'suggestions' in table.fields %}
       <td id="suggestions-{{ item.code|cssid }}" class="stats-number suggestions not-inited">
-        <a class="non-zero" href="{{ item.href_sugg }}"></a>
+        {% if can_translate %}
+        <a class="stats-data non-zero" href="{{ item.href_sugg }}"></a>
+        {% else %}
+        <span class="stats-data non-zero"></span>
+        {% endif %}
         <span class="zero muted">0</span>
         <span class="not-inited muted">—</span>
       </td>
       {% endif %}
 
-      {% if 'critical' in table.fields %}
-      <td id="critical-{{ item.code|cssid }}" class="stats-number critical not-inited">
-        <a class="non-zero" href="{{ item.href_critical }}"></a>
+      {% if 'need-translation' in table.fields %}
+      <td id="need-translation-{{ item.code|cssid }}" class="stats-number need-translation not-inited">
+        {% if can_translate %}
+        <a class="stats-data non-zero" href="{{ item.href_todo }}"></a>
+        {% else %}
+        <span class="stats-data non-zero"></span>
+        {% endif %}
         <span class="zero muted">0</span>
         <span class="not-inited muted">—</span>
       </td>

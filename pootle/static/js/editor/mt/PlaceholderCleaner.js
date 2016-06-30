@@ -8,6 +8,7 @@
 
 const HTML_PAT = /<[\/]?\w+.*?>/g;
 // The printf regex based on http://phpjs.org/functions/sprintf:522
+// eslint-disable-next-line max-len
 const C_PRINTF_PAT = /%%|%(\d+\$)?([-+\'#0 ]*)(\*\d+\$|\*|\d+)?(\.(\*\d+\$|\*|\d+))?([scboxXuidfegEG])/g;
 const C_SHARP_STR_PAT = /{\d+(,\d+)?(:[a-zA-Z ]+)?}/g;
 const PERCENT_NUMBER_PAT = /%\d+/g;
@@ -51,14 +52,14 @@ class PlaceholderCleaner {
     let recoveredTranslation = translation;
     // Fix whitespace which may have been added around [N] blocks
     for (let i = 0; i < argSubs.length; i++) {
-      if (replacedSourceText.match(new RegExp('\\[' + i + '\\][^\\s]'))) {
+      if (replacedSourceText.match(new RegExp(`\\[${i}\\][^\\s]`))) {
         recoveredTranslation = recoveredTranslation.replace(
-          new RegExp('\\[' + i + '\\]\\s+'), '[' + i + ']'
+          new RegExp(`\\[${i}\\]\\s+`), `[${i}]`
         );
       }
-      if (replacedSourceText.match(new RegExp('[^\\s]\\[' + i + '\\]'))) {
+      if (replacedSourceText.match(new RegExp(`[^\\s]\\[${i}\\]`))) {
         recoveredTranslation = recoveredTranslation.replace(
-          new RegExp('\\s+\\[' + i + '\\]'), '[' + i + ']'
+          new RegExp(`\\s+\\[${i}\\]`), `[${i}]`
         );
       }
     }
@@ -68,7 +69,7 @@ class PlaceholderCleaner {
       const value = argSubs[i].replace(/\&/g, '&amp;')
                               .replace(/\</g, '&lt;')
                               .replace(/\>/g, '&gt;');
-      recoveredTranslation = recoveredTranslation.replace('[' + i + ']', value);
+      recoveredTranslation = recoveredTranslation.replace(`[${i}]`, value);
     }
 
     this.resetState();

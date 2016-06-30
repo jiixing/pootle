@@ -7,7 +7,6 @@
  */
 
 import React from 'react';
-import _ from 'underscore';
 
 import FormCheckedInput from './FormCheckedInput';
 import FormValueInput from './FormValueInput';
@@ -18,12 +17,15 @@ const FormElement = React.createClass({
 
   propTypes: {
     type: React.PropTypes.string,
-    attribute: React.PropTypes.string.isRequired,
     label: React.PropTypes.string.isRequired,
+    name: React.PropTypes.string.isRequired,
     handleChange: React.PropTypes.func.isRequired,
-    formData: React.PropTypes.object.isRequired,
+    value: React.PropTypes.oneOfType([
+      React.PropTypes.number,
+      React.PropTypes.string,
+    ]).isRequired,
     help: React.PropTypes.string,
-    errors: React.PropTypes.object,
+    errors: React.PropTypes.array,
   },
 
   /* Lifecycle */
@@ -38,12 +40,9 @@ const FormElement = React.createClass({
   /* Layout */
 
   render() {
-    const { attribute } = this.props;
-    const fieldId = `id_${attribute}`;
+    const { errors } = this.props;
+    const fieldId = `id_${this.props.name}`;
     const hint = this.props.help;
-
-    const errors = (_.size(this.props.errors) > 0 &&
-                    this.props.errors[attribute]);
 
     const InputComponent = {
       text: FormValueInput,
@@ -57,30 +56,14 @@ const FormElement = React.createClass({
       select: FormSelectInput,
     }[this.props.type];
 
-    const newProps = {
-      id: fieldId,
-      name: attribute,
-      value: this.props.formData[attribute],
-    };
-    if (this.props.type === 'select') {
-      // FIXME: react-select's issue #25 prevents using non-string values
-      newProps.value = newProps.value.toString();
-
-      newProps.placeholder = gettext('Select...');
-      newProps.noResultsText = gettext('No results found');
-      newProps.clearValueText = gettext('Clear value');
-      newProps.clearAllText = gettext('Clear all');
-      newProps.searchPromptText = gettext('Type to search');
-    }
-
     return (
       <div className="field-wrapper">
         <label htmlFor={fieldId}>{this.props.label}</label>
-        <InputComponent {...this.props} {...newProps} />
+        <InputComponent id={fieldId} {...this.props} />
       {errors &&
-        <ul className="errorlist">{errors.map((msg, i) => {
-          return <li key={i}>{msg}</li>;
-        })}</ul>}
+        <ul className="errorlist">{errors.map((msg, i) => (
+          <li key={i}>{msg}</li>
+        ))}</ul>}
       {hint &&
         <span className="helptext">{hint}</span>}
       </div>

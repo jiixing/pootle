@@ -66,6 +66,8 @@ class PootleBuildMo(DistutilsBuild):
          "compile all language (don't use LINGUAS file)"),
         ('lang=', 'l',
          "specify a language to compile"),
+        ('check', None,
+         "check for errors"),
     ]
     boolean_options = ['all']
 
@@ -75,6 +77,7 @@ class PootleBuildMo(DistutilsBuild):
     def initialize_options(self):
         self.all = False
         self.lang = None
+        self.check = False
 
     def finalize_options(self):
         if self.all and self.lang is not None:
@@ -98,6 +101,8 @@ class PootleBuildMo(DistutilsBuild):
         import gettext
         from translate.storage import factory
 
+        error_occured = False
+
         for lang in self._langs:
             lang = lang.rstrip()
 
@@ -120,10 +125,16 @@ class PootleBuildMo(DistutilsBuild):
                     os.makedirs(mo_path)
 
                 log.info("compiling %s", lang)
+                if self.check:
+                    command = ['msgfmt', '-c', '--strict',
+                               '-o', mo_filename, po_filename]
+                else:
+                    command = ['msgfmt', '--strict',
+                               '-o', mo_filename, po_filename]
                 try:
-                    subprocess.call([
-                        'msgfmt', '--strict', '-o', mo_filename, po_filename],
-                        stderr=subprocess.STDOUT)
+                    subprocess.check_call(command, stderr=subprocess.STDOUT)
+                except subprocess.CalledProcessError as e:
+                    error_occured = True
                 except Exception as e:
                     log.warn("%s: skipping, running msgfmt failed: %s",
                              lang, e)
@@ -134,6 +145,9 @@ class PootleBuildMo(DistutilsBuild):
                 except Exception:
                     log.warn("%s: invalid plural header in %s",
                              lang, po_filename)
+
+        if error_occured:
+            sys.exit(1)
 
     def run(self):
         self.build_mo()

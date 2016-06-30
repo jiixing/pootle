@@ -25,7 +25,7 @@ const PasswordResetForm = React.createClass({
     formErrors: React.PropTypes.object.isRequired,
     isLoading: React.PropTypes.bool.isRequired,
     tokenFailed: React.PropTypes.bool.isRequired,
-    redirectTo: React.PropTypes.string.isRequired,
+    redirectTo: React.PropTypes.string,
   },
 
   mixins: [PureRenderMixin, FormMixin],
@@ -78,7 +78,9 @@ const PasswordResetForm = React.createClass({
   renderTokenFailed() {
     return (
       <AuthContent>
-        <p>{gettext('The password reset link was invalid, possibly because it has already been used. Please request a new password reset.')}</p>
+        <p>{gettext('The password reset link was invalid, possibly because ' +
+                    'it has already been used. Please request a new ' +
+                    'password reset.')}</p>
         <div className="actions">
           <button
             className="btn btn-primary"
@@ -106,24 +108,25 @@ const PasswordResetForm = React.createClass({
       <AuthContent>
         <form
           method="post"
-          onSubmit={this.handleFormSubmit}>
+          onSubmit={this.handleFormSubmit}
+        >
           <div className="fields">
             <FormElement
               autoFocus
               type="password"
-              attribute="password1"
               label={gettext('Password')}
               handleChange={this.handleChange}
-              formData={formData}
-              errors={errors}
+              name="password1"
+              errors={errors.password1}
+              value={formData.password1}
             />
             <FormElement
               type="password"
-              attribute="password2"
               label={gettext('Repeat Password')}
               handleChange={this.handleChange}
-              formData={formData}
-              errors={errors}
+              name="password2"
+              errors={errors.password2}
+              value={formData.password2}
             />
           </div>
           {this.renderAllFormErrors()}

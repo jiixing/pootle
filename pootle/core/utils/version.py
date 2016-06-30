@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -166,6 +165,16 @@ def get_docs_version(version=None, positions=2):
     if _is_development_candidate(version):
         return 'dev'
     return _get_version_string(version[:positions])
+
+
+def get_rtd_version(version=None):
+    """Return the docs version string reported in the RTD site."""
+    version_str = get_docs_version(version=version, positions=3)
+    return (
+        'latest'
+        if version_str == 'dev'
+        else 'stable-%s' % (version_str, )
+    )
 
 
 def _shell_command(command):

@@ -14,18 +14,20 @@ import pytest
 
 from pytest_pootle.suite import view_context_test
 
+from django.contrib.auth import get_user_model
+
 from pootle_app.models.permissions import check_permission
 from pootle.core.browser import make_project_item, get_table_headings
+from pootle.core.delegate import search_backend
 from pootle.core.helpers import (
     SIDEBAR_COOKIE_NAME,
     get_filter_name, get_sidebar_announcements_context)
 from pootle.core.url_helpers import get_previous_url
-from pootle.core.utils.json import jsonify
+from pootle.core.utils.stats import get_translation_states
 from pootle_misc.checks import get_qualitycheck_schema
 from pootle_misc.forms import make_search_form
-from pootle_misc.stats import get_translation_states
+from pootle_store.forms import UnitExportForm
 from pootle_store.models import Unit
-from pootle_store.views import get_step_query
 
 
 def _test_browse_view(language, request, response, kwargs):
@@ -63,7 +65,9 @@ def _test_browse_view(language, request, response, kwargs):
         # check_categories=get_qualitycheck_schema(language),
         table=table,
         translation_states=get_translation_states(language),
-        stats=jsonify(language.get_stats_for_user(request.user)))
+        top_scorers=get_user_model().top_scorers(language=language.code, limit=10),
+        stats=language.get_stats_for_user(request.user),
+    )
     sidebar = get_sidebar_announcements_context(
         request, (language, ))
     for k in ["has_sidebar", "is_sidebar_open", "announcements"]:
@@ -87,7 +91,7 @@ def _test_translate_view(language, request, response, kwargs, settings):
             check_categories=get_qualitycheck_schema(),
             previous_url=get_previous_url(request),
             display_priority=False,
-            is_admin=check_permission('administrate', request),
+            has_admin_access=check_permission('administrate', request),
             cantranslate=check_permission("translate", request),
             cansuggest=check_permission("suggest", request),
             canreview=check_permission("review", request),
@@ -101,8 +105,13 @@ def _test_export_view(language, request, response, kwargs):
     # TODO: export views should be parsed in a form
     ctx = response.context
     filter_name, filter_extra = get_filter_name(request.GET)
-    units_qs = Unit.objects.get_translatable(request.user, **kwargs)
-    units_qs = get_step_query(request, units_qs)
+    form_data = request.GET.copy()
+    form_data["path"] = request.path.replace("export-view/", "")
+    search_form = UnitExportForm(
+        form_data, user=request.user)
+    assert search_form.is_valid()
+    total, start, end, units_qs = search_backend.get(Unit)(
+        request.user, **search_form.cleaned_data).search()
     units_qs = units_qs.select_related('store')
     unit_groups = [
         (path, list(units))

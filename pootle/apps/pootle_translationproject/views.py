@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -19,10 +18,8 @@ from django.utils.lru_cache import lru_cache
 from import_export.views import handle_upload_form
 from pootle.core.browser import (
     get_parent, get_table_headings, make_directory_item, make_store_item)
-from pootle.core.decorators import (
-    get_path_obj, permission_required)
-from pootle.core.helpers import (
-    get_sidebar_announcements_context)
+from pootle.core.decorators import get_path_obj, permission_required
+from pootle.core.helpers import get_sidebar_announcements_context
 from pootle.core.views import (
     PootleBrowseView, PootleTranslateView, PootleExportView)
 from pootle_app.models import Directory
@@ -43,6 +40,15 @@ from .models import TranslationProject
 def admin_permissions(request, translation_project):
     ctx = {
         'page': 'admin-permissions',
+
+        'browse_url': reverse('pootle-tp-browse', kwargs={
+            'language_code': translation_project.language.code,
+            'project_code': translation_project.project.code,
+        }),
+        'translate_url': reverse('pootle-tp-translate', kwargs={
+            'language_code': translation_project.language.code,
+            'project_code': translation_project.project.code,
+        }),
 
         'translation_project': translation_project,
         'project': translation_project.project,
@@ -286,13 +292,13 @@ class TPBrowseView(TPDirectoryMixin, TPBrowseBaseView):
     @cached_property
     def vfolders(self):
         vftis = self.object.vf_treeitems
-        if not self.is_admin:
+        if not self.has_admin_access:
             vftis = vftis.filter(vfolder__is_public=True)
         return [
             make_vfolder_treeitem_dict(vfolder_treeitem)
             for vfolder_treeitem
             in vftis.order_by('-vfolder__priority').select_related("vfolder")
-            if (self.is_admin
+            if (self.has_admin_access
                 or vfolder_treeitem.is_visible)]
 
     @cached_property
@@ -349,13 +355,6 @@ class TPTranslateBaseView(PootleTranslateView):
     def pootle_path(self):
         return "%s%s" % (self.ctx_path, self.resource_path)
 
-    @property
-    def display_vfolder_priority(self):
-        if 'virtualfolder' not in settings.INSTALLED_APPS:
-            return False
-        return VirtualFolderTreeItem.objects.filter(
-            pootle_path__startswith=self.object.pootle_path).exists()
-
 
 class TPTranslateView(TPDirectoryMixin, TPTranslateBaseView):
 
@@ -377,8 +376,7 @@ class TPTranslateView(TPDirectoryMixin, TPTranslateBaseView):
         vfolder = self.extracted_path[0]
         if vfolder:
             return False
-        return VirtualFolderTreeItem.objects.filter(
-            pootle_path__startswith=self.object.pootle_path).exists()
+        return self.object.has_vfolders
 
     @property
     def resource_path(self):

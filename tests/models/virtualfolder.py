@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -13,7 +12,7 @@ from django.core.exceptions import ValidationError
 
 import pytest
 
-from pytest_pootle.factories import VirtualFolderFactory
+from pytest_pootle.factories import VirtualFolderDBFactory
 
 from pootle_store.models import Unit
 from pootle_store.util import OBSOLETE, TRANSLATED
@@ -155,7 +154,7 @@ def test_vfolder_with_no_filter_rules():
 @pytest.mark.django_db
 def test_vfolder_membership():
 
-    vfolder = VirtualFolderFactory(filter_rules="store0.po")
+    vfolder = VirtualFolderDBFactory(filter_rules="store0.po")
 
     live_units = Unit.objects.filter(state__gt=OBSOLETE)
 
@@ -213,7 +212,7 @@ def test_vfolder_unit_priorities():
         for priority
         in Unit.objects.values_list("priority", flat=True))
 
-    vfolder0 = VirtualFolderFactory(filter_rules="store0.po", priority=3)
+    vfolder0 = VirtualFolderDBFactory(filter_rules="store0.po", priority=3)
 
     assert all(
         priority == 3
@@ -240,7 +239,7 @@ def test_vfolder_unit_priorities():
         in Unit.objects.filter(vfolders__isnull=True)
                        .values_list("priority", flat=True))
 
-    vfolder1 = VirtualFolderFactory(
+    vfolder1 = VirtualFolderDBFactory(
         location='/{LANG}/project0/',
         filter_rules="store1.po",
         priority=4)
@@ -266,14 +265,14 @@ def test_vfolder_unit_priorities():
 
 @pytest.mark.django_db
 def test_virtualfolder_repr():
-    vf = VirtualFolder.objects.first()
+    vf = VirtualFolderDBFactory(filter_rules="store0.po")
     assert (
         "<VirtualFolder: %s: %s>" % (vf.name, vf.location)
         == repr(vf))
 
 
 @pytest.mark.django_db
-def test_virtualfoldertreeitem_repr():
+def test_virtualfoldertreeitem_repr(vfolders):
     vfti = VirtualFolderTreeItem.objects.first()
     assert (
         "<VirtualFolderTreeItem: %s>" % vfti.pootle_path

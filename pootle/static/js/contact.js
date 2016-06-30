@@ -54,9 +54,9 @@ const contact = {
     const body = $el.data(sel.data.body);
 
     this.open({
-      subjectPrefix: subjectPrefix,
-      subject: subject,
-      body: body,
+      subjectPrefix,
+      subject,
+      body,
     });
   },
 
@@ -90,6 +90,7 @@ const contact = {
       },
       mainClass: 'popup-ajax',
     });
+    return true;
   },
 
   onSubmit(e) {
@@ -110,9 +111,9 @@ const contact = {
   sendMessage(url, data) {
     const that = this;
     $.ajax({
-      url: url,
+      url,
+      data,
       type: 'POST',
-      data: data,
       dataType: 'json',
       success: that.onSuccess.bind(that),
       error: that.onError.bind(that),
@@ -145,7 +146,7 @@ const contact = {
   /* Injects a form validation error next to the input it failed to
    * validate */
   validationError(fieldName, msgs) {
-    const $field = $('#id_' + fieldName);
+    const $field = $(`#id_${fieldName}`);
     const errorList = ['<ul class="errorlist">'];
     for (let i = 0; i < msgs.length; i++) {
       errorList.push(['<li>', msgs[i], '</li>'].join(''));

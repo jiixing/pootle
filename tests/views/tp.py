@@ -6,31 +6,32 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
-from itertools import groupby
 import json
+from itertools import groupby
 from urllib import unquote
 
 import pytest
 
 from pytest_pootle.suite import view_context_test
 
+from django.contrib.auth import get_user_model
+
 from pootle_app.models import Directory
 from pootle_app.models.permissions import check_permission
 from pootle.core.browser import (
     get_parent, get_table_headings, make_directory_item, make_store_item)
+from pootle.core.delegate import search_backend
 from pootle.core.helpers import (
     SIDEBAR_COOKIE_NAME,
     get_filter_name, get_sidebar_announcements_context)
 from pootle.core.url_helpers import get_previous_url, get_path_parts
-from pootle.core.utils.json import jsonify
-from pootle_misc.checks import get_qualitycheck_schema
+from pootle.core.utils.stats import get_translation_states
+from pootle_misc.checks import get_qualitycheck_list, get_qualitycheck_schema
 from pootle_misc.forms import make_search_form
-from pootle_misc.stats import get_translation_states
+from pootle_store.forms import UnitExportForm
 from pootle_store.models import Store, Unit
-from pootle_store.views import get_step_query
 from virtualfolder.helpers import (
     extract_vfolder_from_path, make_vfolder_treeitem_dict)
-from virtualfolder.models import VirtualFolderTreeItem
 from virtualfolder.helpers import vftis_for_child_dirs
 
 
@@ -60,13 +61,13 @@ def _test_browse_view(tp, request, response, kwargs):
             pootle_path=pootle_path)
     if not kwargs.get("filename"):
         vftis = ob.vf_treeitems.select_related("vfolder")
-        if not ctx["is_admin"]:
+        if not ctx["has_admin_access"]:
             vftis = vftis.filter(vfolder__is_public=True)
         vfolders = [
             make_vfolder_treeitem_dict(vfolder_treeitem)
             for vfolder_treeitem
             in vftis.order_by('-vfolder__priority')
-            if (ctx["is_admin"]
+            if (ctx["has_admin_access"]
                 or vfolder_treeitem.is_visible)]
         stats = {"vfolders": {}}
         for vfolder_treeitem in vfolders or []:
@@ -77,9 +78,8 @@ def _test_browse_view(tp, request, response, kwargs):
             stats.update(ob.get_stats())
         else:
             stats = ob.get_stats()
-        stats = jsonify(stats)
     else:
-        stats = jsonify(ob.get_stats())
+        stats = ob.get_stats()
         vfolders = None
 
     filters = {}
@@ -113,20 +113,23 @@ def _test_browse_view(tp, request, response, kwargs):
     else:
         table = None
 
+    User = get_user_model()
     assertions = dict(
         page="browse",
         object=ob,
         translation_project=tp,
         language=tp.language,
         project=tp.project,
-        is_admin=check_permission('administrate', request),
+        has_admin_access=check_permission('administrate', request),
         is_store=(kwargs.get("filename") and True or False),
         browser_extends="translation_projects/base.html",
         pootle_path=pootle_path,
         resource_path=resource_path,
         resource_path_parts=get_path_parts(resource_path),
         translation_states=get_translation_states(ob),
-        check_categories=get_qualitycheck_schema(ob),
+        checks=get_qualitycheck_list(ob),
+        top_scorers=User.top_scorers(language=tp.language.code,
+                                     project=tp.project.code, limit=10),
         url_action_continue=ob.get_translate_url(
             state='incomplete', **filters),
         url_action_fixcritical=ob.get_critical_url(**filters),
@@ -144,7 +147,7 @@ def _test_browse_view(tp, request, response, kwargs):
     view_context_test(ctx, **assertions)
     if vfolders:
         for vfolder in ctx["vfolders"]["items"]:
-            assert (vfolder["is_grayed"] and not ctx["is_admin"]) is False
+            assert (vfolder["is_grayed"] and not ctx["has_admin_access"]) is False
         assert (
             ctx["vfolders"]["items"]
             == vfolders)
@@ -167,15 +170,13 @@ def _test_translate_view(tp, request, response, kwargs, settings):
         else "")
     display_priority = (
         not current_vfolder_pk
-        and (
-            VirtualFolderTreeItem.objects.filter(
-                pootle_path__startswith=pootle_path).exists()))
+        and not kwargs['filename'] and ctx['object'].has_vfolders)
     assertions = dict(
         page="translate",
         translation_project=tp,
         language=tp.language,
         project=tp.project,
-        is_admin=check_permission('administrate', request),
+        has_admin_access=check_permission('administrate', request),
         ctx_path=tp.pootle_path,
         pootle_path=request_path,
         resource_path=resource_path,
@@ -194,27 +195,37 @@ def _test_translate_view(tp, request, response, kwargs, settings):
     view_context_test(ctx, **assertions)
 
 
-def _test_export_view(tp, request, response, kwargs):
+def _test_export_view(tp, request, response, kwargs, settings):
     ctx = response.context
     filter_name, filter_extra = get_filter_name(request.GET)
-    units_qs = Unit.objects.get_translatable(request.user, **kwargs)
-    units_qs = get_step_query(request, units_qs)
+    form_data = request.GET.copy()
+    form_data["path"] = request.path.replace("export-view/", "")
+    search_form = UnitExportForm(
+        form_data, user=request.user)
+    assert search_form.is_valid()
+    total, start, end, units_qs = search_backend.get(Unit)(
+        request.user, **search_form.cleaned_data).search()
     units_qs = units_qs.select_related('store')
+    assertions = {}
+    if total > settings.POOTLE_EXPORT_VIEW_LIMIT:
+        units_qs = units_qs[:settings.POOTLE_EXPORT_VIEW_LIMIT]
+        assertions.update(
+            {'unit_total_count': total,
+             'displayed_unit_count': settings.POOTLE_EXPORT_VIEW_LIMIT})
     unit_groups = [
         (path, list(units))
         for path, units
         in groupby(
             units_qs,
             lambda x: x.store.pootle_path)]
-    view_context_test(
-        ctx,
-        **dict(
-            project=tp.project,
-            language=tp.language,
-            source_language=tp.project.source_language,
-            filter_name=filter_name,
-            filter_extra=filter_extra,
-            unit_groups=unit_groups))
+    assertions.update(
+        dict(project=tp.project,
+             language=tp.language,
+             source_language=tp.project.source_language,
+             filter_name=filter_name,
+             filter_extra=filter_extra,
+             unit_groups=unit_groups))
+    view_context_test(ctx, **assertions)
 
 
 @pytest.mark.django_db
@@ -225,7 +236,7 @@ def test_views_tp(tp_views, settings):
     elif test_type == "translate":
         _test_translate_view(tp, request, response, kwargs, settings)
     else:
-        _test_export_view(tp, request, response, kwargs)
+        _test_export_view(tp, request, response, kwargs, settings)
 
 
 @pytest.mark.django_db

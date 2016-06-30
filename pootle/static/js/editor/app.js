@@ -8,6 +8,11 @@
 
 import $ from 'jquery';
 import _ from 'underscore';
+import React from 'react';
+import ReactDOM from 'react-dom';
+
+import TimeSince from 'components/TimeSince';
+import ReactRenderer from 'utils/ReactRenderer';
 
 // jQuery plugins
 import 'jquery-caret';
@@ -21,14 +26,17 @@ import 'jquery-utils';
 import autosize from 'autosize';
 import cx from 'classnames';
 import Levenshtein from 'levenshtein';
+import mousetrap from 'mousetrap';
 import assign from 'object-assign';
-import 'shortcut';
 
 import StatsAPI from 'api/StatsAPI';
 import UnitAPI from 'api/UnitAPI';
 import cookie from 'utils/cookie';
 import fetch from 'utils/fetch';
 import linkHashtags from 'utils/linkHashtags';
+
+import SuggestionFeedbackForm from './components/SuggestionFeedbackForm';
+import UploadTimeSince from './components/UploadTimeSince';
 
 import captcha from '../captcha';
 import { UnitSet } from '../collections';
@@ -38,9 +46,13 @@ import score from '../score';
 import search from '../search';
 import utils from '../utils';
 import suttacentral from '../suttacentral';
-import { escapeUnsafeRegexSymbols, makeRegexForMultipleWords } from './utils';
+import {
+  decodeEntities, escapeUnsafeRegexSymbols, makeRegexForMultipleWords,
+} from './utils';
 
 const CTX_STEP = 1;
+
+const ALLOWED_SORTS = ['oldest', 'newest', 'default'];
 
 
 const filterSelectOpts = {
@@ -75,6 +87,7 @@ PTL.editor = {
     /* Default settings */
     this.settings = {
       mt: [],
+      displayPriority: false,
     };
 
     if (options) {
@@ -95,6 +108,7 @@ PTL.editor = {
     this.$navPrev = $('#js-nav-prev');
     this.unitCountEl = document.querySelector('.js-unit-count');
     this.unitIndexEl = document.querySelector('.js-unit-index');
+    this.offsetRequested = 0;
 
     /* Initialize variables */
     this.units = new UnitSet([], {
@@ -116,6 +130,8 @@ PTL.editor = {
     this.isLoading = true;
     this.showActivity();
 
+    this.fetchingOffsets = [];
+
     /* Regular expressions */
     this.cpRE = /^(<[^>]+>|\[n\|t]|\W$^\n)*(\b|$)/gm;
 
@@ -134,6 +150,10 @@ PTL.editor = {
     search.init({
       onSearch: this.onSearch,
     });
+
+    if (options.displayPriority) {
+      ALLOWED_SORTS.push('priority');
+    }
 
     /* Select2 */
     this.$filterStatus.select2(filterSelectOpts);
@@ -220,6 +240,16 @@ PTL.editor = {
       e.stopPropagation();
       this.acceptSuggestion(e.currentTarget.dataset.suggId);
     });
+    $(document).on('click', '.js-suggestion-toggle',
+      (e) => this.toggleSuggestion(e, { canHide: true }));
+
+    if (this.settings.canReview) {
+      $(document).on('click', '.js-user-suggestion',
+        (e) => this.toggleSuggestion(e, { canHide: false }));
+    }
+
+    $(document).on('click', '.js-translate-lightbox', () => this.closeSuggestion());
+
     $(document).on('click', '#js-toggle-timeline', (e) => this.toggleTimeline(e));
     $(document).on('click', '.js-toggle-check', (e) => {
       this.toggleCheck(e.currentTarget.dataset.checkId);
@@ -262,7 +292,8 @@ PTL.editor = {
 
     /* Confirmation prompt */
     window.addEventListener('beforeunload', (e) => {
-      if (PTL.editor.isUnitDirty) {
+      if (PTL.editor.isUnitDirty || PTL.editor.isSuggestionFeedbackFormDirty) {
+        // eslint-disable-next-line no-param-reassign
         e.returnValue = gettext(
           'You have unsaved changes in this string. Navigating away will discard those changes.'
         );
@@ -270,43 +301,56 @@ PTL.editor = {
     });
 
     /* Bind hotkeys */
-    shortcut.add('ctrl+return', () => {
+    const hotkeys = mousetrap(document.body);
+
+    // FIXME: move binding to `SuggestionFeedbackForm` component
+    hotkeys.bind('esc', () => {
+      if (this.selectedSuggestionId !== undefined) {
+        this.closeSuggestion();
+      }
+    });
+    hotkeys.bind('ctrl+return', () => {
       if (this.isSuggestMode()) {
         this.handleSuggest();
       } else {
         this.handleSubmit();
       }
     });
-    shortcut.add('ctrl+space', () => this.toggleState());
-    shortcut.add('ctrl+shift+space', (e) => this.toggleSuggestMode(e));
+    hotkeys.bind('ctrl+space', () => this.toggleState());
+    hotkeys.bind('ctrl+shift+space', (e) => this.toggleSuggestMode(e));
 
-    shortcut.add('ctrl+up', () => this.gotoPrev());
-    shortcut.add('ctrl+,', () => this.gotoPrev());
+    hotkeys.bind('ctrl+up', () => this.gotoPrev());
+    hotkeys.bind('ctrl+,', () => this.gotoPrev());
 
-    shortcut.add('ctrl+down', () => this.gotoNext({ isSubmission: false }));
-    shortcut.add('ctrl+.', () => this.gotoNext({ isSubmission: false }));
-    shortcut.add('alt+down', function() {
+    hotkeys.bind('ctrl+down', () => this.gotoNext({ isSubmission: false }));
+    hotkeys.bind('ctrl+.', () => this.gotoNext({ isSubmission: false }));
+
+    hotkeys.bind('alt+down', function() {
       console.log('Copy Original!');
       $('.js-copyoriginal').click()
     });
-    shortcut.add('ctrl+b', function() {
+    hotkeys.bind('ctrl+b', function() {
       console.log('Copy Original!');
       $('.js-copyoriginal').click()
     });
-    
+
     if (navigator.platform.toUpperCase().indexOf('MAC') >= 0) {
       // Optimize string join with '<br/>' as separator
-      this.$navNext
-        .attr('title',
-              gettext('Go to the next string (Ctrl+.)<br/><br/>Also:<br/>Next page: Ctrl+Shift+.<br/>Last page: Ctrl+Shift+End')
+      this.$navNext.attr('title',
+        gettext(
+          'Go to the next string (Ctrl+.)<br/><br/>Also:<br/>Next page: ' +
+          'Ctrl+Shift+.<br/>Last page: Ctrl+Shift+End'
+        )
       );
-      this.$navPrev
-        .attr('title',
-              gettext('Go to the previous string (Ctrl+,)<br/><br/>Also:</br>Previous page: Ctrl+Shift+,<br/>First page: Ctrl+Shift+Home')
+      this.$navPrev.attr('title',
+        gettext(
+          'Go to the previous string (Ctrl+,)<br/><br/>Also:</br>Previous page: ' +
+          'Ctrl+Shift+,<br/>First page: Ctrl+Shift+Home'
+        )
       );
     }
 
-    shortcut.add('ctrl+shift+n', (e) => this.unitIndex(e));
+    hotkeys.bind('ctrl+shift+n', (e) => this.unitIndex(e));
 
     /* XHR activity indicator */
     $(document).ajaxStart(() => {
@@ -329,6 +373,8 @@ PTL.editor = {
         const moduleName = provider.name.split('_').map(
           (x) => x[0] + x.slice(1).toLowerCase()
         ).join('');
+        // Webpack doesn't like template strings for now...
+        // eslint-disable-next-line prefer-template
         const Module = require('./mt/providers/' + moduleName).default;
         mtProviders.push(new Module(provider.key));
       });
@@ -342,6 +388,12 @@ PTL.editor = {
       const params = utils.getParsedHash(hash);
       let isInitial = true;
       let uId = 0;
+      let initialOffset = 0;
+
+      if (this.selectedSuggestionId !== undefined) {
+        this.closeSuggestion({ checkIfCanNavigate: false });
+      }
+      ReactRenderer.unmountComponents();
 
       // Walk through known filtering criterias and apply them to the editor object
 
@@ -360,6 +412,13 @@ PTL.editor = {
           uId = uIdParam;
           // Don't retrieve initial data if there are existing results
           isInitial = !this.units.length;
+        }
+      }
+
+      if (params.offset) {
+        const offset = parseInt(params.offset, 10);
+        if (offset && !isNaN(offset)) {
+          initialOffset = this.getStartOfChunk(offset);
         }
       }
 
@@ -382,7 +441,8 @@ PTL.editor = {
           this.category = params.category;
         }
         if ('sort' in params) {
-          this.sortBy = params.sort;
+          const { sort } = params;
+          this.sortBy = ALLOWED_SORTS.indexOf(sort) !== -1 ? sort : 'default';
         }
       }
 
@@ -427,11 +487,11 @@ PTL.editor = {
             continue;
           }
 
-          newOpts.push(
-            `<option value="${key}" data-user="${user}" class="js-user-filter">` +
-              values[key] +
-            '</option>'
-          );
+          newOpts.push(`
+            <option value="${key}" data-user="${user}" class="js-user-filter">
+              ${values[key]}
+            </option>
+          `);
         }
         $('.js-user-filter').remove();
         this.$filterStatus.append(newOpts.join(''));
@@ -482,15 +542,26 @@ PTL.editor = {
       this.preventNavigation = false;
 
       this.fetchUnits({
+        uId,
+        initialOffset,
         initial: isInitial,
-        uId: uId,
       }).then((hasResults) => {
         if (!hasResults) {
           return;
         }
+        if (this.units.uIds.indexOf(uId) === -1) {
+          if (this.offsetRequested > this.initialOffset &&
+              this.offsetRequested <= this.getOffsetOfLastUnit()) {
+            uId = this.units.uIds[this.offsetRequested - this.initialOffset - 1];
+          } else {
+            uId = this.units.uIds[0];
+            $.history.load(utils.updateHashPart('unit', uId));
+          }
+        }
+        this.offsetRequested = 0;
         this.setUnit(uId);
       });
-    }, { 'unescape': true });
+    }, { unescape: true });
   },
 
   /* Stuff to be done when the editor is ready  */
@@ -500,7 +571,7 @@ PTL.editor = {
       this.displayObsoleteMsg();
     }
 
-    autosize(document.querySelector('textarea.expanding'));
+    autosize(document.querySelector('textarea.expanding:not([disabled="disabled"])'));
 
     // set direction of the comment body
     $('.extra-item-comment').filter(':not([dir])').bidi();
@@ -548,7 +619,7 @@ PTL.editor = {
   },
 
   canNavigate() {
-    if (this.isUnitDirty) {
+    if (this.isUnitDirty || this.isSuggestionFeedbackFormDirty) {
       return window.confirm(  // eslint-disable-line no-alert
         gettext(
           'You have unsaved changes in this string. Navigating away will discard those changes.'
@@ -733,7 +804,7 @@ PTL.editor = {
   toggleState() {
     // `blur()` prevents a double-click effect if the checkbox was
     // previously clicked using the mouse
-    $('input.fuzzycheck').blur().click();
+    $('input.fuzzycheck:visible').blur().click();
   },
 
   /* Updates unit textarea and input's `default*` values. */
@@ -858,8 +929,8 @@ PTL.editor = {
     }
 
     return {
+      boxId,
       max: maxSimilarity,
-      boxId: boxId,
     };
   },
 
@@ -902,6 +973,7 @@ PTL.editor = {
 
     const similarity = (simHuman.max > simMT.max) ? simHuman : simMT;
     this.highlightBox(similarity.boxId, similarity.max === 1);
+    return true;
   },
 
   /* Applies highlight classes to `boxId`. */
@@ -920,6 +992,7 @@ PTL.editor = {
       [bestMatchCls]: true,
       [exactMatchCls]: isExact,
     }));
+    return true;
   },
 
 
@@ -995,7 +1068,7 @@ PTL.editor = {
   /* Displays error messages on top of the toolbar */
   displayError(text) {
     this.hideActivity();
-    msg.show({ text: text, level: 'error' });
+    msg.show({ text, level: 'error' });
   },
 
 
@@ -1046,6 +1119,70 @@ PTL.editor = {
    * Misc functions
    */
 
+  /* Gets the offset of a unit in the total result set */
+  getOffsetOfUid(uid) {
+    return this.initialOffset + this.units.uIds.indexOf(uid);
+  },
+
+  /* Gets the start offset for the chunk of a given offset */
+  getStartOfChunk(offset) {
+    return offset - (offset % (2 * this.units.chunkSize));
+  },
+
+  /* Checks whether editor needs the next batch of units */
+  needsNextUnitBatch() {
+    return (
+      this.units.uIds.slice(-7).indexOf(this.units.activeUnit.id) !== -1 &&
+      this.getOffsetOfLastUnit() < this.units.total
+    );
+  },
+
+  /* Checks whether editor needs the previous batch of units */
+  needsPreviousUnitBatch() {
+    return (
+      this.units.uIds.slice(0, 7).indexOf(this.units.activeUnit.id) !== -1 &&
+      this.initialOffset > 0
+    );
+  },
+
+  /* Returns the uids of the last batch of units currently stored */
+  getPreviousUids() {
+    return this.units.uIds.slice(-(2 * this.units.chunkSize));
+  },
+
+  /* Sets the offset in the browser location */
+  setOffset(uid) {
+    $.history.load(utils.updateHashPart(
+      'offset', this.getStartOfChunk(this.getOffsetOfUid(uid)))
+    );
+  },
+
+  /* Gets the offset of the last unit currently held by the client */
+  getOffsetOfLastUnit() {
+    return this.initialOffset + this.units.uIds.length;
+  },
+
+  /* Remembers offsets that are currently being fetched to prevent multiple
+   * calls to same URL
+   */
+  markAsFetching(offset) {
+    this.fetchingOffsets.push(offset);
+  },
+
+  /* Removes remembered offsets once the XHR call has completed */
+  markAsFetched(offset) {
+    if (this.fetchingOffsets.indexOf(offset) !== -1) {
+      this.fetchingOffsets = this.fetchingOffsets.splice(
+        this.fetchingOffsets.indexOf(offset), 1
+      );
+    }
+  },
+
+  /* Returns true if client is awaiting a get_units call with given offset */
+  isBeingFetched(offset) {
+    return this.fetchingOffsets.indexOf(offset) !== -1;
+  },
+
   /* Gets common request data */
   getReqData() {
     const reqData = {};
@@ -1089,11 +1226,11 @@ PTL.editor = {
 
   /* Renders a single row */
   renderRow(unit) {
-    return (
-      `<tr id="row${unit.id}" class="view-row">` +
-        this.tmpl.vUnit({ unit: unit.toJSON() }) +
-      '</tr>'
-    );
+    return (`
+      <tr id="row${unit.id}" class="view-row">
+        ${this.tmpl.vUnit({ unit: unit.toJSON() })}
+      </tr>
+    `);
   },
 
   renderEditorRow(unit) {
@@ -1104,13 +1241,13 @@ PTL.editor = {
 
     const [ctxRowBefore, ctxRowAfter] = this.renderCtxControls({ hasData: false });
 
-    return (
-      (this.filter !== 'all' ? ctxRowBefore : '') +
-      `<tr id="row${unit.id}" class="${eClass}">` +
-        this.editorRow +
-      '</tr>' +
-      (this.filter !== 'all' ? ctxRowAfter : '')
-    );
+    return (`
+      ${this.filter !== 'all' ? ctxRowBefore : ''}
+      <tr id="row${unit.id}" class="${eClass}">
+        ${this.editorRow}
+      </tr>
+      ${this.filter !== 'all' ? ctxRowAfter : ''}
+    `);
   },
 
   /* Renders the editor rows */
@@ -1125,7 +1262,7 @@ PTL.editor = {
       if (unitGroups.length !== 1) {
         rows.push(
           '<tr class="delimiter-row"><td colspan="2">' +
-            `<div class="hd"><h2>${unitGroup.path}</h2></div>` +
+            `<div class="hd"><h2>${_.escape(unitGroup.path)}</h2></div>` +
           '</td></tr>'
         );
       }
@@ -1156,7 +1293,7 @@ PTL.editor = {
       unit = assign({}, currentUnit.toJSON(), unit);
 
       rows += `<tr id="ctx${unit.id}" class="ctx-row ${extraCls}">`;
-      rows += this.tmpl.vUnit({ unit: unit });
+      rows += this.tmpl.vUnit({ unit });
       rows += '</tr>';
     }
 
@@ -1220,6 +1357,9 @@ PTL.editor = {
   reDraw(newTbody) {
     const $oldRows = this.$editorBody.find('tr');
 
+    // Remove autosize event listeners for textarea before removing
+    autosize.destroy(document.querySelectorAll('textarea.expanding'));
+
     $oldRows.remove();
 
     if (newTbody !== undefined) {
@@ -1249,102 +1389,126 @@ PTL.editor = {
 
   /* Updates the navigation widget */
   updateNavigation() {
-    this.updateNavButton(this.$navPrev, !this.units.hasPrev());
+    this.updateNavButton(this.$navPrev,
+                         this.initialOffset === 0 && !this.units.hasPrev());
     this.updateNavButton(this.$navNext, !this.units.hasNext());
 
-    this.unitCountEl.textContent = this.units.total;
+    this.unitCountEl.textContent = this.units.frozenTotal;
 
     const currentUnit = this.units.getCurrent();
     if (currentUnit !== undefined) {
-      this.unitIndexEl.textContent = this.units.uIds.indexOf(currentUnit.id) + 1;
+      if (this.offsetRequested === 0) {
+        this.unitIndexEl.textContent = (
+          this.units.uIds.indexOf(currentUnit.id) + 1 + this.initialOffset
+        );
+      }
     }
   },
 
   /* Fetches more units in case they are needed */
-  fetchUnits({ initial = false, uId = 0 } = {}) {
-    const reqData = {
-      path: this.settings.pootlePath,
-    };
-
+  fetchUnits({ initial = false, uId = 0, initialOffset = 0 } = {}) {
+    let offsetToFetch = -1;
+    let uidToFetch = -1;
+    let previousUids = [];
     if (initial) {
-      reqData.initial = initial;
-
+      this.initialOffset = -1;
+      this.offset = 0;
       if (uId > 0) {
-        reqData.uids = uId;
+        uidToFetch = uId;
       }
-    } else {
-      // Only fetch units limited to an offset, and omit units that have
-      // already been fetched
-      const fetchedIds = this.units.fetchedIds();
-      const offset = this.units.chunkSize;
-      const curUId = uId > 0 ? uId : this.units.getCurrent().id;
-      const uIndex = this.units.uIds.indexOf(curUId);
-
-      let begin = Math.max(uIndex - offset, 0);
-      let end = Math.min(uIndex + offset + 1, this.units.total);
-
-      // Ensure we retrieve chunks of the right size
-      if (uId === 0) {
-        if (fetchedIds.indexOf(this.units.uIds[begin]) === -1) {
-          begin = Math.max(begin - offset, 0);
-        }
-        if (fetchedIds.indexOf(this.units.uIds[end - 1]) === -1) {
-          end = Math.min(end + offset + 1, this.units.total);
-        }
+      if (initialOffset > 0) {
+        offsetToFetch = initialOffset;
+        this.initialOffset = initialOffset;
       }
-
-      let uIds = this.units.uIds.slice(begin, end);
-      uIds = _.difference(uIds, fetchedIds);
-
-      if (!uIds.length) {
-        /* eslint-disable new-cap */
-        return $.Deferred((deferred) => deferred.reject(false));
-        /* eslint-enable new-cap */
+    } else if (this.units.length && this.units.total) {
+      if (this.needsNextUnitBatch()) {
+        // The unit is in the last 7, try and get the next chunk - also sends
+        // the last chunk of uids to allow server to adjust results
+        previousUids = this.getPreviousUids();
+        offsetToFetch = this.offset;
+      } else if (this.needsPreviousUnitBatch()) {
+        // The unit is in the first 7, try and get the previous chunk
+        offsetToFetch = Math.max(this.initialOffset - (2 * this.units.chunkSize), 0);
       }
-
-      reqData.uids = uIds.join(',');
     }
-
-    assign(reqData, this.getReqData());
-
-    return UnitAPI.fetchUnits(reqData)
-      .then(
-        (data) => this.storeUnitData(data),
-        this.error
-      );
+    if (initial || uidToFetch > -1 ||
+        (offsetToFetch > -1 && !this.isBeingFetched(offsetToFetch))) {
+      const reqData = {
+        path: this.settings.pootlePath,
+      };
+      assign(reqData, this.getReqData());
+      if (offsetToFetch > -1) {
+        this.markAsFetching(offsetToFetch);
+        if (offsetToFetch > 0) {
+          reqData.offset = offsetToFetch;
+        }
+      }
+      if (uidToFetch > -1) {
+        reqData.uids = uidToFetch;
+      }
+      if (previousUids.length > 0) {
+        reqData.previous_uids = previousUids;
+      }
+      return UnitAPI.fetchUnits(reqData)
+        .then(
+          (data) => this.storeUnitData(data),
+          this.error
+        ).always(() => this.markAsFetched(offsetToFetch));
+    }
+    /* eslint-disable new-cap */
+    return $.Deferred((deferred) => deferred.reject(false));
+    /* eslint-enable new-cap */
   },
 
   storeUnitData(data) {
-    if (data.uIds) {
-      // Clear old data and add new results
-      this.units.reset();
+    const { total } = data;
+    const { start } = data;
+    const { end } = data;
+    let { unitGroups } = data;
+    let prependUnits = false;
 
-      this.units.uIds = data.uIds;
-      this.units.total = data.uIds.length;
-    }
-
-    const { unitGroups } = data;
-    if (!unitGroups.length) {
+    if (!unitGroups.length && !this.units.uIds.length) {
       this.noResults();
       return false;
     }
-
+    if (this.offset === 0) {
+      this.units.reset();
+      this.units.uIds = [];
+      this.units.frozenTotal = total;
+    }
+    if (this.initialOffset === -1) {
+      this.initialOffset = start;
+      this.units.frozenTotal = total;
+    } else if (start < this.initialOffset) {
+      this.initialOffset = start;
+      prependUnits = true;
+      unitGroups = unitGroups.reverse();
+    }
     for (let i = 0; i < unitGroups.length; i++) {
       const unitGroup = unitGroups[i];
       for (const pootlePath in unitGroup) {
         if (!unitGroup.hasOwnProperty(pootlePath)) {
           continue;
         }
-
         const group = unitGroup[pootlePath];
-        const store = assign({ pootlePath: pootlePath }, group.meta);
+        const store = assign({ pootlePath }, group.meta);
         const units = group.units.map(
           (unit) => assign(unit, { store })  // eslint-disable-line no-loop-func
         );
-        this.units.set(units, { remove: false });
+        if (prependUnits) {
+          this.units.set(units, { remove: false, at: 0 });
+          // eslint-disable-next-line no-loop-func
+          units.reverse().map((unit) => this.units.uIds.unshift(unit.id));
+        } else {
+          this.units.set(units, { remove: false, at: this.units.length });
+          // eslint-disable-next-line no-loop-func
+          units.map((unit) => this.units.uIds.push(unit.id));
+        }
       }
     }
-
+    this.offset = end;
+    this.units.total = total;
+    this.updateNavigation();
     return true;
   },
 
@@ -1361,28 +1525,25 @@ PTL.editor = {
   /* Sets a new unit as the current one, rendering it as well */
   setUnit(unit) {
     const newUnit = this.units.setCurrent(unit);
-
-    this.updateNavigation();
-
-    this.fetchUnits();
-
     const body = {};
     if (this.settings.vFolder) {
       body.vfolder = this.settings.vFolder;
     }
-
-    UnitAPI.fetchUnit(newUnit.id, body)
-      .then(
-        (data) => {
-          this.setEditUnit(data);
-          this.renderUnit();
-        },
-        this.error
-      );
+    this.fetchUnits().always(() => {
+      this.updateNavigation();
+      UnitAPI.fetchUnit(newUnit.id, body)
+        .then(
+          (data) => {
+            this.setEditUnit(data);
+            this.renderUnit();
+          },
+          this.error
+        );
+    });
   },
 
   /* Pushes translation submissions and moves to the next unit */
-  handleSubmit() {
+  handleSubmit(comment = '') {
     const el = document.querySelector('input.submit');
     const newTranslation = $('.js-translation-area')[0].value;
     const suggestions = $('.js-user-suggestion').map(function getSuggestions() {
@@ -1424,6 +1585,15 @@ PTL.editor = {
 
     el.disabled = true;
 
+    // Check if we used a suggestion
+    if (this.selectedSuggestionId !== undefined) {
+      const suggData = {
+        suggestion: this.selectedSuggestionId,
+        comment,
+      };
+      assign(body, suggData);
+    }
+
     UnitAPI.addTranslation(this.units.getCurrent().id, body)
       .then(
         (data) => this.processSubmission(data),
@@ -1432,6 +1602,11 @@ PTL.editor = {
   },
 
   processSubmission(data) {
+    if (this.selectedSuggestionId !== undefined) {
+      this.processAcceptSuggestion(data, this.selectedSuggestionId);
+      return;
+    }
+
     // FIXME: handle this via events
     const translations = $('.js-translation-area').map((i, el) => $(el).val())
                                                   .get();
@@ -1497,23 +1672,27 @@ PTL.editor = {
     if (newUnit) {
       const newHash = utils.updateHashPart('unit', newUnit.id);
       $.history.load(newHash);
+      this.setOffset(newUnit.id);
     }
+    return true;
   },
+
 
   /* Loads the next unit */
   gotoNext(opts = { isSubmission: true }) {
     if (!this.canNavigate()) {
       return false;
     }
-
     const newUnit = this.units.next();
     if (newUnit) {
       const newHash = utils.updateHashPart('unit', newUnit.id);
       $.history.load(newHash);
+      this.setOffset(newUnit.id);
     } else if (opts.isSubmission) {
       cookie('finished', '1', { path: '/' });
       window.location.href = this.backToBrowserEl.getAttribute('href');
     }
+    return true;
   },
 
 
@@ -1552,7 +1731,9 @@ PTL.editor = {
         newHash = `unit=${encodeURIComponent(uid)}`;
       }
       $.history.load(newHash);
+      PTL.editor.setOffset(uid);
     }
+    return true;
   },
 
   /* Selects the element's contents and sets the focus */
@@ -1570,16 +1751,29 @@ PTL.editor = {
 
   /* Loads the editor on a index */
   gotoIndex(e) {
-    if (e.which === 13) { // Enter key
-      e.preventDefault();
-      const index = parseInt(this.unitIndexEl.textContent, 10);
+    if (e.which !== 13) { // Enter key
+      return;
+    }
 
-      if (index && !isNaN(index) && index > 0 &&
-          index <= this.units.total) {
-        const uId = this.units.uIds[index - 1];
-        const newHash = utils.updateHashPart('unit', uId);
-        $.history.load(newHash);
-      }
+    e.preventDefault();
+    const index = parseInt(this.unitIndexEl.textContent, 10) - 1;
+    if (isNaN(index)) {
+      return;
+    }
+
+    // if index is outside of current uids clear units first
+    if (index < this.initialOffset || index >= this.getOffsetOfLastUnit()) {
+      this.initialOffset = -1;
+      this.offset = 0;
+      this.offsetRequested = index + 1;
+      const newHash = utils.updateHashPart('offset',
+                                           this.getStartOfChunk(index),
+                                           ['unit']);
+      $.history.load(newHash);
+    } else if (index >= 0 && index <= this.units.total) {
+      const uId = this.units.uIds[(index - this.initialOffset)];
+      const newHash = utils.updateHashPart('unit', uId);
+      $.history.load(newHash);
     }
   },
 
@@ -1620,6 +1814,7 @@ PTL.editor = {
 
       $.history.load($.param(newHash));
     }
+    return true;
   },
 
   /* Adds the failing checks to the UI */
@@ -1638,7 +1833,7 @@ PTL.editor = {
 
           if (value in checks) {
             empty = false;
-            $opt.text($opt.data('title') + '(' + checks[value] + ')');
+            $opt.text(`${$opt.data('title')}(${checks[value]})`);
           } else {
             $opt.remove();
           }
@@ -1718,6 +1913,7 @@ PTL.editor = {
         $.history.load($.param(newHash));
       }
     }
+    return true;
   },
 
   /* Generates the edit context rows' UI */
@@ -1759,6 +1955,7 @@ PTL.editor = {
     const editCtxRows = $('tr.edit-ctx');
     editCtxRows.first().after(before);
     editCtxRows.last().before(after);
+    return undefined;
   },
 
   /* Gets more context units */
@@ -1842,11 +2039,12 @@ PTL.editor = {
 
     if (searchText) {
       const queryString = this.buildSearchQuery();
-      newHash = 'search=' + queryString;
+      newHash = `search=${queryString}`;
     } else {
       newHash = utils.updateHashPart('filter', 'all', ['search', 'sfields', 'soptions']);
     }
     $.history.load(newHash);
+    return true;
   },
 
 
@@ -1927,8 +2125,17 @@ PTL.editor = {
         $(data.timeline).hide().prependTo('#extras-container')
                         .slideDown(1000, 'easeOutQuad');
       }
-
-      helpers.updateRelativeDates();
+      [...document.querySelectorAll('.js-mount-timesince')].forEach((el, i) => {
+        const props = {
+          title: data.entries_group[i].display_datetime,
+          dateTime: data.entries_group[i].iso_datetime,
+        };
+        if (data.entries_group[i].via_upload) {
+          ReactRenderer.render(<UploadTimeSince {...props} />, el);
+        } else {
+          ReactRenderer.render(<TimeSince {...props} />, el);
+        }
+      });
 
       $('.timeline-field-body').filter(':not([dir])').bidi();
       $('#js-show-timeline').addClass('selected');
@@ -1963,23 +2170,29 @@ PTL.editor = {
       const $element = $(this.focused);
       // set only if the textarea is empty
       if ($element.val() === '') {
+        // save unit editor state to restore it after autofill changes
+        const isUnitDirty = PTL.editor.isUnitDirty;
         const text = results[0].target;
         $element.val(text).trigger('input');
         $element.caret(text.length, text.length);
         this.goFuzzy();
+        PTL.editor.isUnitDirty = isUnitDirty;
       }
     }
 
     for (let i = 0; i < results.length && i < 3; i++) {
-      if (results[i].username === 'nobody') {
-        results[i].fullname = gettext('some anonymous user');
-      } else if (!results[i].fullname) {
-        results[i].fullname = (results[i].username ?
-                               results[i].username : gettext('someone'));
+      const result = results[i];
+      let fullname = result.fullname;
+      if (result.username === 'nobody') {
+        fullname = gettext('some anonymous user');
+      } else if (!result.fullname) {
+        fullname = result.username ? result.username : gettext('someone');
       }
-      results[i].fullname = _.escape(results[i].fullname);
+      result.fullname = _.escape(fullname);
+      result.project = _.escape(result.project);
+      result.path = _.escape(result.path);
 
-      filtered.push(results[i]);
+      filtered.push(result);
     }
 
     return filtered;
@@ -1995,10 +2208,10 @@ PTL.editor = {
 
     if (filtered.length) {
       return this.tmpl.tm({
+        name,
         store: store.toJSON(),
         unit: unit.toJSON(),
         suggs: filtered,
-        name: name,
       });
     }
 
@@ -2012,22 +2225,23 @@ PTL.editor = {
     const src = store.get('source_lang');
     const tgt = store.get('target_lang');
     const sText = unit.get('source')[0];
+
+    if (!sText.length || src === tgt) {
+      return;
+    }
+
     const pStyle = store.get('project_style');
     let tmUrl = `${this.settings.tmUrl}${src}/${tgt}/unit/` +
       `?source=${encodeURIComponent(sText)}`;
 
-    if (!sText.length) {
-      return;
-    }
-
     if (pStyle.length && pStyle !== 'standard') {
-      tmUrl += '&style=' + pStyle;
+      tmUrl += `&style=${pStyle}`;
     }
 
     fetch({ url: tmUrl, crossDomain: true })
       .then(
         (data) => this.handleTmResults(data, store, unit),
-        this.error
+        (xhr, s) => console.error(`HTTP ${xhr.status} (${s}): ${tmUrl}`)
       );
   },
 
@@ -2040,20 +2254,25 @@ PTL.editor = {
     const filtered = PTL.editor.filterTMResults(data, sourceText);
     const name = gettext('Similar translations');
     const tm = PTL.editor.tmpl.tm({
+      name,
       store: store.toJSON(),
       unit: unit.toJSON(),
       suggs: filtered,
-      name: name,
     });
 
     $(tm).hide().appendTo('#extras-container')
                 .slideDown(1000, 'easeOutQuad');
+    return true;
   },
 
 
   /* Rejects a suggestion */
-  rejectSuggestion(suggId) {
-    UnitAPI.rejectSuggestion(this.units.getCurrent().id, suggId)
+  handleRejectSuggestion(suggId, { requestData = {} } = {}) {
+    this.rejectSuggestion(suggId, { requestData });
+  },
+
+  rejectSuggestion(suggId, { requestData = {} } = {}) {
+    UnitAPI.rejectSuggestion(this.units.getCurrent().id, suggId, requestData)
       .then(
         (data) => this.processRejectSuggestion(data, suggId),
         this.error
@@ -2066,6 +2285,7 @@ PTL.editor = {
     }
 
     $(`#suggestion-${suggId}`).fadeOut(200, function handleRemove() {
+      PTL.editor.closeSuggestion({ checkIfCanNavigate: false });
       $(this).remove();
 
       // Go to the next unit if there are no more suggestions left
@@ -2077,26 +2297,43 @@ PTL.editor = {
 
 
   /* Accepts a suggestion */
-  acceptSuggestion(suggId, { skipToNext = false } = {}) {
-    UnitAPI.acceptSuggestion(this.units.getCurrent().id, suggId)
-      .then(
-        (data) => this.processAcceptSuggestion(data, suggId, skipToNext),
-        this.error
-      );
+  handleAcceptSuggestion(
+    suggId, { requestData = {}, isSuggestionChanged = false } = {}
+  ) {
+    if (isSuggestionChanged) {
+      const area = document.querySelector('.js-translation-area');
+      area.value = decodeEntities(requestData.translation);
+      this.undoFuzzyBox();
+      this.handleSubmit(requestData.comment);
+    } else {
+      this.acceptSuggestion(suggId, { requestData });
+    }
+  },
+
+  acceptSuggestion(suggId, { requestData = {}, skipToNext = false } = {}) {
+    UnitAPI.acceptSuggestion(this.units.getCurrent().id, suggId, requestData)
+    .then(
+      (data) => this.processAcceptSuggestion(data, suggId, skipToNext),
+      this.error
+    );
   },
 
   processAcceptSuggestion(data, suggId, skipToNext) {
     // Update target textareas
-    $.each(data.newtargets, (i, target) => {
-      $(`#id_target_f_${i}`).val(target).focus();
-    });
-
-    // Update remaining suggestion's diff
-    $.each(data.newdiffs, (suggestionId, sugg) => {
-      $.each(sugg, (i, target) => {
-        $(`#suggdiff-${suggestionId}-${i}`).html(target);
+    if (data.newtargets !== undefined) {
+      $.each(data.newtargets, (i, target) => {
+        $(`#id_target_f_${i}`).val(target).focus();
       });
-    });
+    }
+
+    if (data.newdiffs !== undefined) {
+      // Update remaining suggestion's diff
+      $.each(data.newdiffs, (suggestionId, sugg) => {
+        $.each(sugg, (i, target) => {
+          $(`#suggdiff-${suggestionId}-${i}`).html(target);
+        });
+      });
+    }
 
     // FIXME: handle this via events
     const translations = $('.js-translation-area').map((i, el) => $(el).val())
@@ -2116,6 +2353,7 @@ PTL.editor = {
     }
 
     $(`#suggestion-${suggId}`).fadeOut(200, function handleRemove() {
+      PTL.editor.closeSuggestion({ checkIfCanNavigate: false });
       $(this).remove();
 
       // Go to the next unit if there are no more suggestions left,
@@ -2183,4 +2421,54 @@ PTL.editor = {
     return true;
   },
 
+  toggleSuggestion(e, { canHide = false } = {}) {
+    e.stopPropagation();
+    const suggestionId = parseInt(e.currentTarget.dataset.suggId, 10);
+    const suggestion = document.getElementById(`suggestion-${suggestionId}`);
+
+    if (this.selectedSuggestionId === undefined) {
+      this.selectedSuggestionId = suggestionId;
+      const props = {
+        suggId: this.selectedSuggestionId,
+        initialSuggestionText: e.currentTarget.dataset.translationAid,
+        localeDir: this.settings.localeDir,
+        onAcceptSuggestion: this.handleAcceptSuggestion.bind(this),
+        onRejectSuggestion: this.handleRejectSuggestion.bind(this),
+        onChange: this.handleSuggestionFeedbackChange.bind(this),
+      };
+      const mountSelector = `.js-mnt-suggestion-feedback-${suggestionId}`;
+      const feedbackMountPoint = document.querySelector(mountSelector);
+      const editorBody = document.querySelector('.js-editor-body .translate-full');
+      suggestion.classList.add('suggestion-expanded');
+      editorBody.classList.add('suggestion-expanded');
+
+      this.isSuggestionFeedbackFormDirty = false;
+      this.suggestionFeedbackForm = ReactDOM.render(
+        <SuggestionFeedbackForm {...props} />,
+        feedbackMountPoint
+      );
+    } else if (canHide) {
+      this.closeSuggestion();
+    }
+  },
+
+  handleSuggestionFeedbackChange(isDirty) {
+    this.isSuggestionFeedbackFormDirty = isDirty;
+  },
+
+  closeSuggestion({ checkIfCanNavigate = true } = {}) {
+    if (this.selectedSuggestionId !== undefined &&
+        (!checkIfCanNavigate || this.canNavigate())) {
+      const suggestion = document.querySelector(`#suggestion-${this.selectedSuggestionId}`);
+      const editorBody = document.querySelector('.js-editor-body .translate-full');
+      const mountSelector = `.js-mnt-suggestion-feedback-${this.selectedSuggestionId}`;
+      const feedbackMountPoint = document.querySelector(mountSelector);
+      editorBody.classList.remove('suggestion-expanded');
+      suggestion.classList.remove('suggestion-expanded');
+      ReactDOM.unmountComponentAtNode(feedbackMountPoint);
+      this.selectedSuggestionId = undefined;
+      this.suggestionFeedbackForm = undefined;
+      this.isSuggestionFeedbackFormDirty = false;
+    }
+  },
 };

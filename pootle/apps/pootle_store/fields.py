@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -46,7 +45,10 @@ def to_db(value):
         if list_empty(value.strings):
             return ''
         else:
-            return SEPARATOR.join(value.strings)
+            strings = list(value.strings)
+            if len(strings) == 1 and getattr(value, "plural", False):
+                strings.append(PLURAL_PLACEHOLDER)
+            return SEPARATOR.join(strings)
     elif isinstance(value, list):
         if list_empty(value):
             return ''
@@ -222,7 +224,7 @@ class TranslationStoreFieldFile(FieldFile):
         avoid the need for locking.
         """
         import shutil
-        from pootle_misc import ptempfile as tempfile
+        from pootle.core.utils import ptempfile as tempfile
         tmpfile, tmpfilename = tempfile.mkstemp(suffix=self.filename)
         os.close(tmpfile)
         self.store.savefile(tmpfilename)

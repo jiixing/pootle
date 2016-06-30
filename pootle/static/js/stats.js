@@ -21,6 +21,7 @@ import TimeSince from 'components/TimeSince';
 import UserEvent from 'components/UserEvent';
 import cookie from 'utils/cookie';
 
+import VisibilityToggle from './browser/components/VisibilityToggle';
 import msg from './msg';
 
 
@@ -45,7 +46,7 @@ function setTdWidth($td, w) {
   if (w === 0) {
     $td.hide();
   } else {
-    $td.css('width', w + '%').show();
+    $td.css('width', `${w}%`).show();
   }
 }
 
@@ -66,7 +67,7 @@ const stats = {
     const isExpanded = (options.isInitiallyExpanded ||
                         window.location.search.indexOf('?details') !== -1);
     this.state = {
-      isExpanded: isExpanded,
+      isExpanded,
       checksData: null,
       data: options.initialData,
     };
@@ -83,6 +84,22 @@ const stats = {
       e.preventDefault();
       this.toggleChecks();
     });
+    $(document).on('click', '.js-toggle-more-checks', (e) => {
+      let count = 0;
+      const data = this.state.checksData;
+      e.preventDefault();
+      $('.js-check').each(function toggleCheck() {
+        const $check = $(this);
+        const code = $check.data('code');
+        if (code in data) {
+          if (count >= 4) {
+            $check.toggle();
+          }
+          count++;
+        }
+      });
+      $(e.target).parent().toggleClass('collapsed');
+    });
     $(document).on('click', '.js-stats-refresh', (e) => {
       e.preventDefault();
       this.refreshStats();
@@ -95,11 +112,16 @@ const stats = {
       }
     });
 
+    if (this.isAdmin && options.hasDisabledItems) {
+      ReactDOM.render(<VisibilityToggle uiLocaleDir={options.uiLocaleDir} />,
+                      document.querySelector('.js-mnt-visibility-toggle'));
+    }
+
     // Retrieve async data if needed
     if (isExpanded) {
       this.loadChecks();
     } else {
-      this.updateUI({});
+      this.updateUI();
     }
   },
 
@@ -132,7 +154,7 @@ const stats = {
   },
 
   updateTranslationStats($tr, total, value, noTotalDefault) {
-    $tr.find('.stats-number a').html(value);
+    $tr.find('.stats-number .stats-data').html(value);
     $tr.find('.stats-percentage span').html(
       nicePercentage(value, total, noTotalDefault)
     );
@@ -149,9 +171,9 @@ const stats = {
       $td.removeClass('zero');
       $td.removeClass('not-inited');
       $td.addClass('non-zero');
-      $td.find('a').html(count);
+      $td.find('.stats-data').html(count);
     } else if (count === 0) {
-      $td.find('a').html('');
+      $td.find('.stats-data').html('');
       $td.addClass('zero');
       $td.removeClass('not-inited');
       $td.removeClass('non-zero');
@@ -181,6 +203,7 @@ const stats = {
       username: data.username,
     };
     ReactDOM.render(<UserEvent {...props} />, el);
+    return true;
   },
 
   renderLastUpdate(el, data) {
@@ -195,6 +218,7 @@ const stats = {
       unitUrl: data.unit_url,
     };
     ReactDOM.render(<LastUpdate {...props} />, el);
+    return true;
   },
 
   renderLastUpdatedTime(el, data) {
@@ -207,15 +231,22 @@ const stats = {
       dateTime: data.iso_datetime,
     };
     ReactDOM.render(<TimeSince {...props} />, el);
+    return true;
   },
 
   updateLastUpdates(statsData) {
+    const luWrapper = document.querySelector('#js-last-updated-wrapper');
+    const hideLastUpdated = !statsData.lastupdated || statsData.lastupdated.mtime === 0;
+    luWrapper.classList.toggle('hide', hideLastUpdated);
     if (statsData.lastupdated) {
-      const lastUpdated = document.querySelector('#js-last-updated .last-updated');
+      const lastUpdated = document.querySelector('#js-last-updated');
       this.renderLastUpdate(lastUpdated, statsData.lastupdated);
     }
+    const laWrapper = document.querySelector('#js-last-action-wrapper');
+    const hideLastAction = !statsData.lastaction || statsData.lastaction.mtime === 0;
+    laWrapper.classList.toggle('hide', hideLastAction);
     if (statsData.lastaction) {
-      const lastAction = document.querySelector('#js-last-action .last-action');
+      const lastAction = document.querySelector('#js-last-action');
       this.renderLastEvent(lastAction, statsData.lastaction);
     }
   },
@@ -223,7 +254,7 @@ const stats = {
   processTableItem(item, code, $table, $tdEl, now) {
     let $td = $tdEl;
     if (!$td.length) {
-      return null;
+      return false;
     }
 
     $td.parent().toggleClass('dirty', item.is_dirty);
@@ -261,6 +292,7 @@ const stats = {
       this.renderLastUpdatedTime($td[0], item.lastupdated);
       $td.attr('sorttable_customkey', now - item.lastupdated.creation_time);
     }
+    return true;
   },
 
   updateStatsUI() {
@@ -348,7 +380,7 @@ const stats = {
       // Sort columns based on previously-made selections
       const columnSort = sorttable.getSortCookie($table.data('sort-cookie'));
       if (columnSort !== null) {
-        const $th = $('#' + columnSort.columnId);
+        const $th = $(`#${columnSort.columnId}`);
         $th.removeClass('sorttable_sorted sorttable_sorted_reverse');
         setTimeout(() => {
           $th.click();
@@ -418,34 +450,31 @@ const stats = {
     this.$expandIcon.attr('class', `icon-${newClass}-stats`);
     this.$expandIcon.attr('title', newText);
 
-    this.$extraDetails.toggle(isExpanded);
+    this.$extraDetails.toggleClass('expand', isExpanded);
   },
 
   updateChecksUI() {
     const data = this.state.checksData;
+    let count = 0;
 
-    if (data !== null && Object.keys(data).length) {
-      this.$extraDetails.find('.js-checks').each(function updateChecksCategory() {
-        const $cat = $(this);
-        let empty = true;
-
-        $cat.find('.js-check').each(function updateCheck() {
-          const $check = $(this);
-          const code = $(this).data('code');
-          if (code in data) {
-            empty = false;
-            $check.show();
-            $check.find('.check-count a').html(data[code]);
-          } else {
-            $check.hide();
-          }
-        });
-
-        $cat.toggle(!empty);
-      });
-
-      $('#js-stats-checks').show();
+    if (data === null || !Object.keys(data).length) {
+      return;
     }
+
+    this.$extraDetails.find('.js-check').each(function updateCheck() {
+      const $check = $(this);
+      const code = $(this).data('code');
+      if (code in data) {
+        count++;
+        $check.toggle(count < 5);
+        $check.find('.check-count .check-data').html(data[code]);
+      } else {
+        $check.hide();
+      }
+    });
+
+    $('.js-more-checks').addClass('collapsed').toggle(count >= 5);
+    $('#js-stats-checks').show();
   },
 
   updateUI() {

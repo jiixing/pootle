@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -9,7 +8,6 @@
 
 from django.views.generic import TemplateView
 
-from pootle.core.utils.json import jsonify
 from pootle.core.views import APIView, SuperuserRequiredMixin
 from pootle_app.forms import ProjectForm
 from pootle_language.models import Language
@@ -34,7 +32,7 @@ class ProjectAdminView(SuperuserRequiredMixin, TemplateView):
 
         return {
             'page': 'admin-projects',
-            'form_choices': jsonify({
+            'form_choices': {
                 'checkstyle': Project.checker_choices,
                 'localfiletype': filetype_choices,
                 'source_language': language_choices,
@@ -42,7 +40,7 @@ class ProjectAdminView(SuperuserRequiredMixin, TemplateView):
                 'defaults': {
                     'source_language': default_language,
                 },
-            }),
+            },
         }
 
 

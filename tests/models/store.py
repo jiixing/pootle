@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -7,22 +6,35 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
+import io
 import os
 import shutil
 import time
 
+import six
+
 import pytest
 
+from pytest_pootle.factories import LanguageDBFactory
 from pytest_pootle.utils import update_store
 
 from translate.storage.factory import getclass
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 
+from pootle.core.delegate import config
 from pootle.core.models import Revision
+from pootle.core.delegate import deserializers, serializers
+from pootle.core.plugin import provider
+from pootle.core.serializers import Serializer, Deserializer
+from pootle_app.models import Directory
+from pootle_config.exceptions import ConfigurationError
+from pootle_language.models import Language
+from pootle_project.models import Project
 from pootle_statistics.models import SubmissionTypes
 from pootle_store.models import NEW, OBSOLETE, PARSED, POOTLE_WINS, Store
 from pootle_store.util import parse_pootle_revision
+from pootle_translationproject.models import TranslationProject
 
 from .unit import _update_translation
 
@@ -40,6 +52,18 @@ def _update_from_upload_file(store, update_file,
     store_revision = parse_pootle_revision(test_store)
     store.update(test_store, store_revision=store_revision,
                  user=user, submission_type=submission_type)
+
+
+def _store_as_string(store):
+    ttk = store.convert(store.get_file_class())
+    if hasattr(ttk, "updateheader"):
+        # FIXME We need those headers on import
+        # However some formats just don't support setting metadata
+        ttk.updateheader(
+            add=True, X_Pootle_Path=store.pootle_path)
+        ttk.updateheader(
+            add=True, X_Pootle_Revision=store.get_max_unit_revision())
+    return str(ttk)
 
 
 @pytest.mark.django_db
@@ -99,21 +123,41 @@ def test_sync(fr_tutorial_remove_sync_po):
 
 
 @pytest.mark.django_db
-def test_update_from_ts(en_tutorial_po):
-    from django.conf import settings
-    from translate.storage.factory import getclass
-
+def test_update_from_ts(en_tutorial_po, test_fs):
     # Parse store
     en_tutorial_po.update_from_disk()
-    ts_dir = os.path.join(settings.ROOT_DIR, 'tests', 'data', 'ts')
     tp = en_tutorial_po.translation_project
-    store_filepath = os.path.join(ts_dir, tp.real_path, 'tutorial.ts')
-    with open(store_filepath) as storefile:
-        store = getclass(storefile)(storefile.read())
+    with test_fs.open(['data', 'ts', tp.real_path, 'tutorial.ts']) as f:
+        store = getclass(f)(f.read())
     en_tutorial_po.update(store)
 
     assert(not en_tutorial_po.units[1].hasplural())
     assert(en_tutorial_po.units[2].hasplural())
+
+
+@pytest.mark.django_db
+def test_update_ts_plurals(store_po, test_fs):
+    with test_fs.open(['data', 'ts', 'add_plurals.ts']) as f:
+        file_store = getclass(f)(f.read())
+    store_po.update(file_store)
+    assert store_po.units[0].hasplural()
+
+    with test_fs.open(['data', 'ts', 'update_plurals.ts']) as f:
+        file_store = getclass(f)(f.read())
+    store_po.update(file_store)
+    assert store_po.units[0].hasplural()
+
+
+@pytest.mark.django_db
+def test_update_with_non_ascii(en_tutorial_po, test_fs):
+    # Parse store
+    en_tutorial_po.update_from_disk()
+    tp = en_tutorial_po.translation_project
+    with test_fs.open(['data', 'po', tp.real_path,
+                       'tutorial_non_ascii.po']) as f:
+        store = getclass(f)(f.read())
+    en_tutorial_po.update(store)
+    assert en_tutorial_po.units[0].target == "Hèllö, wôrld"
 
 
 @pytest.mark.django_db
@@ -326,7 +370,7 @@ def test_update_upload_old_revision_unit_conflict(en_tutorial_po):
 
 @pytest.mark.django_db
 def test_update_upload_new_revision_new_unit(en_tutorial_po):
-    file_name = "tests/data/po/tutorial/en/tutorial_update_new_unit.po"
+    file_name = "pytest_pootle/data/po/tutorial/en/tutorial_update_new_unit.po"
     _update_from_upload_file(en_tutorial_po, file_name)
 
     # the new unit has been added
@@ -338,10 +382,10 @@ def test_update_upload_old_revision_new_unit(en_tutorial_po):
 
     # load initial update
     _update_from_upload_file(en_tutorial_po,
-                             "tests/data/po/tutorial/en/tutorial_update.po")
+                             "pytest_pootle/data/po/tutorial/en/tutorial_update.po")
 
     # load old revision with new unit
-    file_name = "tests/data/po/tutorial/en/tutorial_update_old_unit.po"
+    file_name = "pytest_pootle/data/po/tutorial/en/tutorial_update_old_unit.po"
     _update_from_upload_file(en_tutorial_po, file_name)
 
     # the unit has been added because its not already obsoleted
@@ -507,4 +551,277 @@ def test_store_diff(store_diff_tests):
 @pytest.mark.django_db
 def test_store_repr():
     store = Store.objects.first()
+    assert str(store) == str(store.convert(store.get_file_class()))
     assert repr(store) == u"<Store: %s>" % store.pootle_path
+
+
+@pytest.mark.django_db
+def test_store_po_deserializer(test_fs, store_po):
+
+    with test_fs.open("data/po/complex.po") as test_file:
+        test_string = test_file.read()
+        ttk_po = getclass(test_file)(test_string)
+
+    store_po.update(store_po.deserialize(test_string))
+    assert len(ttk_po.units) - 1 == store_po.units.count()
+
+
+@pytest.mark.django_db
+def test_store_po_serializer(test_fs, store_po):
+
+    with test_fs.open("data/po/complex.po") as test_file:
+        test_string = test_file.read()
+        ttk_po = getclass(test_file)(test_string)
+
+    store_po.update(store_po.deserialize(test_string))
+    store_io = io.BytesIO(store_po.serialize())
+    store_ttk = getclass(store_io)(store_io.read())
+    assert len(store_ttk.units) == len(ttk_po.units)
+
+
+@pytest.mark.django_db
+def test_store_po_serializer_custom(test_fs, store_po):
+
+    class SerializerCheck(object):
+        original_data = None
+        context = None
+
+    checker = SerializerCheck()
+
+    class EGSerializer(Serializer):
+
+        @property
+        def output(self):
+            checker.original_data = self.original_data
+            checker.context = self.context
+
+    @provider(serializers, sender=Project)
+    def provide_serializers(**kwargs):
+        return dict(eg_serializer=EGSerializer)
+
+    with test_fs.open("data/po/complex.po") as test_file:
+        test_string = test_file.read()
+        # ttk_po = getclass(test_file)(test_string)
+    store_po.update(store_po.deserialize(test_string))
+
+    # add config to the project
+    project = store_po.translation_project.project
+    config.get(project.__class__, instance=project).set_config(
+        "pootle.core.serializers",
+        ["eg_serializer"])
+
+    store_po.serialize()
+    assert checker.context == store_po
+    assert (
+        not isinstance(checker.original_data, six.text_type)
+        and isinstance(checker.original_data, str))
+    assert checker.original_data == _store_as_string(store_po)
+
+
+@pytest.mark.django_db
+def test_store_po_deserializer_custom(test_fs, store_po):
+
+    class DeserializerCheck(object):
+        original_data = None
+        context = None
+
+    checker = DeserializerCheck()
+
+    class EGDeserializer(Deserializer):
+
+        @property
+        def output(self):
+            checker.context = self.context
+            checker.original_data = self.original_data
+            return self.original_data
+
+    @provider(deserializers, sender=Project)
+    def provide_deserializers(**kwargs):
+        return dict(eg_deserializer=EGDeserializer)
+
+    with test_fs.open("data/po/complex.po") as test_file:
+        test_string = test_file.read()
+
+    # add config to the project
+    project = store_po.translation_project.project
+    config.get().set_config(
+        "pootle.core.deserializers",
+        ["eg_deserializer"],
+        project)
+    store_po.deserialize(test_string)
+    assert checker.original_data == test_string
+    assert checker.context == store_po
+
+
+@pytest.mark.django_db
+def test_store_base_serializer(store_po):
+    original_data = "SOME DATA"
+    serializer = Serializer(store_po, original_data)
+    assert serializer.context == store_po
+    assert serializer.data == original_data
+
+
+@pytest.mark.django_db
+def test_store_base_deserializer(store_po):
+    original_data = "SOME DATA"
+    deserializer = Deserializer(store_po, original_data)
+    assert deserializer.context == store_po
+    assert deserializer.data == original_data
+
+
+@pytest.mark.django_db
+def test_store_set_bad_deserializers(store_po):
+    project = store_po.translation_project.project
+    with pytest.raises(ConfigurationError):
+        config.get(project.__class__, instance=project).set_config(
+            "pootle.core.deserializers",
+            ["DESERIALIZER_DOES_NOT_EXIST"])
+
+    class EGDeserializer(object):
+        pass
+
+    @provider(deserializers)
+    def provide_deserializers(**kwargs):
+        return dict(eg_deserializer=EGDeserializer)
+
+    # must be list
+    with pytest.raises(ConfigurationError):
+        config.get(project.__class__, instance=project).set_config(
+            "pootle.core.deserializers",
+            "eg_deserializer")
+    with pytest.raises(ConfigurationError):
+        config.get(project.__class__, instance=project).set_config(
+            "pootle.core.deserializers",
+            dict(serializer="eg_deserializer"))
+
+    config.get(project.__class__, instance=project).set_config(
+        "pootle.core.deserializers",
+        ["eg_deserializer"])
+
+
+@pytest.mark.django_db
+def test_store_set_bad_serializers(store_po):
+    project = store_po.translation_project.project
+    with pytest.raises(ConfigurationError):
+        config.get(project.__class__, instance=project).set_config(
+            "pootle.core.serializers",
+            ["SERIALIZER_DOES_NOT_EXIST"])
+
+    class EGSerializer(Serializer):
+        pass
+
+    @provider(serializers)
+    def provide_serializers(**kwargs):
+        return dict(eg_serializer=EGSerializer)
+
+    # must be list
+    with pytest.raises(ConfigurationError):
+        config.get(project.__class__, instance=project).set_config(
+            "pootle.core.serializers",
+            "eg_serializer")
+    with pytest.raises(ConfigurationError):
+        config.get(project.__class__, instance=project).set_config(
+            "pootle.core.serializers",
+            dict(serializer="eg_serializer"))
+
+    config.get(project.__class__, instance=project).set_config(
+        "pootle.core.serializers",
+        ["eg_serializer"])
+
+
+@pytest.mark.django_db
+def test_store_create_by_bad_path():
+    project0 = Project.objects.get(code="project0")
+
+    # bad project name
+    with pytest.raises(Project.DoesNotExist):
+        Store.objects.create_by_path(
+            "/language0/does/not/exist.po")
+
+    # bad language code
+    with pytest.raises(Language.DoesNotExist):
+        Store.objects.create_by_path(
+            "/does/project0/not/exist.po")
+
+    # project and project code dont match
+    with pytest.raises(ValueError):
+        Store.objects.create_by_path(
+            "/language0/project1/store.po",
+            project=project0)
+
+    # bad store.ext
+    with pytest.raises(ValueError):
+        Store.objects.create_by_path(
+            "/language0/project0/store_by_path.foo")
+
+    # subdir doesnt exist
+    path = '/language0/project0/path/to/subdir.po'
+    with pytest.raises(Directory.DoesNotExist):
+        Store.objects.create_by_path(
+            path, create_directory=False)
+
+    path = '/%s/project0/notp.po' % LanguageDBFactory().code
+    with pytest.raises(TranslationProject.DoesNotExist):
+        Store.objects.create_by_path(
+            path, create_tp=False)
+
+
+@pytest.mark.django_db
+def test_store_create_by_path():
+
+    # create in tp
+    path = '/language0/project0/path.po'
+    store = Store.objects.create_by_path(path)
+    assert store.pootle_path == path
+
+    # "create" in tp again - get existing store
+    store = Store.objects.create_by_path(path)
+    assert store.pootle_path == path
+
+    # create in existing subdir
+    path = '/language0/project0/subdir0/exists.po'
+    store = Store.objects.create_by_path(path)
+    assert store.pootle_path == path
+
+    # create in new subdir
+    path = '/language0/project0/path/to/subdir.po'
+    store = Store.objects.create_by_path(path)
+    assert store.pootle_path == path
+
+
+@pytest.mark.django_db
+def test_store_create_by_path_with_project():
+    project0 = Project.objects.get(code="project0")
+
+    # create in tp with project
+    path = '/language0/project0/path2.po'
+    store = Store.objects.create_by_path(
+        path, project=project0)
+    assert store.pootle_path == path
+
+    # create in existing subdir with project
+    path = '/language0/project0/subdir0/exists2.po'
+    store = Store.objects.create_by_path(
+        path, project=project0)
+    assert store.pootle_path == path
+
+    # create in new subdir with project
+    path = '/language0/project0/path/to/subdir2.po'
+    store = Store.objects.create_by_path(
+        path, project=project0)
+    assert store.pootle_path == path
+
+
+@pytest.mark.django_db
+def test_store_create_by_new_tp_path():
+    language = LanguageDBFactory()
+    path = '/%s/project0/tp.po' % language.code
+    store = Store.objects.create_by_path(path)
+    assert store.pootle_path == path
+    assert store.translation_project.language == language
+
+    language = LanguageDBFactory()
+    path = '/%s/project0/with/subdir/tp.po' % language.code
+    store = Store.objects.create_by_path(path)
+    assert store.pootle_path == path
+    assert store.translation_project.language == language

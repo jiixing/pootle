@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -27,7 +26,6 @@ from pootle.core.decorators import admin_required
 from pootle.core.http import (JsonResponse, JsonResponseBadRequest,
                               JsonResponseNotFound)
 from pootle.core.log import PAID_TASK_ADDED, PAID_TASK_DELETED, log
-from pootle.core.utils.json import jsonify
 from pootle.core.utils.timezone import make_aware, make_naive
 from pootle.core.views import AjaxResponseMixin, UserObjectMixin
 from pootle_misc.util import (ajax_required, get_date_interval,
@@ -38,6 +36,7 @@ from pootle_statistics.models import ScoreLog
 
 from .forms import PaidTaskForm, UserRatesForm
 from .models import PaidTask, PaidTaskTypes, ReportActionTypes
+from .utils import get_grouped_word_stats
 
 
 # Django field query aliases
@@ -128,10 +127,10 @@ def reports(request):
 
     ctx = {
         'page': 'admin-reports',
-        'users': jsonify(map(
+        'users': map(
             lambda x: {'id': x.username, 'text': x.formatted_name},
             User.objects.hide_meta()
-        )),
+        ),
         'user_rates_form': UserRatesForm(),
         'paid_task_form': PaidTaskForm(),
         'now': now.strftime('%Y-%m-%d %H:%M:%S'),
@@ -391,15 +390,6 @@ def remove_paid_task(request, task_id=None):
     return JsonResponseBadRequest({'error': _('Invalid request method')})
 
 
-def get_scores(user, start, end):
-    return ScoreLog.objects \
-        .select_related('submission__translation_project__project',
-                        'submission__translation_project__language',) \
-        .filter(user=user,
-                creation_time__gte=start,
-                creation_time__lte=end)
-
-
 def get_activity_data(request, user, month):
     [start, end] = get_date_interval(month)
 
@@ -428,7 +418,7 @@ def get_activity_data(request, user, month):
     }
 
     if user != '':
-        scores = get_scores(user, start, end)
+        scores = ScoreLog.objects.for_user_in_range(user, start, end)
         scores = list(scores.order_by(SCORE_TRANSLATION_PROJECT))
         json['grouped'] = get_grouped_word_stats(scores, user, month)
         scores.sort(key=lambda x: x.creation_time)
@@ -540,14 +530,6 @@ def get_daily_activity(user, scores, start, end):
     return result
 
 
-def get_tasks(user, start, end):
-    return PaidTask.objects \
-                   .filter(user=user,
-                           datetime__gte=start,
-                           datetime__lte=end) \
-                   .order_by('pk')
-
-
 def get_rates(user, start, end):
     """Get user rates that were set for the user during a period
     from start to end. Raise an exception if the user has multiple rates
@@ -561,8 +543,7 @@ def get_rates(user, start, end):
         ``hourly_rate`` is the rate for hourly work that can be added as
         PaidTask.
     """
-
-    scores = get_scores(user, start, end)
+    scores = ScoreLog.objects.for_user_in_range(user, start, end)
     rate, review_rate, hourly_rate = 0, 0, 0
     rates = scores.values('rate', 'review_rate').distinct()
     if len(rates) > 1:
@@ -571,7 +552,7 @@ def get_rates(user, start, end):
         rate = rates[0]['rate']
         review_rate = rates[0]['review_rate']
 
-    tasks = get_tasks(user, start, end)
+    tasks = PaidTask.objects.for_user_in_range(user, start, end)
     task_rates = tasks.values('task_type', 'rate').distinct()
     for task_rate in task_rates:
         if (task_rate['task_type'] == PaidTaskTypes.TRANSLATION and
@@ -598,7 +579,7 @@ def get_rates(user, start, end):
 def get_paid_tasks(user, start, end):
     result = []
 
-    tasks = get_tasks(user, start, end)
+    tasks = PaidTask.objects.for_user_in_range(user, start, end)
 
     for task in tasks:
         result.append({
@@ -612,56 +593,6 @@ def get_paid_tasks(user, start, end):
         })
 
     return result
-
-
-def get_grouped_word_stats(scores, user=None, month=None):
-    result = []
-    tp = None
-    for score in scores:
-        if tp != score.submission.translation_project:
-            tp = score.submission.translation_project
-            row = {
-                'translation_project': u'%s / %s' % (tp.project.fullname,
-                                                     tp.language.fullname),
-                'project_code': tp.project.code,
-                'score_delta': 0,
-                'translated': 0,
-                'reviewed': 0,
-                'suggested': 0,
-            }
-            if user is not None:
-                submissions_filter = {
-                    'state': 'user-submissions',
-                    'user': user.username,
-                }
-                suggestions_filter = {
-                    'state': 'user-suggestions',
-                    'user': user.username,
-                }
-                if month is not None:
-                    submissions_filter['month'] = month
-                    suggestions_filter['month'] = month
-
-                row['tp_browse_url'] = tp.get_absolute_url()
-                row['tp_submissions_translate_url'] = \
-                    tp.get_translate_url(**submissions_filter)
-                row['tp_suggestions_translate_url'] = \
-                    tp.get_translate_url(**suggestions_filter)
-
-            result.append(row)
-
-        translated_words, reviewed_words = score.get_paid_wordcounts()
-        if translated_words is not None:
-            row['translated'] += translated_words
-        if reviewed_words is not None:
-            row['reviewed'] += reviewed_words
-        row['score_delta'] += score.score_delta
-
-        suggested_words = score.get_suggested_wordcount()
-        if suggested_words is not None:
-            row['suggested'] += suggested_words
-
-    return sorted(result, key=lambda x: x['translation_project'])
 
 
 def get_summary(scores, start, end):

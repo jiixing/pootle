@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -378,22 +377,6 @@ class CachedTreeItem(TreeItem):
                     item.get_stats(include_children=False)
 
         return result
-
-    # TODO get rid of this method ?
-    def refresh_stats(self, include_children=True, cached_methods=None):
-        """refresh cached stats for self and for children"""
-        self.initialize_children()
-
-        if include_children:
-            for item in self.children:
-                # note that refresh_stats for a Store object does nothing
-                item.refresh_stats(cached_methods=cached_methods)
-
-        if cached_methods is None:
-            cached_methods = CachedMethods.get_all()
-
-        for name in cached_methods:
-            self.update_cached(name)
 
     def get_error_unit_count(self):
         check_stats = self.get_cached(CachedMethods.CHECKS)

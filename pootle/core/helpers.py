@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -15,8 +14,6 @@ from django.utils.translation import ugettext as _
 
 from pootle_misc.checks import check_names
 
-
-EXPORT_VIEW_QUERY_LIMIT = 10000
 
 SIDEBAR_COOKIE_NAME = 'pootle-browser-sidebar'
 

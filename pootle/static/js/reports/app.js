@@ -8,6 +8,7 @@
 
 import $ from 'jquery';
 import moment from 'moment';
+import assign from 'object-assign';
 import _ from 'underscore';
 
 import 'jquery-flot';
@@ -37,7 +38,8 @@ PTL.reports = {
     _.defaults(this, opts);
 
     /* Compile templates */
-    const showSummary = !PTL.reports.freeUserReport && (PTL.reports.ownReport || PTL.reports.adminReport);
+    const showSummary = (!PTL.reports.freeUserReport &&
+                         (PTL.reports.ownReport || PTL.reports.adminReport));
     this.tmpl = {
       results: _.template($('#language_user_activity').html()),
       summary: showSummary ? _.template($('#summary').html()) : '',
@@ -59,7 +61,7 @@ PTL.reports = {
       });
       $(document).on('click', '#user-rates-form input.submit', this.updateRates);
       $(document).on('click', '#reports-paid-tasks .js-remove-task', this.removePaidTask);
-      $('#reports-user').select2({ 'data': PTL.reports.users });
+      $('#reports-user').select2({ data: PTL.reports.users });
     }
 
     $(document).on('click', '#paid-task-form input.submit', this.addPaidTask);
@@ -93,8 +95,8 @@ PTL.reports = {
       }
 
       PTL.reports.loadedHashParams = params;
-      $('#detailed a').attr('href', PTL.reports.detailedUrl + '?' + utils.getHash());
-    }, { 'unescape': true });
+      $('#detailed a').attr('href', `${PTL.reports.detailedUrl}?${utils.getHash()}`);
+    }, { unescape: true });
   },
 
   updateRates() {
@@ -206,7 +208,7 @@ PTL.reports = {
 
   refreshAmountMeasureUnits(taskType) {
     $('#paid-task-form .units').hide();
-    $('#paid-task-form .units.task-' + taskType).show();
+    $(`#paid-task-form .units.task-${taskType}`).show();
   },
 
   getRateByTaskType(taskType) {
@@ -234,8 +236,8 @@ PTL.reports = {
   update() {
     if (PTL.reports.validate()) {
       const newHash = $.param({
-        'username': PTL.reports.userName,
-        'month': PTL.reports.month.format('YYYY-MM'),
+        username: PTL.reports.userName,
+        month: PTL.reports.month.format('YYYY-MM'),
       });
       $.history.load(newHash);
     } else {
@@ -289,27 +291,28 @@ PTL.reports = {
     );
   },
 
-  getPaidTaskSummaryItem(type, rate) {
-    if (PTL.reports.data.paid_task_summary) {
-      const summary = PTL.reports.data.paid_task_summary;
-      for (const index in summary) {
-        if (summary[index].rate === rate && summary[index].type === type) {
-          return summary[index];
-        }
+  getPaidTaskSummaryItem(type, rate, summary) {
+    if (!summary) {
+      return null;
+    }
+
+    for (const index in summary) {
+      if (summary[index].rate === rate && summary[index].type === type) {
+        return summary[index];
       }
     }
 
     return null;
   },
 
-  setData(data) {
+  processData(origData) {
     let translatedTotal = 0;
     let reviewedTotal = 0;
     let suggestedTotal = 0;
     let scoreDeltaTotal = 0;
     let translatedFloorTotal = 0;
 
-    PTL.reports.data = data;
+    const data = assign({}, origData);
     data.paid_task_summary = [];
 
     for (const index in data.paid_tasks) {
@@ -318,18 +321,19 @@ PTL.reports = {
       }
 
       const task = data.paid_tasks[index];
-      const item = PTL.reports.getPaidTaskSummaryItem(task.type, task.rate);
+      const item = PTL.reports.getPaidTaskSummaryItem(task.type, task.rate,
+                                                      origData.paid_task_summary);
 
       task.datetime = moment(task.datetime, 'YYYY-MM-DD hh:mm:ss').format('MMMM D, HH:mm');
       if (item !== null) {
         item.amount += task.amount;
       } else {
-        PTL.reports.data.paid_task_summary.push({
-          'period': PTL.reports.month.format('MMMM, YYYY'),
-          'type': task.type,
-          'amount': task.amount,
-          'action': task.action,
-          'rate': task.rate,
+        data.paid_task_summary.push({
+          period: PTL.reports.month.format('MMMM, YYYY'),
+          type: task.type,
+          amount: task.amount,
+          action: task.action,
+          rate: task.rate,
         });
       }
     }
@@ -380,6 +384,8 @@ PTL.reports = {
         delta--;
       }
     }
+
+    return data;
   },
 
   buildResults() {
@@ -398,7 +404,9 @@ PTL.reports = {
         PTL.reports.now = moment(data.meta.now, 'YYYY-MM-DD HH:mm:ss');
         PTL.reports.month = moment(data.meta.month, 'YYYY-MM');
 
-        PTL.reports.setData(data);
+        const processedData = PTL.reports.processData(data);
+        PTL.reports.data = processedData;
+
         $('#reports-results').empty();
         $('#reports-results').html(PTL.reports.tmpl.results(PTL.reports.data)).show();
         $('#js-breadcrumb-user').text(data.meta.user.formatted_name).show();
@@ -414,14 +422,15 @@ PTL.reports = {
           month: data.meta.month,
           task: '',
         };
-        data.meta.admin_permalink = [data.meta.admin_permalink,
-                                     $.param(permalinkArgs)].join('#');
+        processedData.meta.admin_permalink = [
+          data.meta.admin_permalink, $.param(permalinkArgs),
+        ].join('#');
 
         if (PTL.reports.adminReport || !PTL.reports.freeUserReport &&
             PTL.reports.ownReport) {
           const ctx = {
-            data: PTL.reports.data,
-            paidTaskTypes: paidTaskTypes,
+            paidTaskTypes,
+            data: processedData,
           };
           $('#reports-paid-tasks').html(PTL.reports.tmpl.paid_tasks(ctx));
           ctx.data.total = 0;
@@ -471,7 +480,7 @@ PTL.reports = {
           $('#user-rates-form .currency').text($('#id_currency').val());
 
           if ('task' in PTL.reports.params) {
-            const task = document.querySelector('.task' + PTL.reports.params.task);
+            const task = document.querySelector(`.task${PTL.reports.params.task}`);
             if (!!task) {
               task.classList.add('highlight');
               setTimeout(() => {
@@ -538,13 +547,13 @@ PTL.reports = {
   updateMonthSelector() {
     $('.js-month').each(function setLink() {
       const $el = $(this);
-      let link = PTL.reports.adminReport ? '#username=' + PTL.reports.userName + '&' : '#';
+      let link = PTL.reports.adminReport ? `#username=${PTL.reports.userName}&` : '#';
 
       if ($el.hasClass('js-previous')) {
-        link += 'month=' + PTL.reports.month.clone().subtract({ M: 1 }).format('YYYY-MM');
+        link += `month=${PTL.reports.month.clone().subtract({ M: 1 }).format('YYYY-MM')}`;
       }
       if ($el.hasClass('js-next')) {
-        link += 'month=' + PTL.reports.month.clone().add({ M: 1 }).format('YYYY-MM');
+        link += `month=${PTL.reports.month.clone().add({ M: 1 }).format('YYYY-MM')}`;
       }
       $el.attr('href', link);
     });

@@ -12,29 +12,30 @@ from django.conf import settings
 from django.core.urlresolvers import resolve
 from django.db.models import Max
 
-from pootle_misc.checks import get_category_id
-
 from pootle.core.dateparse import parse_datetime
+from pootle.core.url_helpers import split_pootle_path
+from pootle_misc.checks import get_category_id
 from pootle_store.models import Unit
-from pootle_store.unit.filters import UnitTextSearch, UnitSearchFilter
-from pootle_store.views import (
-    ALLOWED_SORTS, SIMPLY_SORTED, _path_units_with_meta)
+from pootle_store.unit.filters import UnitSearchFilter, UnitTextSearch
+from pootle_store.unit.results import GroupedResults, StoreResults
+from pootle_store.views import ALLOWED_SORTS, SIMPLY_SORTED
 from virtualfolder.helpers import extract_vfolder_from_path
 from virtualfolder.models import VirtualFolderTreeItem
 
 
 def calculate_search_results(kwargs, user):
     pootle_path = kwargs["pootle_path"]
-
     category = kwargs.get("category")
     checks = kwargs.get("checks")
-    initial = kwargs.get("initial", False)
+    offset = kwargs.get("offset", 0)
     limit = kwargs.get("count", 9)
     modified_since = kwargs.get("modified-since")
     search = kwargs.get("search")
     sfields = kwargs.get("sfields")
     soptions = kwargs.get("soptions", [])
     sort = kwargs.get("sort", None)
+    language_code, project_code, dir_path, filename = (
+        split_pootle_path(kwargs["pootle_path"]))
     uids = [
         int(x)
         for x
@@ -53,7 +54,6 @@ def calculate_search_results(kwargs, user):
                 "directory", "vfolder"))
     qs = (
         Unit.objects.get_translatable(user=user, **resolve(pootle_path).kwargs)
-                    .filter(store__pootle_path__startswith=pootle_path)
                     .order_by("store", "index"))
     if vfolder is not None:
         qs = qs.filter(vfolders=vfolder)
@@ -97,24 +97,29 @@ def calculate_search_results(kwargs, user):
             search,
             [sfields],
             "exact" in soptions)
-    begin = 0
-    end = None
-    uid_list = []
-    if initial:
+
+    find_unit = (
+        not offset
+        and language_code
+        and project_code
+        and filename
+        and uids)
+    start = offset
+    total = qs.count()
+    if find_unit:
+            # find the uid in the Store
         uid_list = list(qs.values_list("pk", flat=True))
-        if uids and len(uids) == 1:
-            # if uid is set get the index of the uid
-            index = uid_list.index(uids[0])
-            begin = max(index - limit, 0)
-            end = min(index + limit + 1, len(uid_list))
-    elif uids:
-        qs = qs.filter(id__in=uids)
-    if end is None:
-        end = 2 * limit
+        unit_index = uid_list.index(uids[0])
+        start = int(unit_index / (2 * limit)) * (2 * limit)
+    end = min(start + (2 * limit), total)
+
     unit_groups = []
     units_by_path = groupby(
-        qs[begin:end],
-        lambda x: x.store.pootle_path)
-    for pootle_path, _units in units_by_path:
-        unit_groups.append(_path_units_with_meta(pootle_path, _units))
-    return uid_list, unit_groups
+        qs.values(*GroupedResults.select_fields)[start:end],
+        lambda x: x["store__pootle_path"])
+    for pootle_path, units in units_by_path:
+        unit_groups.append(
+            {pootle_path: StoreResults(units).data})
+
+    total = qs.count()
+    return total, start, min(end, total), unit_groups

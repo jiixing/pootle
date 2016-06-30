@@ -113,7 +113,9 @@ PTL.common = {
       traditional: true,
       crossDomain: false,
       beforeSend(xhr, settings) {
-        if (!/^(GET|HEAD|OPTIONS|TRACE)$/.test(settings.type)) {
+        // Set CSRF token only for local requests.
+        if (!this.crossDomain &&
+            !/^(GET|HEAD|OPTIONS|TRACE)$/.test(settings.type)) {
           xhr.setRequestHeader('X-CSRFToken', cookie('csrftoken'));
         }
       },
@@ -163,7 +165,7 @@ PTL.common = {
                  '-source_language'];
 
     $.each(ids, (i, id) => {
-      const $selects = $('select[id$="' + id + '"]');
+      const $selects = $(`select[id$="${id}"]`);
 
       $.each($selects, (j, select) => {
         const $select = $(select);
@@ -176,9 +178,7 @@ PTL.common = {
           }
 
           const opsArray = $.makeArray(options);
-          opsArray.sort((a, b) => {
-            return utils.strCmp($(a).text(), $(b).text());
-          });
+          opsArray.sort((a, b) => utils.strCmp($(a).text(), $(b).text()));
 
           options.remove();
           $select.append($(opsArray));

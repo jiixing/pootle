@@ -77,7 +77,12 @@ const SocialVerification = React.createClass({
     const { formData } = this.state;
 
     const verificationMsg = interpolate(
-      gettext('We found a user with <span>%s</span> email in our system. Please provide the password to finish the sign in procedure. This is a one-off procedure, which will establish a link between your Pootle and %s accounts.'),
+      gettext(
+        'We found a user with <span>%s</span> email in our system. Please ' +
+        'provide the password to finish the sign in procedure. This is a ' +
+        'one-off procedure, which will establish a link between your ' +
+        'Pootle and %s accounts.'
+      ),
       [this.props.email, this.props.providerName]
     );
 
@@ -87,15 +92,16 @@ const SocialVerification = React.createClass({
         <div>
           <form
             method="post"
-            onSubmit={this.handleFormSubmit}>
+            onSubmit={this.handleFormSubmit}
+          >
             <div className="fields">
               <FormElement
                 type="password"
-                attribute="password"
                 label={gettext('Password')}
                 handleChange={this.handleChange}
-                formData={formData}
-                errors={errors}
+                name="password"
+                errors={errors.password}
+                value={formData.password}
               />
               <div className="actions password-forgotten">
                 <a href="#" onClick={this.handleRequestPasswordReset}>

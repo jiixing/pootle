@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -10,6 +9,13 @@
 import shutil
 
 import pytest
+
+
+def pytest_generate_tests(metafunc):
+    from pootle_project.models import PROJECT_CHECKERS
+
+    if 'checkers' in metafunc.funcargnames:
+        metafunc.parametrize("checkers", PROJECT_CHECKERS.keys())
 
 
 def _require_tp(language, project):
@@ -72,23 +78,17 @@ def russian_tutorial(russian, tutorial):
 
 
 @pytest.fixture
-def afrikaans_vfolder_test(afrikaans, vfolder_test):
+def afrikaans_vfolder_test(afrikaans, vfolder_project):
     """Require Afrikaans Virtual Folder Test."""
-    return _require_tp(afrikaans, vfolder_test)
+    return _require_tp(afrikaans, vfolder_project)
 
 
-def get_project_checkers():
-    from translate.filters import checks
+@pytest.fixture
+def tp_checker_tests(request, english, checkers):
+    from pytest_pootle.factories import ProjectDBFactory
 
-    return ['standard'] + list(checks.projectcheckers.keys())
-
-
-@pytest.fixture(params=get_project_checkers())
-def tp_checker_tests(request, english):
-    from pytest_pootle.factories import ProjectFactory
-
-    checker_name = request.param
-    project = ProjectFactory(
+    checker_name = checkers
+    project = ProjectDBFactory(
         checkstyle=checker_name,
         source_language=english)
 
@@ -97,3 +97,20 @@ def tp_checker_tests(request, english):
     request.addfinalizer(_remove_project_directory)
 
     return (checker_name, project)
+
+
+@pytest.fixture
+def templates_project0(request, templates):
+    """Require the templates/project0/ translation project."""
+    from pootle_project.models import Project
+    from pytest_pootle.factories import TranslationProjectFactory
+
+    project0 = Project.objects.get(code="project0")
+    tp = TranslationProjectFactory(language=templates, project=project0)
+
+    def _cleanup():
+        shutil.rmtree(tp.abs_real_path)
+
+    request.addfinalizer(_cleanup)
+
+    return tp

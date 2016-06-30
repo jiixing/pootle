@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -22,12 +21,13 @@ from django.utils.functional import cached_property
 from pootle.core.mixins import CachedMethods, CachedTreeItem
 from pootle.core.url_helpers import get_editor_filter, split_pootle_path
 from pootle_app.models.directory import Directory
-from pootle_app.project_tree import does_not_exist
+from pootle_app.project_tree import (does_not_exist, init_store_from_template,
+                                     translation_project_dir_exists)
 from pootle_language.models import Language
 from pootle_misc.checks import excluded_filters
 from pootle_project.models import Project
-from pootle_store.models import PARSED, Store, Unit
-from pootle_store.util import OBSOLETE, absolute_real_path, relative_real_path
+from pootle_store.models import PARSED, Store
+from pootle_store.util import absolute_real_path, relative_real_path
 from staticpages.models import StaticPage
 
 
@@ -53,8 +53,7 @@ def create_or_resurrect_translation_project(language, project):
 
 
 def create_translation_project(language, project):
-    from pootle_app import project_tree
-    if project_tree.translation_project_dir_exists(language, project):
+    if translation_project_dir_exists(language, project):
         try:
             translation_project, created = TranslationProject.objects.all() \
                 .get_or_create(language=language, project=project)
@@ -114,7 +113,8 @@ class TranslationProjectManager(models.Manager):
         """Filters translation projects for a specific user.
 
         - Admins always get all translation projects.
-        - Regular users only get enabled translation projects.
+        - Regular users only get enabled translation projects
+            accessible to them.
 
         :param user: The user for whom the translation projects need to be
             retrieved for.
@@ -127,7 +127,9 @@ class TranslationProjectManager(models.Manager):
         if user.is_superuser:
             return qs
 
-        return qs.filter(project__disabled=False)
+        return qs.filter(
+            project__disabled=False,
+            project__code__in=Project.accessible_by_user(user))
 
     def get_for_user(self, user, project_code, language_code,
                      select_related=None):
@@ -137,7 +139,7 @@ class TranslationProjectManager(models.Manager):
         - Admins can get the translation project even
             if its project is disabled.
         - Regular users only get a translation project
-            if its project isn't disabled.
+            if its project isn't disabled and it is accessible to them.
 
         :param user: The user for whom the translation project needs
             to be retrieved.
@@ -156,7 +158,7 @@ class TranslationProject(models.Model, CachedTreeItem):
 
     language = models.ForeignKey(Language, db_index=True)
     project = models.ForeignKey(Project, db_index=True)
-    real_path = models.FilePathField(editable=False)
+    real_path = models.FilePathField(editable=False, null=True, blank=True)
     directory = models.OneToOneField(Directory, db_index=True, editable=False)
     pootle_path = models.CharField(max_length=255, null=False, unique=True,
                                    db_index=True, editable=False)
@@ -189,11 +191,15 @@ class TranslationProject(models.Model, CachedTreeItem):
 
     @property
     def abs_real_path(self):
-        return absolute_real_path(self.real_path)
+        if self.real_path is not None:
+            return absolute_real_path(self.real_path)
 
     @abs_real_path.setter
     def abs_real_path(self, value):
-        self.real_path = relative_real_path(value)
+        if value is not None:
+            self.real_path = relative_real_path(value)
+        else:
+            self.real_path = None
 
     @property
     def file_style(self):
@@ -231,13 +237,6 @@ class TranslationProject(models.Model, CachedTreeItem):
         return self._non_db_state
 
     @property
-    def units(self):
-        # FIXME: we rely on implicit ordering defined in the model. We might
-        # want to consider pootle_path as well
-        return Unit.objects.filter(store__translation_project=self,
-                                   state__gt=OBSOLETE).select_related('store')
-
-    @property
     def disabled(self):
         return self.project.disabled
 
@@ -258,56 +257,19 @@ class TranslationProject(models.Model, CachedTreeItem):
         super(TranslationProject, self).__init__(*args, **kwargs)
 
     def save(self, *args, **kwargs):
-        created = self.id is None
-
-        if created:
-            from pootle_app.project_tree import translation_project_dir_exists
-
-            template_tp = self.project.get_template_translationproject()
-            initialize_from_templates = (
-                not self.is_template_project
-                and template_tp is not None
-                and not translation_project_dir_exists(self.language,
-                                                       self.project))
-
         self.directory = self.language.directory \
                                       .get_or_make_subdir(self.project.code)
         self.pootle_path = self.directory.pootle_path
 
-        project_dir = self.project.get_real_path()
-        from pootle_app.project_tree import get_translation_project_dir
-        self.abs_real_path = get_translation_project_dir(
-            self.language, project_dir, self.file_style, make_dirs=not
-            self.directory.obsolete)
-
+        if self.project.treestyle != "none":
+            project_dir = self.project.get_real_path()
+            from pootle_app.project_tree import get_translation_project_dir
+            self.abs_real_path = get_translation_project_dir(
+                self.language, project_dir, self.file_style, make_dirs=not
+                self.directory.obsolete)
+        else:
+            self.abs_real_path = None
         super(TranslationProject, self).save(*args, **kwargs)
-
-        if created:
-            if initialize_from_templates:
-                # We are adding a new TP and there are no files to import from
-                # disk, so initialize the TP files using the templates TP ones.
-                from pootle_app.project_tree import init_store_from_template
-
-                template_stores = template_tp.stores.live().exclude(file="")
-
-                for template_store in template_stores.iterator():
-                    init_store_from_template(self, template_store)
-
-            self.scan_files()
-
-            # If this TP has no stores, cache should be updated forcibly.
-            if self.stores.live().count() == 0:
-                self.update_all_cache()
-
-            # Create units from disk store
-            for store in self.stores.live().iterator():
-                changed = store.update_from_disk()
-
-                # If there were changes stats will be refreshed anyway -
-                # otherwise...  Trigger stats refresh for TP added from UI.
-                # FIXME: This won't be necessary once #3547 is fixed.
-                if not changed:
-                    store.save(update_cache=True)
 
     def delete(self, *args, **kwargs):
         directory = self.directory
@@ -344,11 +306,64 @@ class TranslationProject(models.Model, CachedTreeItem):
 
         return self.project.code in Project.accessible_by_user(user)
 
-    def update(self):
-        """Update all stores to reflect state on disk"""
-        stores = self.stores.live().exclude(file='').filter(state__gte=PARSED)
+    def can_be_inited_from_templates(self):
+        """Returns `True` if the current translation project hasn't been
+        saved yet and can be initialized from templates.
+        """
+
+        # This method checks if the current translation project directory
+        # doesn't exist. So it won't work if the translation project is already
+        # saved the database because the translation project directory is
+        # auto-created in `save()` method.
+        template_tp = self.project.get_template_translationproject()
+        return (
+            not self.is_template_project
+            and template_tp is not None
+            and not translation_project_dir_exists(self.language,
+                                                   self.project))
+
+        return False
+
+    def init_from_templates(self):
+        """Initializes the current translation project files using
+        the templates TP ones.
+        """
+
+        template_tp = self.project.get_template_translationproject()
+        template_stores = template_tp.stores.live().exclude(file="")
+
+        for template_store in template_stores.iterator():
+            init_store_from_template(self, template_store)
+
+        self.update_from_disk()
+
+    def update_from_disk(self, force=False, overwrite=False):
+        """Update all stores to reflect state on disk."""
+        changed = False
+
+        logging.info(u"Scanning for new files in %s", self)
+        # Create new, make obsolete in-DB stores to reflect state on disk
+        self.scan_files()
+
+        stores = self.stores.live().select_related('parent').exclude(file='')
+        # Update store content from disk store
         for store in stores.iterator():
-            store.update_from_disk()
+            if not store.file:
+                continue
+            disk_mtime = store.get_file_mtime()
+            if not force and disk_mtime == store.file_mtime:
+                # The file on disk wasn't changed since the last sync
+                logging.debug(u"File didn't change since last sync, "
+                              u"skipping %s", store.pootle_path)
+                continue
+
+            changed = store.update_from_disk(overwrite=overwrite) or changed
+
+        # If this TP has no stores, cache should be updated forcibly.
+        if not changed and stores.count() == 0:
+            self.update_all_cache()
+
+        return changed
 
     def sync(self, conservative=True, skip_missing=False, only_newer=True):
         """Sync unsaved work on all stores to disk"""
@@ -478,7 +493,9 @@ def scan_languages(sender, instance, created=False, raw=False, **kwargs):
         return
 
     for language in Language.objects.iterator():
-        create_translation_project(language, instance)
+        tp = create_translation_project(language, instance)
+        if tp is not None:
+            tp.update_from_disk()
 
 
 @receiver(post_save, sender=Language)
@@ -487,4 +504,6 @@ def scan_projects(sender, instance, created=False, raw=False, **kwargs):
         return
 
     for project in Project.objects.enabled().iterator():
-        create_translation_project(instance, project)
+        tp = create_translation_project(instance, project)
+        if tp is not None:
+            tp.update_from_disk()

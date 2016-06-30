@@ -30,9 +30,9 @@ const DropdownView = Backbone.View.extend({
 
   events() {
     const events = {
-      'keydown': 'onKey',
+      keydown: 'onKey',
     };
-    events['click ' + sel.data.toggle] = 'toggle';
+    events[`click ${sel.data.toggle}`] = 'toggle';
 
     return events;
   },
@@ -81,6 +81,8 @@ const DropdownView = Backbone.View.extend({
 
       $items.eq(index).trigger('focus');
     }
+
+    return true;
   },
 
   isVisible() {

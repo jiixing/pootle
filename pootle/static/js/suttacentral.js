@@ -1,3 +1,4 @@
+
 ;
 import $ from 'jquery';
 import _ from 'underscore';
@@ -149,17 +150,7 @@ window.suttacentral = {
             gotoIndex(maxIndex);
         });
         */
-        // Rebind ctrl+shift+n
-        shortcut.add('ctrl+shift+g', shortcut.all_shortcuts["ctrl+shift+n"].callback);
 
-        // Copy Original
-
-        shortcut.add('alt+down', function() {
-          $('.js-copyoriginal').click()
-        });
-        shortcut.add('ctrl+b', function() {
-          $('.js-copyoriginal').click()
-        });
 
     },
     /* Automatically convert ascii punctuation to unicode */

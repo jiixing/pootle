@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -7,8 +6,8 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
-from django.utils.functional import cached_property
 from django.db.models import Max
+from django.utils.functional import cached_property
 
 from pootle_store.models import Unit
 from pootle_store.unit.filters import UnitSearchFilter, UnitTextSearch
@@ -17,8 +16,8 @@ from pootle_store.views import SIMPLY_SORTED
 
 class DBSearchBackend(object):
 
-    default_chunk_size = 9
-    default_order = "store", "index"
+    default_chunk_size = None
+    default_order = "store__pootle_path", "index"
     select_related = (
         'store__translation_project__project',
         'store__translation_project__language')
@@ -30,12 +29,8 @@ class DBSearchBackend(object):
     @property
     def chunk_size(self):
         return self.kwargs.get(
-            'chunk_size',
+            'count',
             self.default_chunk_size)
-
-    @property
-    def initial(self):
-        return self.kwargs.get('initial', True)
 
     @property
     def project_code(self):
@@ -56,6 +51,14 @@ class DBSearchBackend(object):
     @property
     def unit_filter(self):
         return self.kwargs.get("filter")
+
+    @property
+    def offset(self):
+        return self.kwargs.get("offset", None)
+
+    @property
+    def previous_uids(self):
+        return self.kwargs.get("previous_uids", []) or []
 
     @property
     def sort_by(self):
@@ -145,18 +148,41 @@ class DBSearchBackend(object):
         return self.sort_qs(self.filter_qs(self.units_qs))
 
     def search(self):
-        uid_list = None
-        begin = 0
-        end = 2 * self.chunk_size
-        if self.initial:
-            results = self.results
-            uid_list = list(results.values_list('id', flat=True))
-            if len(self.uids) == 1:
-                if self.uids[0] not in uid_list:
-                    return [], results.none()
-                index = uid_list.index(self.uids[0])
-                begin = max(index - self.chunk_size, 0)
-                end = min(index + self.chunk_size + 1, len(uid_list))
-        elif self.uids:
-            results = self.results.filter(id__in=self.uids)
-        return uid_list, results[begin:end]
+        total = self.results.count()
+        start = self.offset
+
+        if start > total:
+            return total, total, total, self.results.none()
+
+        find_unit = (
+            self.language_code
+            and self.project_code
+            and self.filename
+            and self.uids)
+        find_next_slice = (
+            self.previous_uids
+            and self.offset)
+
+        if find_unit:
+            # find the uid in the Store
+            uid_list = list(self.results.values_list("pk", flat=True))
+            if self.chunk_size and self.uids[0] in uid_list:
+                unit_index = uid_list.index(self.uids[0])
+                start = (
+                    int(unit_index / (2 * self.chunk_size))
+                    * (2 * self.chunk_size))
+        elif find_next_slice:
+            # if both previous_uids and offset are set then try to ensure
+            # that the results we are returning start from the end of previous
+            # result set
+            _start = start = max(self.offset - len(self.previous_uids), 0)
+            end = max(self.offset + (2 * self.chunk_size), total)
+            uid_list = self.results[start:end].values_list("pk", flat=True)
+            for i, uid in enumerate(uid_list):
+                if uid in self.previous_uids:
+                    start = _start + i + 1
+        if self.chunk_size is None:
+            return total, 0, total, self.results
+        start = start or 0
+        end = min(start + (2 * self.chunk_size), total)
+        return total, start, end, self.results[start:end]

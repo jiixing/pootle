@@ -2,11 +2,13 @@ module.exports = {
   'extends': 'airbnb',
   env: {
     browser: true,
-    es6: true,
   },
-  ecmaFeatures: {
-    jsx: true,
-    modules: true,
+  parserOptions: {
+    ecmaVersion: 6,
+    ecmaFeatures: {
+      jsx: true,
+    },
+    sourceType: 'module',
   },
   globals: {
     gettext: false,
@@ -21,4 +23,8 @@ module.exports = {
   plugins: [
     'react',
   ],
+  rules: {
+    'react/prefer-es6-class': 0,
+    'react/prefer-stateless-function': 1,
+  },
 };

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -8,13 +7,17 @@
 # AUTHORS file for copyright and authorship information.
 
 import pytest
+
 from translate.storage import factory
+from translate.storage.factory import getclass
+from translate.storage.pypo import pounit
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from pootle.core.mixins.treeitem import CachedMethods
 from pootle_store.util import FUZZY, TRANSLATED, UNTRANSLATED
+from pootle_store.models import Unit
 
 
 User = get_user_model()
@@ -280,3 +283,37 @@ def test_accept_suggestion_update_wordcount(it_tutorial_po, system):
     assert (
         it_tutorial_po.get_cached(CachedMethods.WORDCOUNT_STATS)['translated']
         == 2)
+
+
+@pytest.mark.django_db
+def test_unit_repr():
+    unit = Unit.objects.first()
+    assert str(unit) == str(unit.convert(unit.get_unit_class()))
+    assert unicode(unit) == unicode(unit.source)
+
+
+@pytest.mark.django_db
+def test_unit_po_plurals(store_po):
+    unit = Unit(store=store_po, index=1)
+    unit_po = pounit('bar')
+    unit_po.msgid_plural = ['bars']
+    unit.update(unit_po)
+    assert unit.hasplural()
+    unit.save()
+    assert unit.hasplural()
+
+
+@pytest.mark.django_db
+def test_unit_ts_plurals(store_po, test_fs):
+    with test_fs.open(['data', 'ts', 'add_plurals.ts']) as f:
+        file_store = getclass(f)(f.read())
+    unit = Unit(store=store_po, index=1)
+    unit_ts = file_store.units[0]
+    unit.update(unit_ts)
+    assert unit.hasplural()
+    unit.save()
+    unit = Unit.objects.get(id=unit.id)
+    assert unit.hasplural()
+    unit.save()
+    unit = Unit.objects.get(id=unit.id)
+    assert unit.hasplural()

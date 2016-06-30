@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -43,15 +42,17 @@ class Command(PootleCommand):
         """
         :return: flag if child stores should be updated
         """
+        if translation_project.project.treestyle == "none":
+            return
         if translation_project.directory_exists_on_disk():
-            logging.info(u"Scanning for new files in %s", translation_project)
-            translation_project.scan_files()
-            return True
+            translation_project.update_from_disk(
+                force=options['force'], overwrite=options['overwrite'])
+            return False
 
-        # Skip if project directory was ceased to exist on disk.
         if translation_project.project.directory_exists_on_disk():
             translation_project.directory.makeobsolete()
         else:
+            # Skip if project directory ceased to exist on disk.
             logging.warning(u"Missing project directory for %s. Skipping %s.",
                             translation_project.project, translation_project)
 

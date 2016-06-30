@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -15,13 +14,12 @@ from translate.filters import checks
 from translate.lang.data import langcode_re
 
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db import models
 from django.db.models import Q
-from django.db.models.signals import post_delete, post_save, pre_delete
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.utils.encoding import iri_to_uri
 from django.utils.functional import cached_property
@@ -34,6 +32,7 @@ from pootle.core.url_helpers import (get_editor_filter, get_path_sortkey,
                                      split_pootle_path, to_tp_relative_path)
 from pootle_app.models.directory import Directory
 from pootle_app.models.permissions import PermissionSet
+from pootle_config.utils import ObjectConfig
 from pootle_store.filetypes import factory_classes
 from pootle_store.models import Store
 from pootle_store.util import absolute_real_path
@@ -41,24 +40,44 @@ from staticpages.models import StaticPage
 
 
 RESERVED_PROJECT_CODES = ('admin', 'translate', 'settings')
+PROJECT_CHECKERS = {
+    "standard": checks.StandardChecker,
+    "openoffice": checks.OpenOfficeChecker,
+    "libreoffice": checks.LibreOfficeChecker,
+    "mozilla": checks.MozillaChecker,
+    "kde": checks.KdeChecker,
+    "wx": checks.KdeChecker,
+    "gnome": checks.GnomeChecker,
+    "creativecommons": checks.CCLicenseChecker,
+    "drupal": checks.DrupalChecker,
+    "terminology": checks.TermChecker,
+}
 
 
 class ProjectManager(models.Manager):
 
     def cached_dict(self, user):
-        """Return a cached list of projects tuples for `user`.
+        """Return a cached ordered dictionary of projects tuples for `user`.
+
+        - Admins always get all projects.
+        - Regular users only get enabled projects accessible to them.
 
         :param user: The user for whom projects need to be retrieved for.
-        :return: A list of project tuples including (code, fullname)
+        :return: An ordered dictionary of project tuples including
+          (`fullname`, `disabled`) and `code` is a key in the dictionary.
         """
-        cache_key = make_method_key('Project', 'cached_dict',
-                                    {'is_admin': user.is_superuser})
+        if not user.is_superuser:
+            cache_params = {'username': user.username}
+        else:
+            cache_params = {'is_admin': user.is_superuser}
+        cache_key = make_method_key('Project', 'cached_dict', cache_params)
         projects = cache.get(cache_key)
         if not projects:
             logging.debug('Cache miss for %s', cache_key)
             projects_dict = self.for_user(user).order_by('fullname') \
                                                .values('code', 'fullname',
                                                        'disabled')
+
             projects = OrderedDict(
                 (project.pop('code'), project) for project in projects_dict
             )
@@ -73,7 +92,8 @@ class ProjectManager(models.Manager):
         """Gets a `project_code` project for a specific `user`.
 
         - Admins can get the project even if it's disabled.
-        - Regular users only get a project if it's not disabled.
+        - Regular users only get a project if it's not disabled and
+            it is accessible to them.
 
         :param project_code: The code of the project to retrieve.
         :param user: The user for whom the project needs to be retrieved.
@@ -82,13 +102,13 @@ class ProjectManager(models.Manager):
         if user.is_superuser:
             return self.get(code=project_code)
 
-        return self.get(code=project_code, disabled=False)
+        return self.for_user(user).get(code=project_code)
 
     def for_user(self, user):
         """Filters projects for a specific user.
 
         - Admins always get all projects.
-        - Regular users only get enabled projects.
+        - Regular users only get enabled projects accessible to them.
 
         :param user: The user for whom the projects need to be retrieved for.
         :return: A filtered queryset with `Project`s for `user`.
@@ -96,7 +116,7 @@ class ProjectManager(models.Manager):
         if user.is_superuser:
             return self.all()
 
-        return self.enabled()
+        return self.enabled().filter(code__in=Project.accessible_by_user(user))
 
 
 class ProjectURLMixin(object):
@@ -146,22 +166,26 @@ class Project(models.Model, CachedTreeItem, ProjectURLMixin):
     fullname = models.CharField(max_length=255, null=False,
                                 verbose_name=_("Full Name"))
 
-    checker_choices = [('standard', 'standard')]
-    checkers = list(checks.projectcheckers.keys())
-    checkers.sort()
-    checker_choices.extend([(checker, checker) for checker in checkers])
-    checkstyle = models.CharField(max_length=50, default='standard',
-                                  null=False, choices=checker_choices,
-                                  verbose_name=_('Quality Checks'))
+    checker_choices = [
+        (checker, checker)
+        for checker
+        in sorted(PROJECT_CHECKERS.keys())]
+    checkstyle = models.CharField(
+        max_length=50,
+        default='standard',
+        null=False,
+        choices=checker_choices,
+        verbose_name=_('Quality Checks'))
 
     localfiletype = models.CharField(max_length=50, default="po",
                                      verbose_name=_('File Type'))
 
     treestyle_choices = (
         # TODO: check that the None is stored and handled correctly
-        ('auto', _('Automatic detection (slower)')),
+        ('auto', _('Automatic detection of gnu/non-gnu file layouts (slower)')),
         ('gnu', _('GNU style: files named by language code')),
         ('nongnu', _('Non-GNU: Each language in its own directory')),
+        ('none', _('Allow pootle_fs to manage filesystems')),
     )
     treestyle = models.CharField(max_length=20, default='auto',
                                  choices=treestyle_choices,
@@ -210,8 +234,11 @@ class Project(models.Model, CachedTreeItem, ProjectURLMixin):
 
         :param user: The ``User`` instance to get accessible projects for.
         """
-        username = 'nobody' if user.is_anonymous() else user.username
-        key = iri_to_uri('projects:accessible:%s' % username)
+        if user.is_superuser:
+            key = iri_to_uri('projects:all')
+        else:
+            username = user.username
+            key = iri_to_uri('projects:accessible:%s' % username)
         user_projects = cache.get(key, None)
 
         if user_projects is not None:
@@ -219,22 +246,20 @@ class Project(models.Model, CachedTreeItem, ProjectURLMixin):
 
         logging.debug(u'Cache miss for %s', key)
 
-        if user.is_anonymous():
-            allow_usernames = [username]
-            forbid_usernames = [username, 'default']
-        else:
-            allow_usernames = list(set([username, 'default', 'nobody']))
-            forbid_usernames = list(set([username, 'default']))
-
-        # FIXME: use `cls.objects.cached_dict().keys()`, but that needs
-        # to use the `LiveProjectManager` first, as it only considers
-        # `enabled()` projects
+        # FIXME: use `cls.objects.cached_dict().keys()`
         ALL_PROJECTS = cls.objects.values_list('code', flat=True)
 
         if user.is_superuser:
             user_projects = ALL_PROJECTS
         else:
             ALL_PROJECTS = set(ALL_PROJECTS)
+
+            if user.is_anonymous():
+                allow_usernames = [username]
+                forbid_usernames = [username, 'default']
+            else:
+                allow_usernames = list(set([username, 'default', 'nobody']))
+                forbid_usernames = list(set([username, 'default']))
 
             # Check root for `view` permissions
 
@@ -272,6 +297,15 @@ class Project(models.Model, CachedTreeItem, ProjectURLMixin):
 
     # # # # # # # # # # # # # #  Properties # # # # # # # # # # # # # # # # # #
 
+    @cached_property
+    def config(self):
+        return ObjectConfig(self)
+
+    @property
+    def local_fs_path(self):
+        return os.path.join(
+            settings.POOTLE_FS_PATH, self.code)
+
     @property
     def name(self):
         return self.fullname
@@ -302,8 +336,6 @@ class Project(models.Model, CachedTreeItem, ProjectURLMixin):
         :cls:`~pootle_store.models.Store` resource paths available for
         this :cls:`~pootle_project.models.Project` across all languages.
         """
-        from virtualfolder.models import VirtualFolderTreeItem
-
         cache_key = make_method_key(self, 'resources', self.code)
         resources = cache.get(cache_key, None)
         if resources is not None:
@@ -313,20 +345,11 @@ class Project(models.Model, CachedTreeItem, ProjectURLMixin):
             translation_project__project__pk=self.pk)
         dirs = Directory.objects.live().order_by().filter(
             pootle_path__regex=r"^/[^/]*/%s/" % self.code)
-        vftis = (
-            VirtualFolderTreeItem.objects.filter(
-                vfolder__is_public=True,
-                pootle_path__regex=r"^/[^/]*/%s/" % self.code)
-            if 'virtualfolder' in settings.INSTALLED_APPS
-            else [])
         resources = sorted(
             {to_tp_relative_path(pootle_path)
              for pootle_path
              in (set(stores.values_list("pootle_path", flat=True))
-                 | set(dirs.values_list("pootle_path", flat=True))
-                 | set(vftis.values_list("pootle_path", flat=True)
-                       if vftis
-                       else []))},
+                 | set(dirs.values_list("pootle_path", flat=True)))},
             key=get_path_sortkey)
         cache.set(cache_key, resources, settings.POOTLE_CACHE_TIMEOUT)
         return resources
@@ -337,11 +360,13 @@ class Project(models.Model, CachedTreeItem, ProjectURLMixin):
         return self.fullname
 
     def save(self, *args, **kwargs):
-        # Create file system directory if needed
-        if not self.directory_exists_on_disk() and not self.disabled:
+        requires_translation_directory = (
+            not self.treestyle == "none"
+            and not self.disabled
+            and not self.directory_exists_on_disk())
+        if requires_translation_directory:
             os.makedirs(self.get_real_path())
 
-        from pootle_app.models.directory import Directory
         self.directory = Directory.objects.projects \
                                           .get_or_make_subdir(self.code)
 
@@ -365,12 +390,6 @@ class Project(models.Model, CachedTreeItem, ProjectURLMixin):
         super(Project, self).delete(*args, **kwargs)
 
         directory.delete()
-
-    def clean(self):
-        if self.code in RESERVED_PROJECT_CODES:
-            raise ValidationError(
-                _('"%s" cannot be used as a project code', self.code)
-            )
 
     def directory_exists_on_disk(self):
         """Checks if the actual directory for the project exists on disk."""
@@ -445,18 +464,17 @@ class Project(models.Model, CachedTreeItem, ProjectURLMixin):
                 if filter(self.file_belongs_to_project, filenames):
                     # Translation files found, assume gnu
                     return "gnu"
-            else:
-                # There are subdirectories
-                if filter(lambda dirname: dirname == 'templates' or
-                          langcode_re.match(dirname), dirnames):
-                    # Found language dirs assume nongnu
-                    return "nongnu"
-                else:
-                    # No language subdirs found, look for any translation file
-                    for dirpath, dirnames, filenames in \
-                            os.walk(self.get_real_path()):
-                        if filter(self.file_belongs_to_project, filenames):
-                            return "gnu"
+
+            # There are subdirectories
+            if filter(lambda dirname: dirname == 'templates' or
+                      langcode_re.match(dirname), dirnames):
+                # Found language dirs assume nongnu
+                return "nongnu"
+
+            # No language subdirs found, look for any translation file
+            for dirpath, dirnames, filenames in os.walk(self.get_real_path()):
+                if filter(self.file_belongs_to_project, filenames):
+                    return "gnu"
         except:
             pass
 
@@ -473,11 +491,11 @@ class Project(models.Model, CachedTreeItem, ProjectURLMixin):
         """
         if self.treestyle != "auto":
             return self.treestyle
-        else:
-            detected = self._detect_treestyle()
 
-            if detected is not None:
-                return detected
+        detected = self._detect_treestyle()
+
+        if detected is not None:
+            return detected
 
         # When unsure return nongnu
         return "nongnu"
@@ -542,27 +560,6 @@ class ProjectSet(VirtualResource, ProjectURLMixin):
     # # # /TreeItem
 
 
-if 'virtualfolder' in settings.INSTALLED_APPS:
-    from virtualfolder.signals import vfolder_post_save
-
-    @receiver([vfolder_post_save, pre_delete])
-    def invalidate_resources_cache_for_vfolders(sender, instance, **kwargs):
-        if instance.__class__.__name__ == 'VirtualFolder':
-            try:
-                # In case this is vfolder_post_save.
-                affected_projects = kwargs['projects']
-            except KeyError:
-                # In case this is pre_delete.
-                affected_projects = Project.objects.filter(
-                    translationproject__stores__unit__vfolders=instance
-                ).distinct().values_list('code', flat=True)
-
-            cache.delete_many([
-                make_method_key('Project', 'resources', proj)
-                for proj in affected_projects
-            ])
-
-
 @receiver([post_delete, post_save])
 def invalidate_resources_cache(sender, instance, **kwargs):
     if instance.__class__.__name__ not in ['Directory', 'Store']:
@@ -585,13 +582,6 @@ def invalidate_accessible_projects_cache(sender, instance, **kwargs):
         ['Project', 'TranslationProject', 'PermissionSet']):
         return
 
-    # FIXME: use Redis directly to clear these caches effectively
-
-    cache.delete_many([
-        make_method_key('Project', 'cached_dict', {'is_admin': False}),
-        make_method_key('Project', 'cached_dict', {'is_admin': True}),
-    ])
-
-    User = get_user_model()
-    users_list = User.objects.values_list('username', flat=True)
-    cache.delete_many(map(lambda x: 'projects:accessible:%s' % x, users_list))
+    cache.delete_pattern(make_method_key('Project', 'cached_dict', '*'))
+    cache.delete('projects:all')
+    cache.delete_pattern('projects:accessible:*')

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -115,6 +114,7 @@ check_names = {
     'potential_unwanted_placeholders': _(u"Potential unwanted placeholders"),
     'double_quotes_in_tags': _(u"Double quotes in tags"),
     'percent_brace_placeholders': _(u"Percent brace placeholders"),
+    'plurr_format': _(u'Plurr format'),
 }
 
 excluded_filters = ['hassuggestion', 'spellcheck', 'isfuzzy',
@@ -266,56 +266,71 @@ class SkipCheck(Exception):
     pass
 
 
-class ENChecker(checks.TranslationChecker):
+class ENChecker(checks.UnitChecker):
+
+    def run_test(self, test, unit):
+        """Runs the given test on the given unit."""
+        return test(self.str1, self.str2, language_code=self.language_code)
+
+    def run_filters(self, unit, categorised=False):
+        """Make some optimizations before running individual filters in
+        `run_test`.
+        """
+        self.str1 = data.normalized_unicode(unit.source) or u''
+        self.str2 = data.normalized_unicode(unit.target) or u''
+
+        self.language_code = unit.store.translation_project.language.code
+
+        return super(ENChecker, self).run_filters(unit, categorised)
 
     @critical
-    def java_format(self, str1, str2):
+    def java_format(self, str1, str2, **kwargs):
         return _generic_check(str1, str2, java_format_regex, u"java_format")
 
     @critical
-    def template_format(self, str1, str2):
+    def template_format(self, str1, str2, **kwargs):
         return _generic_check(str1, str2, template_format_regex,
                               u"template_format")
 
     @critical
-    def android_format(self, str1, str2):
+    def android_format(self, str1, str2, **kwargs):
         return _generic_check(str1, str2, android_format_regex,
                               u"android_format")
 
     @critical
-    def objective_c_format(self, str1, str2):
+    def objective_c_format(self, str1, str2, **kwargs):
         return _generic_check(str1, str2, objective_c_format_regex,
                               u"objective_c_format")
 
     @critical
-    def javaencoded_unicode(self, str1, str2):
+    def javaencoded_unicode(self, str1, str2, **kwargs):
         return _generic_check(str1, str2, javaencoded_unicode_regex,
                               u"javaencoded_unicode")
 
     @critical
-    def dollar_sign_placeholders(self, str1, str2):
+    def dollar_sign_placeholders(self, str1, str2, **kwargs):
         return _generic_check(str1, str2, dollar_sign_placeholders_regex,
                               u"dollar_sign_placeholders")
 
     @critical
-    def dollar_sign_closure_placeholders(self, str1, str2):
+    def dollar_sign_closure_placeholders(self, str1, str2, **kwargs):
         return _generic_check(str1, str2,
                               dollar_sign_closure_placeholders_regex,
                               u"dollar_sign_closure_placeholders")
 
     @critical
-    def percent_sign_placeholders(self, str1, str2):
+    def percent_sign_placeholders(self, str1, str2, **kwargs):
         return _generic_check(str1, str2, percent_sign_placeholders_regex,
                               u"percent_sign_placeholders")
 
     @critical
-    def percent_sign_closure_placeholders(self, str1, str2):
+    def percent_sign_closure_placeholders(self, str1, str2, **kwargs):
         return _generic_check(str1, str2,
                               percent_sign_closure_placeholders_regex,
                               u"percent_sign_closure_placeholders")
 
     @critical
-    def uppercase_placeholders(self, str1, str2):
+    def uppercase_placeholders(self, str1, str2, **kwargs):
         # Ignore check for Plurr-formatted strings
         if plurr_format_regex.search(str1):
             return True
@@ -324,7 +339,7 @@ class ENChecker(checks.TranslationChecker):
                               u"uppercase_placeholders")
 
     @critical
-    def mustache_placeholders(self, str1, str2):
+    def mustache_placeholders(self, str1, str2, **kwargs):
         # Ignore check for Plurr-formatted strings
         if plurr_format_regex.search(str1):
             return True
@@ -333,12 +348,12 @@ class ENChecker(checks.TranslationChecker):
                               u"mustache_placeholders")
 
     @critical
-    def percent_brace_placeholders(self, str1, str2):
+    def percent_brace_placeholders(self, str1, str2, **kwargs):
         return _generic_check(str1, str2, percent_brace_placeholders_regex,
                               u"percent_brace_placeholders")
 
     @critical
-    def mustache_placeholder_pairs(self, str1, str2):
+    def mustache_placeholder_pairs(self, str1, str2, **kwargs):
         def get_fingerprint(str, is_source=False, translation=''):
             chunks = mustache_placeholder_pairs_regex.split(str)
             translate = False
@@ -388,7 +403,7 @@ class ENChecker(checks.TranslationChecker):
         raise checks.FilterFailure(u"mustache_placeholder_pairs")
 
     @critical
-    def mustache_like_placeholder_pairs(self, str1, str2):
+    def mustache_like_placeholder_pairs(self, str1, str2, **kwargs):
         def get_fingerprint(str, is_source=False, translation=''):
             chunks = mustache_like_placeholder_pairs_regex.split(str)
             translate = False
@@ -434,7 +449,7 @@ class ENChecker(checks.TranslationChecker):
         raise checks.FilterFailure(u"mustache_like_placeholder_pairs")
 
     @critical
-    def date_format(self, str1, str2):
+    def date_format(self, str1, str2, **kwargs):
         def get_fingerprint(str, is_source=False, translation=''):
             is_date_format = bool(date_format_regex.match(str))
             if is_source:
@@ -453,7 +468,7 @@ class ENChecker(checks.TranslationChecker):
         raise checks.FilterFailure(u"Incorrect date format")
 
     @critical
-    def whitespace(self, str1, str2):
+    def whitespace(self, str1, str2, **kwargs):
         def get_fingerprint(str, is_source=False, translation=''):
             chunks = whitespace_regex.split(str)
             translate = False
@@ -484,7 +499,7 @@ class ENChecker(checks.TranslationChecker):
         raise checks.FilterFailure(u"Incorrect whitespaces")
 
     @critical
-    def test_check(self, str1, str2):
+    def test_check(self, str1, str2, **kwargs):
         def get_fingerprint(str, is_source=False, translation=''):
             return 0
 
@@ -494,7 +509,7 @@ class ENChecker(checks.TranslationChecker):
         raise checks.FilterFailure(u"Incorrect test check")
 
     @critical
-    def unescaped_ampersands(self, str1, str2):
+    def unescaped_ampersands(self, str1, str2, **kwargs):
         if escaped_entities_regex.search(str1):
             chunks = broken_ampersand_regex.split(str2)
             if len(chunks) == 1:
@@ -505,7 +520,7 @@ class ENChecker(checks.TranslationChecker):
         return True
 
     @critical
-    def incorrectly_escaped_ampersands(self, str1, str2):
+    def incorrectly_escaped_ampersands(self, str1, str2, **kwargs):
         if escaped_entities_regex.search(str2):
             chunks = broken_ampersand_regex.split(str1)
             if len(chunks) == 1:
@@ -518,7 +533,7 @@ class ENChecker(checks.TranslationChecker):
         return True
 
     @critical
-    def changed_attributes(self, str1, str2):
+    def changed_attributes(self, str1, str2, **kwargs):
         def get_fingerprint(str, is_source=False, translation=''):
             # hardcoded rule: skip web banner images which are translated
             # differently
@@ -554,7 +569,7 @@ class ENChecker(checks.TranslationChecker):
         raise checks.FilterFailure(u"Changed attributes")
 
     @critical
-    def c_format(self, str1, str2):
+    def c_format(self, str1, str2, **kwargs):
         def get_fingerprint(str, is_source=False, translation=''):
             chunks = c_format_regex.split(str)
             translate = False
@@ -577,7 +592,7 @@ class ENChecker(checks.TranslationChecker):
         raise checks.FilterFailure(u"Incorrect C format")
 
     @critical
-    def non_printable(self, str1, str2):
+    def non_printable(self, str1, str2, **kwargs):
         def get_fingerprint(str, is_source=False, translation=''):
             chunks = non_printable_regex.split(str)
             translate = False
@@ -601,7 +616,7 @@ class ENChecker(checks.TranslationChecker):
         raise checks.FilterFailure(u"Non printable mismatch")
 
     @critical
-    def unbalanced_tag_braces(self, str1, str2):
+    def unbalanced_tag_braces(self, str1, str2, **kwargs):
         def get_fingerprint(str, is_source=False, translation=''):
             chunks = unbalanced_tag_braces_regex.split(str)
             translate = False
@@ -629,7 +644,7 @@ class ENChecker(checks.TranslationChecker):
         raise checks.FilterFailure(u"Unbalanced tag braces")
 
     @critical
-    def unbalanced_curly_braces(self, str1, str2):
+    def unbalanced_curly_braces(self, str1, str2, **kwargs):
         def get_fingerprint(str, is_source=False, translation=''):
             chunks = unbalanced_curly_braces_regex.split(str)
             translate = False
@@ -669,7 +684,7 @@ class ENChecker(checks.TranslationChecker):
         raise checks.FilterFailure(u"Unbalanced curly braces")
 
     @critical
-    def tags_differ(self, str1, str2):
+    def tags_differ(self, str1, str2, **kwargs):
         def get_fingerprint(str, is_source=False, translation=''):
 
             if is_source:
@@ -715,7 +730,7 @@ class ENChecker(checks.TranslationChecker):
         raise checks.FilterFailure(u"Tags differ")
 
     @critical
-    def accelerators(self, str1, str2):
+    def accelerators(self, str1, str2, **kwargs):
         def get_fingerprint(str, is_source=False, translation=''):
 
             # special rule for banner images in the web client which are
@@ -769,7 +784,7 @@ class ENChecker(checks.TranslationChecker):
         raise checks.FilterFailure(u"Accelerator mismatch")
 
     @critical
-    def broken_entities(self, str1, str2):
+    def broken_entities(self, str1, str2, **kwargs):
         def get_fingerprint(str, is_source=False, translation=''):
             chunks = broken_entities_regex_0.split(str)
             translate = False
@@ -841,7 +856,7 @@ class ENChecker(checks.TranslationChecker):
         raise checks.FilterFailure(u"Broken HTML entities")
 
     @critical
-    def potential_unwanted_placeholders(self, str1, str2):
+    def potential_unwanted_placeholders(self, str1, str2, **kwargs):
         def get_fingerprint(str, is_source=False, translation=''):
             chunks = potential_placeholders_regex.split(str)
             translate = False
@@ -867,7 +882,7 @@ class ENChecker(checks.TranslationChecker):
         raise checks.FilterFailure(u"Potential unwanted placeholders")
 
     @cosmetic
-    def doublequoting(self, str1, str2):
+    def doublequoting(self, str1, str2, **kwargs):
         """Checks whether there is no double quotation mark `"` in source string but
         there is in a translation string.
         """
@@ -897,7 +912,7 @@ class ENChecker(checks.TranslationChecker):
         raise checks.FilterFailure(u"Double quotes mismatch")
 
     @critical
-    def double_quotes_in_tags(self, str1, str2):
+    def double_quotes_in_tags(self, str1, str2, **kwargs):
         """Checks whether double quotation mark `"` in tags is consistent between the
         two strings.
         """
@@ -945,6 +960,33 @@ class ENChecker(checks.TranslationChecker):
 
         raise checks.FilterFailure(u"Double quotes in tags mismatch")
 
+    @critical
+    def plurr_format(self, str1, str2, **kwargs):
+        """For plurr-formatted strings, checks the syntax is correct."""
+        # Ignore check for empty target strings or non Plurr-formatted
+        # source strings
+        if str2 == u'' or not plurr_format_regex.search(str1):
+            return True
+
+        # Ignore check if library is missing
+        try:
+            from plurr import Plurr
+        except ImportError:
+            return True
+
+        plurr = Plurr()
+
+        try:
+            plurr.format(str2, {}, {
+                'locale': kwargs['language_code'],
+                'strict': False,
+                'callback': lambda x: '',
+            })
+        except SyntaxError as e:
+            raise checks.FilterFailure(e.message)
+
+        return True
+
 
 def run_given_filters(checker, unit, check_names=None):
     """Run all the tests in this suite.
@@ -965,6 +1007,7 @@ def run_given_filters(checker, unit, check_names=None):
 
     checker.str1 = data.normalized_unicode(unit.source) or u""
     checker.str2 = data.normalized_unicode(unit.target) or u""
+    checker.language_code = unit.language_code  # XXX: comes from `CheckableUnit`
     checker.hasplural = unit.hasplural()
     checker.locations = unit.getlocations()
 
@@ -1037,8 +1080,6 @@ def get_qualitychecks():
 
 
 def get_qualitycheck_schema(path_obj=None):
-    # TODO: add tests
-
     d = {}
     checks = get_qualitychecks()
 
@@ -1059,6 +1100,31 @@ def get_qualitycheck_schema(path_obj=None):
     result = sorted([item for code, item in d.items()],
                     key=lambda x: x['code'],
                     reverse=True)
+
+    return result
+
+
+def get_qualitycheck_list(path_obj):
+    """
+    Returns list of checks sorted in alphabetical order
+    but having critical checks first.
+    """
+    result = []
+    checks = get_qualitychecks()
+
+    for check, cat in checks.items():
+        result.append({
+            'code': check,
+            'is_critical': cat == Category.CRITICAL,
+            'title': u"%s" % check_names.get(check, check),
+            'url': path_obj.get_translate_url(check=check)
+        })
+
+    def alphabetical_critical_first(item):
+        critical_first = 0 if item['is_critical'] else 1
+        return critical_first, item['title'].lower()
+
+    result = sorted(result, key=alphabetical_critical_first)
 
     return result
 

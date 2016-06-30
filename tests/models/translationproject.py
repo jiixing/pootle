@@ -11,7 +11,11 @@ import shutil
 
 import pytest
 
+from translate.filters import checks
+
 from django.db import IntegrityError
+
+from pytest_pootle.factories import LanguageDBFactory, TranslationProjectFactory
 
 from pootle_language.models import Language
 from pootle_project.models import Project
@@ -21,14 +25,14 @@ from pootle_translationproject.models import TranslationProject
 @pytest.mark.django_db
 def test_tp_create_fail(tutorial, english):
 
-    # Trying to create a TP with no Project raises a RelatedObjectDoesNotExist
-    # which can be caught with Project.DoesNotExist
-    with pytest.raises(Project.DoesNotExist):
+    # Trying to create a TP with no Language raises a RelatedObjectDoesNotExist
+    # which can be caught with Language.DoesNotExist
+    with pytest.raises(Language.DoesNotExist):
         TranslationProject.objects.create()
 
-    # TP needs a lang set too...
-    with pytest.raises(Language.DoesNotExist):
-        TranslationProject.objects.create(project=tutorial)
+    # TP needs a project set too...
+    with pytest.raises(Project.DoesNotExist):
+        TranslationProject.objects.create(language=english)
 
     # There is already an english tutorial was automagically set up
     with pytest.raises(IntegrityError):
@@ -41,8 +45,10 @@ def test_tp_create_templates(tutorial, klingon_vpw, templates):
     # our new TP
     template_tp = TranslationProject.objects.get(
         language=templates, project=tutorial)
+
     tp = TranslationProject.objects.create(
         project=tutorial, language=klingon_vpw)
+    tp.init_from_templates()
     assert tp.stores.count() == template_tp.stores.count()
     assert (
         [(s, t)
@@ -67,26 +73,27 @@ def test_tp_create_with_files(tutorial, klingon, settings):
 
     TranslationProject.objects.create(project=tutorial, language=klingon)
 
-    shutil.rmtree(os.path.join(trans_dir, "tutorial/kl"))
-
 
 @pytest.mark.django_db
 def test_tp_empty_stats():
-    from pootle_project.models import Project
-    from pootle_language.models import Language
-    from pootle_translationproject.models import TranslationProject
+    """Tests if empty stats is initialized when translation project (new language)
+    is added for a project with existing but empty template translation project.
+    """
 
+    # Create an empty template translation project for project0.
     project = Project.objects.get(code="project0")
-    language = Language.objects.get(code="en")
+    english = Language.objects.get(code="en")
+    TranslationProjectFactory(project=project, language=english)
 
-    tp, created = TranslationProject.objects.get_or_create(language=language,
-                                                           project=project)
+    # Create a new language to test.
+    language = LanguageDBFactory()
+    tp = TranslationProject.objects.create(language=language, project=project)
+    tp.init_from_templates()
 
-    # There are no files on disk so TP was not automagically created and there
-    # are no templates loaded
+    # There are no files on disk so TP was not automagically filled.
     assert list(tp.stores.all()) == []
 
-    # Check if zero stats is calculated and available
+    # Check if zero stats is calculated and available.
     stats = tp.get_stats()
     assert stats['total'] == 0
     assert stats['translated'] == 0
@@ -96,8 +103,11 @@ def test_tp_empty_stats():
 
 
 @pytest.mark.django_db
-def test_tp_stats_created_from_template(tutorial, fish, templates):
-    tp = TranslationProject.objects.create(project=tutorial, language=fish)
+def test_tp_stats_created_from_template(tutorial, templates):
+    language = LanguageDBFactory()
+    tp = TranslationProject.objects.create(language=language, project=tutorial)
+    tp.init_from_templates()
+
     assert tp.stores.all().count() == 1
     stats = tp.get_stats()
     assert stats['total'] == 2  # there are 2 words in test template
@@ -108,9 +118,22 @@ def test_tp_stats_created_from_template(tutorial, fish, templates):
 
 
 @pytest.mark.django_db
-def test_tp_checker(tp_checker_tests):
-    from translate.filters import checks
+def test_can_be_inited_from_templates(tutorial, templates):
+    language = LanguageDBFactory()
+    tp = TranslationProject(project=tutorial, language=language)
+    assert tp.can_be_inited_from_templates()
 
+
+@pytest.mark.django_db
+def test_cannot_be_inited_from_templates():
+    language = LanguageDBFactory()
+    project = Project.objects.get(code='project0')
+    tp = TranslationProject(project=project, language=language)
+    assert not tp.can_be_inited_from_templates()
+
+
+@pytest.mark.django_db
+def test_tp_checker(tp_checker_tests):
     language = Language.objects.get(code="language0")
     checker_name, project = tp_checker_tests
     tp = TranslationProject.objects.create(project=project, language=language)
@@ -120,3 +143,31 @@ def test_tp_checker(tp_checker_tests):
                                    checks.StandardChecker)
     ]
     assert [x.__class__ for x in tp.checker.checkers] == checkerclasses
+
+
+@pytest.mark.django_db
+def test_tp_create_with_none_treestyle(english, templates, settings):
+    from pytest_pootle.factories import ProjectDBFactory
+
+    project = ProjectDBFactory(
+        source_language=english,
+        treestyle="none")
+    language = LanguageDBFactory()
+    TranslationProjectFactory(
+        language=templates, project=project)
+
+    tp = TranslationProject.objects.create(
+        project=project, language=language)
+
+    assert not tp.abs_real_path
+    assert not os.path.exists(
+        os.path.join(
+            settings.POOTLE_TRANSLATION_DIRECTORY,
+            project.code))
+
+    tp.save()
+    assert not tp.abs_real_path
+    assert not os.path.exists(
+        os.path.join(
+            settings.POOTLE_TRANSLATION_DIRECTORY,
+            project.code))

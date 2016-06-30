@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -9,4 +8,16 @@
 
 
 class Http400(Exception):
+    pass
+
+
+class MissingPluginError(KeyError):
+    pass
+
+
+class NotConfiguredError(KeyError):
+    pass
+
+
+class MissingHandlerError(KeyError):
     pass

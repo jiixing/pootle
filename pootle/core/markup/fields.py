@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -8,6 +7,9 @@
 # AUTHORS file for copyright and authorship information.
 
 import logging
+
+from lxml.etree import ParserError
+from lxml.html.clean import clean_html
 
 from django.conf import settings
 from django.core.cache import cache
@@ -56,7 +58,10 @@ class Markup(object):
         return rendered
 
     def __unicode__(self):
-        return mark_safe(self.rendered)
+        try:
+            return mark_safe(clean_html(self.rendered))
+        except ParserError:
+            return u''
 
     def __nonzero__(self):
         return self.raw.strip() != '' and self.raw is not None

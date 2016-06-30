@@ -24,7 +24,7 @@ const Tab = React.createClass({
 
   render() {
     const classes = cx({
-      'TabList__Tab': true,
+      TabList__Tab: true,
       'TabList__Tab--is-active': this.props.selected,
     });
     const style = {
@@ -33,8 +33,8 @@ const Tab = React.createClass({
     };
 
     const props = {
+      style,
       className: classes,
-      style: style,
     };
     if (!this.props.selected) {
       props.onClick = this.props.onClick.bind(null, this.props.tabIndex);

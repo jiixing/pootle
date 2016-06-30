@@ -86,18 +86,20 @@ const RequestPasswordResetForm = React.createClass({
       <AuthContent>
         <form
           method="post"
-          onSubmit={this.handleFormSubmit}>
+          onSubmit={this.handleFormSubmit}
+        >
           <div className="fields">
             {this.renderAllFormErrors()}
             <FormElement
               autoFocus
               type="email"
-              attribute="email"
               label={gettext('Email Address')}
-              help={gettext('Enter your email address, and we will send you a message with the special link to reset your password.')}
+              help={gettext('Enter your email address, and we will send you a ' +
+                            'message with the special link to reset your password.')}
               handleChange={this.handleChange}
-              formData={formData}
-              errors={errors}
+              name="email"
+              errors={errors.email}
+              value={formData.email}
             />
           </div>
           <div className="actions">

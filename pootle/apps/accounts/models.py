@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -29,10 +28,9 @@ from allauth.account.models import EmailAddress
 from allauth.account.utils import sync_user_email_addresses
 
 from pootle.core.cache import make_method_key
-from pootle.core.utils.json import jsonify
 from pootle_language.models import Language
-from pootle_statistics.models import Submission, SubmissionTypes
-from pootle_store.models import SuggestionStates, Unit
+from pootle_statistics.models import Submission, ScoreLog
+from pootle_store.models import Unit
 
 from .managers import UserManager
 from .utils import UserMerger, UserPurger
@@ -186,29 +184,45 @@ class User(AbstractBaseUser):
         past = now + datetime.timedelta(-days)
 
         lookup_kwargs = {
-            'scorelog__creation_time__range': [past, now],
+            'creation_time__range': [past, now],
         }
 
         if language is not None:
             lookup_kwargs.update({
-                'scorelog__submission__translation_project__language__code':
+                'submission__translation_project__language__code':
                     language,
             })
 
         if project is not None:
             lookup_kwargs.update({
-                'scorelog__submission__translation_project__project__code':
+                'submission__translation_project__project__code':
                     project,
             })
 
-        top_scorers = cls.objects.hide_meta().filter(
+        meta_user_ids = cls.objects.meta_users().values_list('id', flat=True)
+        top_scores = ScoreLog.objects.values("user").filter(
             **lookup_kwargs
+        ).exclude(
+            user__pk__in=meta_user_ids,
         ).annotate(
-            total_score=Sum('scorelog__score_delta'),
+            total_score=Sum('score_delta'),
         ).order_by('-total_score')
 
         if isinstance(limit, (int, long)) and limit > 0:
-            top_scorers = top_scorers[:limit]
+            top_scores = top_scores[:limit]
+
+        users = dict(
+            (user.id, user)
+            for user in cls.objects.filter(
+                pk__in=[item['user'] for item in top_scores]
+            )
+        )
+
+        top_scorers = []
+        for item in top_scores:
+            user = users[item['user']]
+            user.total_score = item['total_score']
+            top_scorers.append(user)
 
         cache.set(cache_key, list(top_scorers), 60)
         return top_scorers
@@ -245,9 +259,9 @@ class User(AbstractBaseUser):
     def get_absolute_url(self):
         return reverse('pootle-user-profile', args=[self.username])
 
-    def as_json(self):
-        """Returns the user's field-values as a JSON-encoded string."""
-        return jsonify(model_to_dict(self, exclude=['password']))
+    def field_values(self):
+        """Returns the user's field-values (can be encoded as e.g. JSON)."""
+        return model_to_dict(self, exclude=['password'])
 
     def is_anonymous(self):
         """Returns `True` if this is an anonymous user."""
@@ -348,60 +362,6 @@ class User(AbstractBaseUser):
         created_unit_pks = self.submission_set.get_unit_creates() \
                                               .values_list("unit", flat=True)
         return Unit.objects.filter(pk__in=created_unit_pks)
-
-    def pending_suggestion_count(self, tp):
-        """Returns the number of pending suggestions for the user in the given
-        translation project.
-
-        :param tp: a :cls:`TranslationProject` object.
-        """
-        return self.suggestions.filter(unit__store__translation_project=tp,
-                                       state=SuggestionStates.PENDING).count()
-
-    def accepted_suggestion_count(self, tp):
-        """Returns the number of accepted suggestions for the user in the given
-        translation project.
-
-        :param tp: a :cls:`TranslationProject` object.
-        """
-        return self.suggestions.filter(unit__store__translation_project=tp,
-                                       state=SuggestionStates.ACCEPTED).count()
-
-    def rejected_suggestion_count(self, tp):
-        """Returns the number of rejected suggestions for the user in the given
-        translation project.
-
-        :param tp: a :cls:`TranslationProject` object.
-        """
-        return self.suggestions.filter(unit__store__translation_project=tp,
-                                       state=SuggestionStates.REJECTED).count()
-
-    def total_submission_count(self, tp):
-        """Returns the number of submissions the current user has done from the
-        editor in the given translation project.
-
-        :param tp: a :cls:`TranslationProject` object.
-        """
-        return Submission.objects.filter(
-            submitter=self,
-            translation_project=tp,
-            type__in=SubmissionTypes.CONTRIBUTION_TYPES,
-        ).count()
-
-    def overwritten_submission_count(self, tp):
-        """Returns the number of submissions the current user has done from the
-        editor and have been overwritten by other users in the given
-        translation project.
-
-        :param tp: a :cls:`TranslationProject` object.
-        """
-        return Submission.objects.filter(
-            submitter=self,
-            translation_project=tp,
-            type__in=SubmissionTypes.CONTRIBUTION_TYPES,
-        ).exclude(
-            unit__submitted_by=self,
-        ).count()
 
     def top_language(self, days=30):
         """Returns the top language the user has contributed to and its

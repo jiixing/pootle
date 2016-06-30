@@ -13,6 +13,7 @@ from urllib import unquote
 
 import pytest
 
+from django.contrib.auth import get_user_model
 from django.core.urlresolvers import reverse
 
 from pytest_pootle.suite import view_context_test
@@ -22,21 +23,26 @@ from pootle_app.models.permissions import check_permission
 from pootle.core.browser import (
     get_table_headings, make_language_item, make_xlanguage_item,
     make_project_list_item)
+from pootle.core.delegate import search_backend
 from pootle.core.helpers import (
     SIDEBAR_COOKIE_NAME,
     get_filter_name, get_sidebar_announcements_context)
-from pootle.core.utils.json import jsonify
 from pootle.core.url_helpers import get_previous_url, get_path_parts
-from pootle_misc.checks import get_qualitycheck_schema
+from pootle.core.utils.stats import get_translation_states
+from pootle_misc.checks import get_qualitycheck_list, get_qualitycheck_schema
 from pootle_misc.forms import make_search_form
-from pootle_misc.stats import get_translation_states
 from pootle_project.models import Project, ProjectResource, ProjectSet
+from pootle_store.forms import UnitExportForm
 from pootle_store.models import Store, Unit
-from pootle_store.views import get_step_query
 from virtualfolder.models import VirtualFolderTreeItem
 
 
 def _test_translate_view(project, request, response, kwargs, settings):
+
+    if not request.user.is_superuser:
+        assert response.status_code == 403
+        return
+
     ctx = response.context
     kwargs["project_code"] = project.code
     ctx_path = (
@@ -48,7 +54,7 @@ def _test_translate_view(project, request, response, kwargs, settings):
         ctx,
         **dict(
             page="translate",
-            is_admin=False,
+            has_admin_access=request.user.is_superuser,
             language=None,
             project=project,
             pootle_path=pootle_path,
@@ -115,6 +121,18 @@ def _test_browse_view(project, request, response, kwargs):
         'headings': get_table_headings(table_fields),
         'items': items}
 
+    if request.user.is_superuser or kwargs.get("language_code"):
+        url_action_continue = ob.get_translate_url(state='incomplete')
+        url_action_fixcritical = ob.get_critical_url()
+        url_action_review = ob.get_translate_url(state='suggestions')
+        url_action_view_all = ob.get_translate_url(state='all')
+    else:
+        (url_action_continue,
+         url_action_fixcritical,
+         url_action_review,
+         url_action_view_all) = [None] * 4
+
+    User = get_user_model()
     assertions = dict(
         page="browse",
         project=project,
@@ -122,14 +140,16 @@ def _test_browse_view(project, request, response, kwargs):
         pootle_path="/projects/%s" % project_path,
         resource_path=resource_path,
         resource_path_parts=get_path_parts(resource_path),
-        url_action_continue=ob.get_translate_url(state='incomplete'),
-        url_action_fixcritical=ob.get_critical_url(),
-        url_action_review=ob.get_translate_url(state='suggestions'),
-        url_action_view_all=ob.get_translate_url(state='all'),
+        url_action_continue=url_action_continue,
+        url_action_fixcritical=url_action_fixcritical,
+        url_action_review=url_action_review,
+        url_action_view_all=url_action_view_all,
         translation_states=get_translation_states(ob),
-        check_categories=get_qualitycheck_schema(ob),
+        checks=get_qualitycheck_list(ob),
         table=table,
-        stats=jsonify(ob.get_stats()))
+        top_scorers=User.top_scorers(project=project.code, limit=10),
+        stats=ob.get_stats(),
+    )
     sidebar = get_sidebar_announcements_context(
         request, (project, ))
     for k in ["has_sidebar", "is_sidebar_open", "announcements"]:
@@ -137,26 +157,37 @@ def _test_browse_view(project, request, response, kwargs):
     view_context_test(ctx, **assertions)
 
 
-def _test_export_view(project, request, response, kwargs):
+def _test_export_view(project, request, response, kwargs, settings):
     ctx = response.context
     kwargs["project_code"] = project.code
     filter_name, filter_extra = get_filter_name(request.GET)
-    units_qs = Unit.objects.get_translatable(request.user, **kwargs)
-    units_qs = get_step_query(request, units_qs)
+    form_data = request.GET.copy()
+    form_data["path"] = request.path.replace("export-view/", "")
+    search_form = UnitExportForm(
+        form_data, user=request.user)
+    assert search_form.is_valid()
+    total, start, end, units_qs = search_backend.get(Unit)(
+        request.user, **search_form.cleaned_data).search()
     units_qs = units_qs.select_related('store')
+    assertions = {}
+    if total > settings.POOTLE_EXPORT_VIEW_LIMIT:
+        units_qs = units_qs[:settings.POOTLE_EXPORT_VIEW_LIMIT]
+        assertions.update(
+            {'unit_total_count': total,
+             'displayed_unit_count': settings.POOTLE_EXPORT_VIEW_LIMIT})
     unit_groups = [
         (path, list(units))
         for path, units
         in groupby(
             units_qs,
             lambda x: x.store.pootle_path)]
-    assertions = dict(
-        project=project,
-        language=None,
-        source_language="en",
-        filter_name=filter_name,
-        filter_extra=filter_extra,
-        unit_groups=unit_groups)
+    assertions.update(
+        dict(project=project,
+             language=None,
+             source_language="en",
+             filter_name=filter_name,
+             filter_extra=filter_extra,
+             unit_groups=unit_groups))
     view_context_test(ctx, **assertions)
 
 
@@ -168,11 +199,15 @@ def test_views_project(project_views, settings):
     elif test_type == "translate":
         _test_translate_view(project, request, response, kwargs, settings)
     if test_type == "export":
-        _test_export_view(project, request, response, kwargs)
+        _test_export_view(project, request, response, kwargs, settings)
 
 
 @pytest.mark.django_db
-def test_view_projects_browse(client):
+def test_view_projects_browse(client, request_users):
+    user = request_users["user"]
+    client.login(
+        username=user.username,
+        password=request_users["password"])
     response = client.get(reverse("pootle-projects-browse"))
     assert response.cookies["pootle-language"].value == "projects"
     ctx = response.context
@@ -194,6 +229,19 @@ def test_view_projects_browse(client):
         'fields': table_fields,
         'headings': get_table_headings(table_fields),
         'items': items}
+
+    if request.user.is_superuser:
+        url_action_continue = ob.get_translate_url(state='incomplete')
+        url_action_fixcritical = ob.get_critical_url()
+        url_action_review = ob.get_translate_url(state='suggestions')
+        url_action_view_all = ob.get_translate_url(state='all')
+    else:
+        (url_action_continue,
+         url_action_fixcritical,
+         url_action_review,
+         url_action_view_all) = [None] * 4
+
+    User = get_user_model()
     assertions = dict(
         page="browse",
         pootle_path="/projects/",
@@ -202,24 +250,34 @@ def test_view_projects_browse(client):
         object=ob,
         table=table,
         browser_extends="projects/all/base.html",
-        stats=jsonify(ob.get_stats()),
-        check_categories=get_qualitycheck_schema(ob),
+        stats=ob.get_stats(),
+        checks=get_qualitycheck_list(ob),
+        top_scorers=User.top_scorers(limit=10),
         translation_states=get_translation_states(ob),
-        url_action_continue=ob.get_translate_url(state='incomplete'),
-        url_action_fixcritical=ob.get_critical_url(),
-        url_action_review=ob.get_translate_url(state='suggestions'),
-        url_action_view_all=ob.get_translate_url(state='all'))
+        url_action_continue=url_action_continue,
+        url_action_fixcritical=url_action_fixcritical,
+        url_action_review=url_action_review,
+        url_action_view_all=url_action_view_all)
     view_context_test(ctx, **assertions)
 
 
 @pytest.mark.django_db
-def test_view_projects_translate(client, settings):
+def test_view_projects_translate(client, settings, request_users):
+    user = request_users["user"]
+    client.login(
+        username=user.username,
+        password=request_users["password"])
     response = client.get(reverse("pootle-projects-translate"))
+
+    if not user.is_superuser:
+        assert response.status_code == 403
+        return
+
     ctx = response.context
     request = response.wsgi_request
     assertions = dict(
         page="translate",
-        is_admin=False,
+        has_admin_access=user.is_superuser,
         language=None,
         project=None,
         pootle_path="/projects/",
@@ -246,8 +304,13 @@ def test_view_projects_export(client):
     ctx = response.context
     request = response.wsgi_request
     filter_name, filter_extra = get_filter_name(request.GET)
-    units_qs = Unit.objects.get_translatable(request.user)
-    units_qs = get_step_query(request, units_qs)
+    form_data = request.GET.copy()
+    form_data["path"] = request.path.replace("export-view/", "")
+    search_form = UnitExportForm(
+        form_data, user=request.user)
+    assert search_form.is_valid()
+    total, start, end, units_qs = search_backend.get(Unit)(
+        request.user, **search_form.cleaned_data).search()
     units_qs = units_qs.select_related('store')
     unit_groups = [
         (path, list(units))

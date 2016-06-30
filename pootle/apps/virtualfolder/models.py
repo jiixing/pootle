@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -72,20 +71,6 @@ class VirtualFolder(models.Model):
 
     class Meta(object):
         unique_together = ('name', 'location')
-
-    @property
-    def tp_relative_path(self):
-        """Return the virtual folder path relative to any translation project.
-
-        This is the virtual folder location stripping out the language and
-        project parts and appending the virtual folder name as if it were a
-        folder.
-
-        For example a location /af/{PROJ}/browser/ for a virtual folder default
-        is returned as browser/default/
-        """
-        return '/'.join(
-            self.location.strip('/').split('/')[2:] + [self.name, ''])
 
     @property
     def all_locations(self):

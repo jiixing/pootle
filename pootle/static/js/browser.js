@@ -25,8 +25,8 @@ const sel = {
 
 
 const actionMap = {
-  'browse': '',
-  'translate': 'translate',
+  browse: '',
+  translate: 'translate',
   'admin-permissions': 'admin/permissions',
   'admin-characters': 'admin/characters',
   'admin-languages': 'admin/languages',
@@ -67,9 +67,7 @@ function navigateTo(languageCode, projectCode, resource) {
   }
 
   const parts = ['', newLanguageCode, projectCode, action, newResource];
-  const urlParts = parts.filter((p, i) => {
-    return i === 0 || p !== '';
-  });
+  const urlParts = parts.filter((p, i) => i === 0 || p !== '');
 
   if (!newResource) {
     urlParts.push('');
@@ -79,7 +77,9 @@ function navigateTo(languageCode, projectCode, resource) {
 
   const PTL = window.PTL || {};
   if (PTL.hasOwnProperty('editor')) {
-    const hash = utils.getHash().replace(/&?unit=\d+/, '');
+    const hash = utils.getHash()
+          .replace(/&?unit=\d+/, '')
+          .replace(/&?offset=\d+/, '');
     if (hash !== '') {
       newUrl = [newUrl, hash].join('#');
     }
@@ -105,7 +105,53 @@ function navigateTo(languageCode, projectCode, resource) {
 }
 
 
-function makeNavDropdown(selector, opts) {
+function handleNavDropDownSelectClick() {
+  const $select = $(this);
+  const $opt = $select.find('option:selected');
+  const href = $opt.data('href');
+
+  if (href) {
+    const openInNewTab = $opt.data('new-tab');
+
+    if (openInNewTab) {
+      window.open(href, '_blank');
+      // Reset drop-down to its original value
+      $select.select2('val', $select.data('initial-code'));
+    } else {
+      window.location.href = href;
+    }
+
+    return false;
+  }
+
+  const langCode = $(sel.language).val();
+  const projectCode = $(sel.project).val();
+  const $resource = $(sel.resource);
+  const resource = $resource.length ? $resource.val().replace('ctx-', '') : '';
+  navigateTo(langCode, projectCode, resource);
+  return true;
+}
+
+
+function handleBeforeNavDropDownResourceSelect(e) {
+  const resource = e.val ? e.val.replace('ctx-', '') : '';
+  if (resource !== '') {
+    return;
+  }
+
+  e.preventDefault();
+  const $select = $(this);
+  if ($select.val() === '') {
+    $select.select2('close');
+  } else {
+    $select.select2('val', '');
+    $select.select2('close');
+    handleNavDropDownSelectClick();
+  }
+}
+
+
+function makeNavDropdown(selector, opts, handleSelectClick, handleBeforeSelect) {
   const defaults = {
     allowClear: true,
     dropdownAutoWidth: true,
@@ -114,34 +160,11 @@ function makeNavDropdown(selector, opts) {
   };
   const options = $.extend({}, defaults, opts);
 
-  return utils.makeSelectableInput(selector, options,
-    function handleSelectClick() {
-      const $select = $(this);
-      const $opt = $select.find('option:selected');
-      const href = $opt.data('href');
-
-      if (href) {
-        const openInNewTab = $opt.data('new-tab');
-
-        if (openInNewTab) {
-          window.open(href, '_blank');
-          // Reset drop-down to its original value
-          $select.select2('val', $select.data('initial-code'));
-        } else {
-          window.location.href = href;
-        }
-
-        return false;
-      }
-
-      const langCode = $(sel.language).val();
-      const projectCode = $(sel.project).val();
-      const $resource = $(sel.resource);
-      const resource = $resource.length ? $resource.val()
-                                                  .replace('ctx-', '')
-                                       : '';
-      navigateTo(langCode, projectCode, resource);
-    }
+  return utils.makeSelectableInput(
+    selector,
+    options,
+    handleSelectClick,
+    handleBeforeSelect
   );
 }
 
@@ -174,45 +197,53 @@ function fixDropdowns() {
 }
 
 
+function formatResult(text, term) {
+  const match = text.toUpperCase().indexOf(term.toUpperCase());
+  if (match < 0) {
+    return _.escape(text);
+  }
+
+  const tl = term.length;
+  return [
+    _.escape(text.substring(0, match)),
+    '<span class="select2-match">',
+    _.escape(text.substring(match, match + tl)),
+    '</span>',
+    _.escape(text.substring(match + tl, text.length)),
+  ].join('');
+}
+
 function formatResource(path, container, query) {
   const $el = $(path.element);
-
   if ($el.prop('disabled')) {
     return '';
   }
 
-  let t = '/' + path.text.trim();
-
-  if (query.term !== '') {
-    const escapedTerm = query.term.replace(
-          /[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g,
-          '\\$&'
-        );
-    const regex = new RegExp(escapedTerm, 'gi');
-    t = t.replace(regex, '<span class="select2-match">$&</span>');
-  }
-
+  const t = `/${path.text.trim()}`;
   return [
     '<span class="', $el.data('icon'), '">',
     '<i class="icon-', $el.data('icon'), '"></i>',
-    '<span class="text">', t, '</span>',
+    '<span class="text">', formatResult(t, query.term), '</span>',
     '</span>',
   ].join('');
 }
 
 
-function formatProject(path) {
+function formatProject(path, container, query) {
   const state = path.element[0].dataset.state;
 
-  return `<span class="text project-${state}">${path.text}</span>`;
+  return `<span class="text project-${state}">${formatResult(path.text, query.term)}</span>`;
+}
+
+
+function formatLanguage(path, container, query) {
+  return formatResult(path.text, query.term);
 }
 
 
 function removeCtxEntries(results, container, query) {
   if (query.term) {
-    return _.filter(results, (result) => {
-      return result.id.slice(0, 4) !== 'ctx-';
-    });
+    return results.filter((result) => result.id.slice(0, 4) !== 'ctx-');
   }
   return results;
 }
@@ -225,19 +256,20 @@ const browser = {
 
     makeNavDropdown(sel.navigation, {
       minimumResultsForSearch: -1,
-    });
+    }, handleNavDropDownSelectClick);
     makeNavDropdown(sel.language, {
       placeholder: gettext('All Languages'),
-    });
+      formatResult: formatLanguage,
+    }, handleNavDropDownSelectClick);
     makeNavDropdown(sel.project, {
       placeholder: gettext('All Projects'),
       formatResult: formatProject,
-    });
+    }, handleNavDropDownSelectClick);
     makeNavDropdown(sel.resource, {
       placeholder: gettext('Entire Project'),
       formatResult: formatResource,
       sortResults: removeCtxEntries,
-    });
+    }, handleNavDropDownSelectClick, handleBeforeNavDropDownResourceSelect);
 
     /* Adjust breadcrumb layout on window resize */
     $(window).on('resize', () => {

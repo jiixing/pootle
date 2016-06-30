@@ -15,15 +15,15 @@ import AdminAPIMixin from 'mixins/admin_api';
 export const Language = Backbone.Model.extend({
 
   defaults: {
-    'code': '',
-    'fullname': '',
-    'specialchars': '',
-    'nplurals': '0',
-    'pluralequation': '',
+    code: '',
+    fullname: '',
+    specialchars: '',
+    nplurals: '0',
+    pluralequation: '',
   },
 
   fieldChoices: {
-    'nplurals': [
+    nplurals: [
       // FIXME: using `gettext()` here breaks everything
       [0, 'Unknown'], [1, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 6],
     ],
@@ -43,10 +43,11 @@ export const Language = Backbone.Model.extend({
 
   getFieldChoices(fieldName) {
     if (this.fieldChoices && this.fieldChoices.hasOwnProperty(fieldName)) {
-      return this.fieldChoices[fieldName].map((field) => {
+      return this.fieldChoices[fieldName].map((field) => ({
         // FIXME: react-select's issue #25 prevents using non-string values
-        return { value: field[0].toString(), label: field[1] };
-      });
+        value: field[0].toString(),
+        label: field[1],
+      }));
     }
     return [];
   },

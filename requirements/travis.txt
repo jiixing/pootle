@@ -1,13 +1,16 @@
+# Travis testing https://travis-ci.org/translate/pootle
+
 -r tests.txt
+-r _docs.txt
+-r _lint.txt
 
 tox>=2.3
-MySQL-python
-psycopg2
+
+# Databases
+MySQL-python>=1.2.1p2
+psycopg2>=2.4.5
+
+# Test coverage
+codecov
 coverage
 coveralls
-sphinx<1.3.3
-pep8<1.6
-pep257
-flake8!=2.5.3
-isort
-codecov

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -50,9 +49,9 @@ HEADING_CHOICES = [
         'display_name': _("Last updated"),
     },
     {
-        'id': 'need-translation',
+        'id': 'critical',
         'class': 'stats-number sorttable_numeric when-loaded',
-        'display_name': _("Need Translation"),
+        'display_name': _("Critical"),
     },
     {
         'id': 'suggestions',
@@ -61,9 +60,9 @@ HEADING_CHOICES = [
         'display_name': _("Suggestions"),
     },
     {
-        'id': 'critical',
+        'id': 'need-translation',
         'class': 'stats-number sorttable_numeric when-loaded',
-        'display_name': _("Critical"),
+        'display_name': _("Need Translation"),
     },
     {
         'id': 'activity',

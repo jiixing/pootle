@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -9,6 +8,6 @@
 
 from pootle.core.utils.version import get_version
 
-VERSION = (2, 7, 3, 'beta', 1)
+VERSION = (2, 8, 0, 'beta', 1)
 
 __version__ = get_version(VERSION)

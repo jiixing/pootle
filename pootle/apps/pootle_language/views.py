@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -7,6 +6,7 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
+from django.core.urlresolvers import reverse
 from django.http import Http404
 from django.shortcuts import redirect, render
 from django.utils.functional import cached_property
@@ -92,10 +92,6 @@ class LanguageBrowseView(LanguageMixin, PootleBrowseView):
 class LanguageTranslateView(LanguageMixin, PootleTranslateView):
     url_pattern_name = "pootle-language-translate"
 
-    @property
-    def display_vfolder_priority(self):
-        return False
-
 
 class LanguageExportView(LanguageMixin, PootleExportView):
     url_pattern_name = "pootle-language-export"
@@ -107,6 +103,13 @@ class LanguageExportView(LanguageMixin, PootleExportView):
 def language_admin(request, language):
     ctx = {
         'page': 'admin-permissions',
+
+        'browse_url': reverse('pootle-language-browse', kwargs={
+            'language_code': language.code,
+        }),
+        'translate_url': reverse('pootle-language-translate', kwargs={
+            'language_code': language.code,
+        }),
 
         'language': language,
         'directory': language.directory,
@@ -128,6 +131,13 @@ def language_characters_admin(request, language):
 
     ctx = {
         'page': 'admin-characters',
+
+        'browse_url': reverse('pootle-language-browse', kwargs={
+            'language_code': language.code,
+        }),
+        'translate_url': reverse('pootle-language-translate', kwargs={
+            'language_code': language.code,
+        }),
 
         'language': language,
         'directory': language.directory,

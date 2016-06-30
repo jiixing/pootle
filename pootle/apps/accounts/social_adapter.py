@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -15,7 +14,6 @@ from allauth.exceptions import ImmediateHttpResponse
 from allauth.socialaccount import providers
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 
-from pootle.core.utils.json import jsonify
 from pootle.middleware.errorpages import log_exception
 
 from .utils import get_user_by_email
@@ -79,7 +77,7 @@ class PootleSocialAccountAdapter(DefaultSocialAccountAdapter):
         log_exception(request, exception, tb)
 
         ctx = {
-            'social_error': jsonify({
+            'social_error': {
                 'error': error,
                 'exception': {
                     'name': exception.__class__.__name__,
@@ -87,7 +85,7 @@ class PootleSocialAccountAdapter(DefaultSocialAccountAdapter):
                 },
                 'provider': provider.name,
                 'retry_url': retry_url,
-            }),
+            },
         }
         raise ImmediateHttpResponse(
             response=render(request, 'account/social_error.html', ctx)

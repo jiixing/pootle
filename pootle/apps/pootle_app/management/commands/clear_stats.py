@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -16,7 +15,7 @@ from pootle_app.management.commands import PootleCommand
 
 
 class Command(PootleCommand):
-    help = "Flush stats cache."
+    help = "Clear stats cache."
 
     def handle_all_stores(self, translation_project, **options):
         translation_project.clear_all_cache()

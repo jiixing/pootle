@@ -42,52 +42,60 @@ const LanguageForm = React.createClass({
     const { formData } = this.state;
 
     return (
-      <form method="post"
-            id="item-form"
-            onSubmit={this.handleFormSubmit}>
+      <form
+        method="post"
+        id="item-form"
+        onSubmit={this.handleFormSubmit}
+      >
         <div className="fields">
           <FormElement
             autoFocus
-            attribute="code"
             disabled={model.hasOwnProperty('id')}
             label={gettext('Code')}
             handleChange={this.handleChange}
-            formData={formData}
-            errors={errors} />
+            name="code"
+            errors={errors.code}
+            value={formData.code}
+          />
           <FormElement
-            attribute="fullname"
             label={gettext('Full Name')}
             handleChange={this.handleChange}
-            formData={formData}
-            errors={errors} />
+            name="fullname"
+            errors={errors.fullname}
+            value={formData.fullname}
+          />
           <FormElement
-            attribute="specialchars"
             label={gettext('Special Characters')}
             handleChange={this.handleChange}
-            formData={formData}
-            errors={errors} />
+            name="specialchars"
+            errors={errors.specialchars}
+            value={formData.specialchars}
+          />
           <FormElement
             type="select"
             clearable={false}
-            attribute="nplurals"
             options={model.getFieldChoices('nplurals')}
             label={gettext('Number of Plurals')}
             handleChange={this.handleChange}
-            formData={formData}
-            errors={errors} />
+            name="nplurals"
+            errors={errors.nplurals}
+            value={formData.nplurals}
+          />
           <FormElement
-            attribute="pluralequation"
             label={gettext('Plural Equation')}
             handleChange={this.handleChange}
-            formData={formData}
-            errors={errors} />
+            name="pluralequation"
+            errors={errors.pluralequation}
+            value={formData.pluralequation}
+          />
         </div>
         <div className="buttons">
           <input
             type="submit"
             className="btn btn-primary"
             disabled={!this.state.isDirty}
-            value={gettext('Save')} />
+            value={gettext('Save')}
+          />
         {model.id &&
           <ul className="action-links">
             <li><a href={model.getAbsoluteUrl()}>{gettext('Overview')}</a></li>

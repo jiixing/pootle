@@ -6,6 +6,7 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
+import os
 from datetime import datetime, timedelta
 
 
@@ -38,8 +39,8 @@ class PootleTestEnv(object):
     methods = (
         "redis", "case_sensitive_schema", "content_type", "site_root",
         "languages", "site_matrix", "system_users", "permissions",
-        "site_permissions", "tps", "vfolders", "subdirs", "submissions",
-        "announcements")
+        "site_permissions", "tps", "disabled_project",
+        "subdirs", "submissions", "announcements", "terminology", "fs")
 
     def __init__(self, request):
         self.request = request
@@ -151,31 +152,6 @@ class PootleTestEnv(object):
             "utf8_bin",
             "varchar(255)")
 
-        # VirtualFolderTreeItem
-        set_mysql_collation_for_column(
-            apps,
-            cursor,
-            "virtualfolder.VirtualFolderTreeItem",
-            "pootle_path",
-            "utf8_bin",
-            "varchar(255)")
-
-        # VirtualFolder
-        set_mysql_collation_for_column(
-            apps,
-            cursor,
-            "virtualfolder.VirtualFolder",
-            "name",
-            "utf8_bin",
-            "varchar(70)")
-        set_mysql_collation_for_column(
-            apps,
-            cursor,
-            "virtualfolder.VirtualFolder",
-            "location",
-            "utf8_bin",
-            "varchar(255)")
-
     def setup_content_type(self):
         from django.contrib.contenttypes.models import ContentType
 
@@ -183,7 +159,8 @@ class PootleTestEnv(object):
             'app_label': 'pootle_app',
             'model': 'directory'}
         content_type, created = ContentType.objects.get_or_create(**args)
-        content_type.save()
+        if created:
+            content_type.save()
 
         return content_type
 
@@ -222,6 +199,30 @@ class PootleTestEnv(object):
             'Can administrate a TP',
             pootle_content_type)
 
+    def setup_fs(self):
+        from pytest_pootle.utils import add_store_fs
+
+        from django.conf import settings
+
+        from pootle_project.models import Project
+        from pootle_fs.utils import FSPlugin
+
+        settings.POOTLE_FS_PATH = os.path.join(
+            settings.POOTLE_TRANSLATION_DIRECTORY, "__fs_working_dir__")
+        os.mkdir(settings.POOTLE_FS_PATH)
+
+        project = Project.objects.get(code="project0")
+        project.config["pootle_fs.fs_type"] = "localfs"
+        project.config["pootle_fs.translation_paths"] = {
+            "default": "/<language_code>/<dir_path>/<filename>.<ext>"}
+        project.config["pootle_fs.fs_url"] = "/tmp/path/for/setup"
+        plugin = FSPlugin(project)
+        for store in plugin.resources.stores:
+            add_store_fs(
+                store=store,
+                fs_path=plugin.get_fs_path(store.pootle_path),
+                synced=True)
+
     def setup_languages(self):
         from .fixtures.models.language import _require_language
         _require_language('en', 'English')
@@ -257,14 +258,16 @@ class PootleTestEnv(object):
         criteria = {
             'user': nobody,
             'directory': Directory.objects.root}
-        permission_set = PermissionSet.objects.create(**criteria)
-        permission_set.positive_permissions = [view, suggest]
-        permission_set.save()
+        permission_set, created = PermissionSet.objects.get_or_create(**criteria)
+        if created:
+            permission_set.positive_permissions = [view, suggest]
+            permission_set.save()
 
         criteria['user'] = default
-        permission_set = PermissionSet.objects.create(**criteria)
-        permission_set.positive_permissions = [view, suggest, translate]
-        permission_set.save()
+        permission_set, created = PermissionSet.objects.get_or_create(**criteria)
+        if created:
+            permission_set.positive_permissions = [view, suggest, translate]
+            permission_set.save()
 
     def setup_site_root(self):
         from pytest_pootle.factories import DirectoryFactory
@@ -274,18 +277,53 @@ class PootleTestEnv(object):
             parent=DirectoryFactory(parent=None, name=""))
 
     def setup_site_matrix(self):
-        from pytest_pootle.factories import ProjectFactory, LanguageFactory
+        from pytest_pootle.factories import ProjectDBFactory, LanguageDBFactory
 
         from pootle_language.models import Language
 
         # add 2 languages
         for i in range(0, 2):
-            LanguageFactory()
+            LanguageDBFactory()
 
         source_language = Language.objects.get(code="en")
         for i in range(0, 2):
             # add 2 projects
-            ProjectFactory(source_language=source_language)
+            ProjectDBFactory(source_language=source_language)
+
+    def setup_terminology(self):
+        from pytest_pootle.factories import (ProjectDBFactory,
+                                             TranslationProjectFactory)
+        from pootle_language.models import Language
+
+        source_language = Language.objects.get(code="en")
+        terminology = ProjectDBFactory(code="terminology",
+                                       checkstyle="terminology",
+                                       fullname="Terminology",
+                                       source_language=source_language)
+        for language in Language.objects.all():
+            TranslationProjectFactory(project=terminology, language=language)
+
+    def setup_disabled_project(self):
+        from pytest_pootle.factories import (DirectoryFactory,
+                                             ProjectDBFactory,
+                                             TranslationProjectFactory)
+
+        from pootle_language.models import Language
+
+        source_language = Language.objects.get(code="en")
+        project = ProjectDBFactory(code="disabled_project0",
+                                   fullname="Disabled Project 0",
+                                   source_language=source_language)
+        project.disabled = True
+        project.save()
+        language = Language.objects.get(code="language0")
+        tp = TranslationProjectFactory(project=project, language=language)
+        tp_dir = tp.directory
+        tp_dir.obsolete = False
+        tp_dir.save()
+        self._add_stores(tp, n=(1, 1))
+        subdir0 = DirectoryFactory(name="subdir0", parent=tp.directory)
+        self._add_stores(tp, n=(1, 1), parent=subdir0)
 
     def setup_subdirs(self):
         from pytest_pootle.factories import DirectoryFactory
@@ -323,39 +361,22 @@ class PootleTestEnv(object):
                 tp_dir.save()
                 self._add_stores(tp)
 
-    def setup_vfolders(self):
-        from pytest_pootle.factories import VirtualFolderFactory
-
-        VirtualFolderFactory(filter_rules="store0.po")
-        VirtualFolderFactory(filter_rules="store1.po")
-        vfolder2 = VirtualFolderFactory(
-            location='/{LANG}/project0/',
-            filter_rules="store0.po")
-        vfolder3 = VirtualFolderFactory(
-            location='/{LANG}/project0/',
-            filter_rules="store1.po")
-
-        vfolder2.is_public = False
-        vfolder2.save()
-        vfolder3.is_public = False
-        vfolder3.save()
-
     def _add_stores(self, tp, n=(3, 2), parent=None):
-        from pytest_pootle.factories import StoreFactory, UnitFactory
+        from pytest_pootle.factories import StoreDBFactory, UnitDBFactory
 
         from pootle_store.models import UNTRANSLATED, TRANSLATED, FUZZY, OBSOLETE
 
         for i in range(0, n[0]):
             # add 3 stores
             if parent is None:
-                store = StoreFactory(translation_project=tp)
+                store = StoreDBFactory(translation_project=tp)
             else:
-                store = StoreFactory(translation_project=tp, parent=parent)
+                store = StoreDBFactory(translation_project=tp, parent=parent)
 
             # add 8 units to each store
             for state in [UNTRANSLATED, TRANSLATED, FUZZY, OBSOLETE]:
                 for i in range(0, n[1]):
-                    UnitFactory(store=store, state=state)
+                    UnitDBFactory(store=store, state=state)
 
     def _update_submission_times(self, update_time, last_update=None):
         from pootle_statistics.models import Submission

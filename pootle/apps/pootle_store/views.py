@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -7,50 +6,48 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
-from itertools import groupby
+import copy
 
 from translate.lang import data
 
 from django import forms
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
-from django.core.urlresolvers import reverse
-from django.db.models import Max, Q
-from django.http import Http404
+from django.http import Http404, QueryDict
 from django.shortcuts import redirect
 from django.template import RequestContext, loader
 from django.utils import timezone
-from django.utils.safestring import mark_safe
+from django.utils.functional import cached_property
+from django.utils.lru_cache import lru_cache
 from django.utils.translation import to_locale, ugettext as _
 from django.utils.translation.trans_real import parse_accept_lang_header
-from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
 
-from pootle.core.dateparse import parse_datetime
 from pootle.core.decorators import (get_path_obj, get_resource,
                                     permission_required)
+from pootle.core.delegate import search_backend
 from pootle.core.exceptions import Http400
 from pootle.core.http import JsonResponse, JsonResponseBadRequest
+from pootle.core.utils import dateformat
+from pootle.core.views import PootleJSON
 from pootle_app.models.directory import Directory
 from pootle_app.models.permissions import (check_permission,
                                            check_user_permission)
-from pootle_misc.checks import check_names, get_category_id
-from pootle_misc.forms import make_search_form
-from pootle_misc.util import ajax_required, get_date_interval
+from pootle_comment.forms import UnsecuredCommentForm
+from pootle_misc.util import ajax_required
 from pootle_statistics.models import (Submission, SubmissionFields,
                                       SubmissionTypes)
 
 from .decorators import get_unit_context
-from .fields import to_python
 from .forms import (
     highlight_whitespace, unit_comment_form_factory,
     unit_form_factory, UnitSearchForm)
 from .models import Unit
 from .templatetags.store_tags import (highlight_diffs, pluralize_source,
                                       pluralize_target)
-from .unit.filters import UnitSearchFilter, UnitTextSearch
-from .util import STATES_MAP, find_altsrcs, get_search_backend
+from .unit.results import GroupedResults
+from .unit.timeline import Timeline
+from .util import find_altsrcs
 
 
 #: Mapping of allowed sorting criteria.
@@ -113,99 +110,6 @@ def get_alt_src_langs(request, user, translation_project):
     return langs
 
 
-def get_step_query(request, units_queryset):
-    """Narrows down unit query to units matching conditions in GET."""
-    if 'filter' in request.GET:
-        unit_filter = request.GET['filter']
-        username = request.GET.get('user', None)
-        modified_since = request.GET.get('modified-since', None)
-        month = request.GET.get('month', None)
-        sort_by_param = request.GET.get('sort', None)
-        sort_on = 'units'
-
-        user = request.user
-        if username is not None:
-            User = get_user_model()
-            try:
-                user = User.objects.get(username=username)
-            except User.DoesNotExist:
-                pass
-
-        if unit_filter:
-            checks = None
-            category = None
-            if unit_filter == "checks":
-                if 'checks' in request.GET:
-                    checks = request.GET['checks'].split(',')
-                elif 'category' in request.GET:
-                    category_name = request.GET['category']
-                    category = get_category_id(category_name)
-            elif unit_filter in ["my-suggestions", "user-suggestions"]:
-                sort_on = "suggestions"
-            elif unit_filter in ["my-submissions", "user-submissions"]:
-                sort_on = "submissions"
-
-            match_queryset = UnitSearchFilter().filter(
-                units_queryset, unit_filter,
-                user=user, checks=checks, category=category)
-
-            if modified_since is not None:
-                datetime_obj = parse_datetime(modified_since)
-                if datetime_obj is not None:
-                    match_queryset = match_queryset.filter(
-                        submitted_on__gt=datetime_obj,
-                    ).distinct()
-
-            if month is not None:
-                [start, end] = get_date_interval(month)
-                match_queryset = match_queryset.filter(
-                    submitted_on__gte=start,
-                    submitted_on__lte=end,
-                ).distinct()
-
-            sort_by = ALLOWED_SORTS[sort_on].get(sort_by_param, None)
-            if sort_by is not None:
-                if sort_on in SIMPLY_SORTED:
-                    match_queryset = match_queryset.order_by(
-                        sort_by, "store__pootle_path", "index")
-                else:
-                    # Omit leading `-` sign
-                    if sort_by[0] == '-':
-                        max_field = sort_by[1:]
-                        sort_order = '-sort_by_field'
-                    else:
-                        max_field = sort_by
-                        sort_order = 'sort_by_field'
-
-                    # It's necessary to use `Max()` here because we can't
-                    # use `distinct()` and `order_by()` at the same time
-                    # (unless PostreSQL is used and `distinct(field_name)`)
-                    match_queryset = match_queryset \
-                        .annotate(sort_by_field=Max(max_field)) \
-                        .order_by(sort_order, "store__pootle_path", "index")
-
-            units_queryset = match_queryset
-
-    if 'search' in request.GET and 'sfields' in request.GET:
-        # Accept `sfields` to be a comma-separated string of fields (#46)
-        GET = request.GET.copy()
-        sfields = GET['sfields']
-        if isinstance(sfields, unicode) and u',' in sfields:
-            GET.setlist('sfields', sfields.split(u','))
-
-        # use the search form for validation only
-        search_form = make_search_form(GET)
-
-        if search_form.is_valid():
-            exact = 'exact' in search_form.cleaned_data['soptions']
-            text = search_form.cleaned_data['search']
-            sfields = GET.getlist("sfields")
-            units_queryset = UnitTextSearch(
-                units_queryset).search(text, sfields, exact=exact)
-
-    return units_queryset
-
-
 #
 # Views used with XMLHttpRequest requests.
 #
@@ -237,38 +141,6 @@ def _prepare_unit(unit):
         'isfuzzy': unit.isfuzzy(),
         'source': [source[1] for source in pluralize_source(unit)],
         'target': [target[1] for target in pluralize_target(unit)],
-    }
-
-
-def _path_units_with_meta(path, units):
-    """Constructs a dictionary which contains a list of `units`
-    corresponding to `path` as well as its metadata.
-    """
-    meta = None
-    units_list = []
-
-    for unit in iter(units):
-        if meta is None:
-            # XXX: Watch out for the query count
-            store = unit.store
-            tp = store.translation_project
-            project = tp.project
-            meta = {
-                'source_lang': project.source_language.code,
-                'source_dir': project.source_language.direction,
-                'target_lang': tp.language.code,
-                'target_dir': tp.language.direction,
-                'project_code': project.code,
-                'project_style': project.checkstyle,
-            }
-
-        units_list.append(_prepare_unit(unit))
-
-    return {
-        path: {
-            'meta': meta,
-            'units': units_list,
-        },
     }
 
 
@@ -334,25 +206,13 @@ def get_units(request):
                     raise Http400(_('Arguments missing.'))
         raise Http404(forms.ValidationError(search_form.errors).messages)
 
-    uid_list, units_qs = get_search_backend()(
+    total, start, end, units_qs = search_backend.get(Unit)(
         request.user, **search_form.cleaned_data).search()
-
-    bad_uid = (
-        len(search_form.cleaned_data["uids"]) == 1
-        and search_form.cleaned_data["uids"][0] not in uid_list)
-    if bad_uid:
-        raise Http404
-
-    unit_groups = []
-    units_by_path = groupby(
-        units_qs,
-        lambda x: x.store.pootle_path)
-    for pootle_path, units in units_by_path:
-        unit_groups.append(_path_units_with_meta(pootle_path, units))
-    response = {'unitGroups': unit_groups}
-    if uid_list:
-        response['uIds'] = uid_list
-    return JsonResponse(response)
+    return JsonResponse(
+        {'start': start,
+         'end': end,
+         'total': total,
+         'unitGroups': GroupedResults(units_qs).data})
 
 
 @ajax_required
@@ -369,110 +229,6 @@ def get_more_context(request, unit):
     qty = int(request.GET.get('qty', 1))
 
     json["ctx"] = _filter_ctx_units(store.units, unit, qty, gap)
-    return JsonResponse(json)
-
-
-@never_cache
-@get_unit_context('view')
-def timeline(request, unit):
-    """Returns a JSON-encoded string including the changes to the unit
-    rendered in HTML.
-    """
-    timeline = Submission.objects.filter(
-        unit=unit,
-    ).filter(
-        Q(field__in=[
-            SubmissionFields.TARGET, SubmissionFields.STATE,
-            SubmissionFields.COMMENT, SubmissionFields.NONE
-        ]) |
-        Q(type__in=SubmissionTypes.SUGGESTION_TYPES)
-    ).exclude(
-        field=SubmissionFields.COMMENT,
-        creation_time=unit.commented_on
-    ).order_by("id")
-    timeline = timeline.select_related("submitter",
-                                       "translation_project__language")
-
-    User = get_user_model()
-    entries_group = []
-    context = {}
-
-    # Group by submitter id and creation_time because
-    # different submissions can have same creation time
-    for key, values in \
-        groupby(timeline,
-                key=lambda x: "%d\001%s" % (x.submitter.id, x.creation_time)):
-
-        entry_group = {
-            'entries': [],
-        }
-
-        for item in values:
-            # Only add creation_time information for the whole entry group once
-            entry_group['datetime'] = item.creation_time
-
-            # Only add submitter information for the whole entry group once
-            entry_group.setdefault('submitter', item.submitter)
-
-            context.setdefault('language', item.translation_project.language)
-
-            entry = {
-                'field': item.field,
-                'field_name': SubmissionFields.NAMES_MAP.get(item.field, None),
-                'type': item.type,
-            }
-
-            if item.field == SubmissionFields.STATE:
-                entry['old_value'] = STATES_MAP[int(to_python(item.old_value))]
-                entry['new_value'] = STATES_MAP[int(to_python(item.new_value))]
-            elif item.suggestion:
-                entry.update({
-                    'suggestion_text': item.suggestion.target,
-                    'suggestion_description':
-                        mark_safe(item.get_suggestion_description()),
-                })
-            elif item.quality_check:
-                check_name = item.quality_check.name
-                entry.update({
-                    'check_name': check_name,
-                    'check_display_name': check_names[check_name],
-                    'checks_url': u''.join([
-                        reverse('pootle-checks-descriptions'), '#', check_name,
-                    ]),
-                })
-            else:
-                entry['new_value'] = to_python(item.new_value)
-
-            entry_group['entries'].append(entry)
-
-        entries_group.append(entry_group)
-
-    if (len(entries_group) > 0 and
-        entries_group[0]['datetime'] == unit.creation_time):
-        entries_group[0]['created'] = True
-    else:
-        created = {
-            'created': True,
-            'submitter': User.objects.get_system_user(),
-        }
-
-        if unit.creation_time:
-            created['datetime'] = unit.creation_time
-        entries_group[:0] = [created]
-
-    # Let's reverse the chronological order
-    entries_group.reverse()
-
-    context['entries_group'] = entries_group
-
-    # The client will want to confirm that the response is relevant for
-    # the unit on screen at the time of receiving this, so we add the uid.
-    json = {'uid': unit.id}
-
-    t = loader.get_template('editor/units/xhr_timeline.html')
-    c = RequestContext(request, context)
-    json['timeline'] = t.render(c).replace('\n', '')
-
     return JsonResponse(json)
 
 
@@ -540,102 +296,189 @@ def save_comment(request, unit):
     return JsonResponseBadRequest({'msg': _("Comment submission failed.")})
 
 
-@never_cache
-@ajax_required
-@get_unit_context('view')
-def get_edit_unit(request, unit):
-    """Given a store path ``pootle_path`` and unit id ``uid``, gathers all the
-    necessary information to build the editing widget.
+class PootleUnitJSON(PootleJSON):
+    model = Unit
+    pk_url_kwarg = "uid"
 
-    :return: A templatised editing widget is returned within the ``editor``
-             variable and paging information is also returned if the page
-             number has changed.
-    """
-    json = {}
+    @cached_property
+    def permission_context(self):
+        self.object = self.get_object()
+        tp_prefix = "parent__" * (self.pootle_path.count("/") - 3)
+        return Directory.objects.select_related(
+            "%stranslationproject__project"
+            % tp_prefix).get(pk=self.store.parent_id)
 
-    translation_project = request.translation_project
-    language = translation_project.language
+    @property
+    def pootle_path(self):
+        return self.store.pootle_path
 
-    if unit.hasplural():
-        snplurals = len(unit.source.strings)
-    else:
+    @cached_property
+    def tp(self):
+        return self.store.translation_project
+
+    @cached_property
+    def store(self):
+        return self.object.store
+
+    @cached_property
+    def source_language(self):
+        return self.project.source_language
+
+    @cached_property
+    def directory(self):
+        return self.store.parent
+
+    @lru_cache()
+    def get_object(self):
+        return super(PootleUnitJSON, self).get_object()
+
+
+class UnitTimelineJSON(PootleUnitJSON):
+
+    model = Unit
+    pk_url_kwarg = "uid"
+
+    template_name = 'editor/units/xhr_timeline.html'
+
+    @property
+    def language(self):
+        return self.object.store.translation_project.language
+
+    @cached_property
+    def permission_context(self):
+        self.object = self.get_object()
+        return self.project.directory
+
+    @property
+    def project(self):
+        return self.object.store.translation_project.project
+
+    @property
+    def timeline(self):
+        return Timeline(self.object)
+
+    def get_context_data(self, *args, **kwargs):
+        return dict(
+            entries_group=self.timeline.grouped_entries,
+            language=self.language)
+
+    def get_queryset(self):
+        return Unit.objects.get_translatable(self.request.user).select_related(
+            "store__translation_project__language",
+            "store__translation_project__project__directory")
+
+    def get_response_data(self, context):
+        return {
+            'uid': self.object.id,
+            'entries_group': self.get_entries_group_data(context),
+            'timeline': self.render_timeline(context)}
+
+    def render_timeline(self, context):
+        return loader.get_template(
+            self.template_name).render(context).replace('\n', '')
+
+    def get_entries_group_data(self, context):
+        result = []
+        for entry_group in context['entries_group']:
+            display_dt = entry_group['datetime']
+            if display_dt is not None:
+                display_dt = dateformat.format(display_dt)
+                iso_dt = entry_group['datetime'].isoformat()
+            else:
+                iso_dt = None
+            result.append({
+                "display_datetime": display_dt,
+                "iso_datetime": iso_dt,
+                "via_upload": entry_group.get('via_upload', False),
+            })
+        return result
+
+
+class UnitEditJSON(PootleUnitJSON):
+
+    def get_edit_template(self):
+        if self.project.is_terminology or self.store.has_terminology:
+            return loader.get_template('editor/units/term_edit.html')
+        return loader.get_template('editor/units/edit.html')
+
+    def render_edit_template(self, context):
+        return self.get_edit_template().render(
+            RequestContext(self.request, context))
+
+    def get_unit_edit_form(self):
         snplurals = None
+        if self.object.hasplural():
+            snplurals = len(self.object.source.strings)
+        form_class = unit_form_factory(self.language, snplurals, self.request)
+        return form_class(instance=self.object, request=self.request)
 
-    form_class = unit_form_factory(language, snplurals, request)
-    form = form_class(instance=unit, request=request)
-    comment_form_class = unit_comment_form_factory(language)
-    comment_form = comment_form_class({}, instance=unit, request=request)
+    def get_unit_comment_form(self):
+        comment_form_class = unit_comment_form_factory(self.language)
+        return comment_form_class({}, instance=self.object, request=self.request)
 
-    store = unit.store
-    directory = store.parent
-    user = request.user
-    project = translation_project.project
+    @lru_cache()
+    def get_alt_srcs(self):
+        return find_altsrcs(
+            self.object,
+            get_alt_src_langs(self.request, self.request.user, self.tp),
+            store=self.store,
+            project=self.project)
 
-    alt_src_langs = get_alt_src_langs(request, user, translation_project)
-    altsrcs = find_altsrcs(unit, alt_src_langs, store=store, project=project)
-    source_language = translation_project.project.source_language
-    sources = {
-        unit.store.translation_project.language.code: unit.target_f.strings
-        for unit in altsrcs
-    }
-    sources[source_language.code] = unit.source_f.strings
+    def get_queryset(self):
+        return Unit.objects.get_translatable(self.request.user).select_related(
+            "store",
+            "store__parent",
+            "store__translation_project",
+            "store__translation_project__project",
+            "store__translation_project__project__source_language",
+            "store__translation_project__language")
 
-    priority = None
+    def get_sources(self):
+        sources = {
+            unit.store.translation_project.language.code: unit.target_f.strings
+            for unit in self.get_alt_srcs()}
+        sources[self.source_language.code] = self.object.source_f.strings
+        return sources
 
-    if 'virtualfolder' in settings.INSTALLED_APPS:
-        vfolder_pk = request.GET.get('vfolder', '')
+    def get_context_data(self, *args, **kwargs):
+        priority = (
+            self.object.priority if 'virtualfolder' in settings.INSTALLED_APPS
+            else None
+        )
+        return {
+            'unit': self.object,
+            'form': self.get_unit_edit_form(),
+            'comment_form': self.get_unit_comment_form(),
+            'priority': priority,
+            'store': self.store,
+            'directory': self.directory,
+            'user': self.request.user,
+            'project': self.project,
+            'language': self.language,
+            'source_language': self.source_language,
+            'cantranslate': check_user_permission(self.request.user,
+                                                  "translate",
+                                                  self.directory),
+            'cantranslatexlang': check_user_permission(self.request.user,
+                                                       "administrate",
+                                                       self.project.directory),
+            'cansuggest': check_user_permission(self.request.user,
+                                                "suggest",
+                                                self.directory),
+            'canreview': check_user_permission(self.request.user,
+                                               "review",
+                                               self.directory),
+            'has_admin_access': check_user_permission(self.request.user,
+                                                      'administrate',
+                                                      self.directory),
+            'altsrcs': self.get_alt_srcs()}
 
-        if vfolder_pk:
-            from virtualfolder.models import VirtualFolder
-
-            try:
-                # If we are translating a virtual folder, then display its
-                # priority.
-                # Note that the passed virtual folder pk might be invalid.
-                priority = VirtualFolder.objects.get(pk=vfolder_pk).priority
-            except VirtualFolder.DoesNotExist:
-                pass
-
-        if priority is None:
-            # Retrieve the unit top priority, if any. This can happen if we are
-            # not in a virtual folder or if the passed virtual folder pk is
-            # invalid.
-            priority = unit.vfolders.aggregate(
-                priority=Max('priority')
-            )['priority']
-
-    template_vars = {
-        'unit': unit,
-        'form': form,
-        'comment_form': comment_form,
-        'priority': priority,
-        'store': store,
-        'directory': directory,
-        'user': user,
-        'project': project,
-        'language': language,
-        'source_language': source_language,
-        'cantranslate': check_user_permission(user, "translate", directory),
-        'cansuggest': check_user_permission(user, "suggest", directory),
-        'canreview': check_user_permission(user, "review", directory),
-        'is_admin': check_user_permission(user, 'administrate', directory),
-        'altsrcs': altsrcs,
-    }
-
-    if translation_project.project.is_terminology or store.is_terminology:
-        t = loader.get_template('editor/units/term_edit.html')
-    else:
-        t = loader.get_template('editor/units/edit.html')
-    c = RequestContext(request, template_vars)
-
-    json.update({
-        'editor': t.render(c),
-        'tm_suggestions': unit.get_tm_suggestions(),
-        'is_obsolete': unit.isobsolete(),
-        'sources': sources,
-    })
-
-    return JsonResponse(json)
+    def get_response_data(self, context):
+        return {
+            'editor': self.render_edit_template(context),
+            'tm_suggestions': self.object.get_tm_suggestions(),
+            'is_obsolete': self.object.isobsolete(),
+            'sources': self.get_sources()}
 
 
 @get_unit_context('view')
@@ -683,6 +526,7 @@ def submit(request, unit):
 
     translation_project = request.translation_project
     language = translation_project.language
+    old_unit = copy.copy(unit)
 
     if unit.hasplural():
         snplurals = len(unit.source.strings)
@@ -696,8 +540,23 @@ def submit(request, unit):
     form = form_class(request.POST, instance=unit, request=request)
 
     if form.is_valid():
+        suggestion = form.cleaned_data['suggestion']
+        if suggestion:
+            old_unit.accept_suggestion(suggestion,
+                                       request.translation_project, request.user)
+            if form.cleaned_data['comment']:
+                kwargs = dict(
+                    comment=form.cleaned_data['comment'],
+                    user=request.user,
+                )
+                comment_form = UnsecuredCommentForm(suggestion, kwargs)
+                if comment_form.is_valid():
+                    comment_form.save()
+
         if form.updated_fields:
             for field, old_value, new_value in form.updated_fields:
+                if field == SubmissionFields.TARGET and suggestion:
+                    old_value = str(suggestion.target_f)
                 sub = Submission(
                     creation_time=current_time,
                     translation_project=translation_project,
@@ -806,6 +665,15 @@ def reject_suggestion(request, unit, suggid):
         raise PermissionDenied(_('Insufficient rights to access review mode.'))
 
     unit.reject_suggestion(sugg, request.translation_project, request.user)
+    r_data = QueryDict(request.body)
+    if "comment" in r_data and r_data["comment"]:
+        kwargs = dict(
+            comment=r_data["comment"],
+            user=request.user,
+        )
+        comment_form = UnsecuredCommentForm(sugg, kwargs)
+        if comment_form.is_valid():
+            comment_form.save()
 
     json['user_score'] = request.user.public_score
 
@@ -825,6 +693,14 @@ def accept_suggestion(request, unit, suggid):
         raise Http404
 
     unit.accept_suggestion(suggestion, request.translation_project, request.user)
+    if "comment" in request.POST and request.POST["comment"]:
+        kwargs = dict(
+            comment=request.POST["comment"],
+            user=request.user,
+        )
+        comment_form = UnsecuredCommentForm(suggestion, kwargs)
+        if comment_form.is_valid():
+            comment_form.save()
 
     json['user_score'] = request.user.public_score
     json['newtargets'] = [highlight_whitespace(target)

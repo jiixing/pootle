@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -52,8 +51,6 @@ def export(request):
     with BytesIO() as f:
         with ZipFile(f, "w") as zf:
             for store in stores:
-                if store.is_terminology:
-                    continue
                 try:
                     data = store.serialize()
                 except Exception as e:

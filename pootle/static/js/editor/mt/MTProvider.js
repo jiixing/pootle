@@ -17,6 +17,7 @@ import PlaceholderCleaner from './PlaceholderCleaner';
 class MTProvider {
 
   constructor(opts) {
+    this.method = 'GET';
     assign(this, opts);
 
     // FIXME: retrieve pairs asynchronously using provider APIs (#3718)
@@ -70,6 +71,7 @@ class MTProvider {
 
     return fetch({
       crossDomain: true,
+      method: this.method,
       url: this.url,
       body: this.getRequestBody(bodyOpts),
     }).then(
@@ -79,8 +81,9 @@ class MTProvider {
         if (!('translation' in result)) {
           return result;
         }
-        result.translation = placeholderCleaner.recover(result.translation);
-        return result;
+        const newResult = assign({}, result);
+        newResult.translation = placeholderCleaner.recover(result.translation);
+        return newResult;
       }
     );
   }
@@ -116,7 +119,7 @@ class MTProvider {
     return (
       `<a class="translate-mt js-${this.name}" data-source-lang="${sourceLang}">` +
         `<i class="icon-${this.name}" title="${hint}">` +
-      `</a>`
+      '</a>'
     );
   }
 

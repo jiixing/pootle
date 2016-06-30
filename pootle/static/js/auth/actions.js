@@ -11,8 +11,8 @@ import AuthAPI from './utils/AuthAPI';
 
 export function gotoScreen(screen) {
   return {
+    screen,
     type: 'GOTO_SCREEN',
-    screen: screen,
   };
 }
 
@@ -29,7 +29,7 @@ function handleErrors(jsonResponse = {}) {
   }
   if ('msg' in jsonResponse) {
     errors = {
-      '__all__': [jsonResponse.msg],
+      __all__: [jsonResponse.msg],
     };
   }
 

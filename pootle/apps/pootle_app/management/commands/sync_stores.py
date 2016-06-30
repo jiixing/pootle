@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -43,6 +42,8 @@ class Command(PootleCommand):
         )
 
     def handle_all_stores(self, translation_project, **options):
+        if translation_project.project.treestyle == "none":
+            return
         if translation_project.directory_exists_on_disk():
             translation_project.sync(
                 conservative=not options['overwrite'],

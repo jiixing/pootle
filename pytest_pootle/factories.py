@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -14,17 +13,18 @@ import factory
 from django.utils import timezone
 
 import pootle_store
+from pootle.core.utils.timezone import make_aware
 
 
 class ScoreLogFactory(factory.django.DjangoModelFactory):
-    creation_time = timezone.now()
+    creation_time = make_aware(timezone.now())
 
     class Meta(object):
         model = 'pootle_statistics.ScoreLog'
 
 
 class SubmissionFactory(factory.django.DjangoModelFactory):
-    creation_time = timezone.now()
+    creation_time = make_aware(timezone.now())
 
     class Meta(object):
         model = 'pootle_statistics.Submission'
@@ -72,7 +72,7 @@ class DirectoryFactory(factory.django.DjangoModelFactory):
     obsolete = False
 
 
-class LanguageFactory(factory.django.DjangoModelFactory):
+class LanguageDBFactory(factory.django.DjangoModelFactory):
 
     class Meta(object):
         model = 'pootle_language.Language'
@@ -93,7 +93,7 @@ class LanguageFactory(factory.django.DjangoModelFactory):
         return 'Language %s' % (Language.objects.count() - 1)
 
 
-class ProjectFactory(factory.django.DjangoModelFactory):
+class ProjectDBFactory(factory.django.DjangoModelFactory):
 
     class Meta(object):
         model = 'pootle_project.Project'
@@ -117,7 +117,7 @@ class ProjectFactory(factory.django.DjangoModelFactory):
     checkstyle = "standard"
 
 
-class StoreFactory(factory.django.DjangoModelFactory):
+class StoreDBFactory(factory.django.DjangoModelFactory):
 
     class Meta(object):
         model = 'pootle_store.Store'
@@ -125,6 +125,7 @@ class StoreFactory(factory.django.DjangoModelFactory):
 
     parent = factory.LazyAttribute(
         lambda s: s.translation_project.directory)
+    obsolete = False
 
     @factory.lazy_attribute
     def pootle_path(self):
@@ -145,7 +146,7 @@ class TranslationProjectFactory(factory.django.DjangoModelFactory):
         model = 'pootle_translationproject.TranslationProject'
 
 
-class UnitFactory(factory.django.DjangoModelFactory):
+class UnitDBFactory(factory.django.DjangoModelFactory):
 
     class Meta(object):
         model = 'pootle_store.Unit'
@@ -159,10 +160,7 @@ class UnitFactory(factory.django.DjangoModelFactory):
 
     @factory.lazy_attribute
     def unitid(self):
-        return (
-            "%s_unit%s"
-            % (pootle_store.util.get_state_name(self),
-               self.index))
+        return self.source_f
 
     @factory.lazy_attribute
     def unitid_hash(self):
@@ -195,11 +193,11 @@ class UnitFactory(factory.django.DjangoModelFactory):
         return ""
 
 
-class VirtualFolderFactory(factory.django.DjangoModelFactory):
+class VirtualFolderDBFactory(factory.django.DjangoModelFactory):
 
     class Meta(object):
         model = 'virtualfolder.VirtualFolder'
-        django_get_or_create = ("location", "filter_rules")
+        django_get_or_create = ("location", "is_public", "filter_rules")
 
     priority = 2
     is_public = True

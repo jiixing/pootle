@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -8,11 +7,11 @@
 # AUTHORS file for copyright and authorship information.
 
 import os
-import shutil
-import tempfile
 from collections import OrderedDict
 
 import pytest
+
+from translate.storage.factory import getclass
 
 from django.utils import timezone
 
@@ -275,35 +274,6 @@ def _make_member_updates(store, member):
     _mark_unit_fuzzy(store.units[0], member)
 
 
-@pytest.fixture(scope='session')
-def po_directory(request):
-    """Sets up a tmp directory with test PO files."""
-    from django.conf import settings
-    from pootle_store.models import fs
-
-    test_base_dir = tempfile.mkdtemp()
-
-    projects = [dirname for dirname
-                in os.listdir(settings.POOTLE_TRANSLATION_DIRECTORY)
-                if dirname != '.tmp']
-
-    for project in projects:
-        src_dir = os.path.join(settings.POOTLE_TRANSLATION_DIRECTORY, project)
-
-        # Copy files over the temporal dir
-        shutil.copytree(src_dir, os.path.join(test_base_dir, project))
-
-    # Adjust locations
-    settings.POOTLE_TRANSLATION_DIRECTORY = test_base_dir
-    fs.location = test_base_dir
-
-    def _cleanup():
-        shutil.rmtree(test_base_dir)
-    request.addfinalizer(_cleanup)
-
-    return test_base_dir
-
-
 @pytest.fixture
 def af_tutorial_po(settings, afrikaans_tutorial, system):
     """Require the /af/tutorial/tutorial.po store."""
@@ -421,3 +391,44 @@ def af_vfolder_test_browser_defines_po(settings, afrikaans_vfolder_test,
     return _require_store(afrikaans_vfolder_test,
                           settings.POOTLE_TRANSLATION_DIRECTORY,
                           'browser/defines.po')
+
+
+@pytest.fixture
+def store_po():
+    """An empty Store in the /language0/project0 TP"""
+    from pootle_translationproject.models import TranslationProject
+
+    from pytest_pootle.factories import StoreDBFactory
+
+    tp = TranslationProject.objects.get(
+        project__code="project0",
+        language__code="language0")
+
+    store = StoreDBFactory(
+        parent=tp.directory,
+        translation_project=tp,
+        name="test_store.po")
+    return store
+
+
+@pytest.fixture
+def complex_po(test_fs):
+    """A Store with some complex Units"""
+    from pootle_translationproject.models import TranslationProject
+
+    from pytest_pootle.factories import StoreDBFactory
+
+    tp = TranslationProject.objects.get(
+        project__code="project0",
+        language__code="language0")
+
+    store = StoreDBFactory(
+        parent=tp.directory,
+        translation_project=tp,
+        name="complex_store.po")
+
+    with test_fs.open(("data", "po", "complex.po")) as f:
+        ttk = getclass(f)(f.read())
+
+    store.update(ttk)
+    return store

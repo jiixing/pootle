@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -49,8 +48,8 @@ class ProjectForm(forms.ModelForm):
     class Meta(object):
         model = Project
         fields = ('id', 'code', 'fullname', 'checkstyle', 'localfiletype',
-                  'treestyle', 'source_language', 'report_email',
-                  'screenshot_search_prefix', 'disabled',)
+                  'treestyle', 'source_language', 'ignoredfiles',
+                  'report_email', 'screenshot_search_prefix', 'disabled',)
 
     def __init__(self, *args, **kwargs):
         super(ProjectForm, self).__init__(*args, **kwargs)
@@ -71,30 +70,30 @@ class ProjectForm(forms.ModelForm):
                 self.instance.treestyle == self.instance._detect_treestyle()):
                 self.fields['treestyle'].required = False
 
-        def clean_localfiletype(self):
-            value = self.cleaned_data.get('localfiletype', None)
-            if not value:
-                value = self.instance.localfiletype
-            filetypes = [x[0] for x in filetype_choices]
-            if value not in filetypes:
-                raise forms.ValidationError(
-                    "Unrecognised project filetype: %s" % value
-                )
-            return value
+    def clean_localfiletype(self):
+        value = self.cleaned_data.get('localfiletype', None)
+        if not value:
+            value = self.instance.localfiletype
+        filetypes = [x[0] for x in filetype_choices]
+        if value not in filetypes:
+            raise forms.ValidationError(
+                "Unrecognised project filetype: %s" % value
+            )
+        return value
 
-        def clean_treestyle(self):
-            value = self.cleaned_data.get('treestyle', None)
-            if not value:
-                value = self.instance.treestyle
-            return value
+    def clean_treestyle(self):
+        value = self.cleaned_data.get('treestyle', None)
+        if not value:
+            value = self.instance.treestyle
+        return value
 
-        def clean_code(self):
-            value = self.cleaned_data['code']
-            if value in RESERVED_PROJECT_CODES:
-                raise forms.ValidationError(
-                    _('"%s" cannot be used as a project code', value)
-                )
-            return value
+    def clean_code(self):
+        value = self.cleaned_data['code']
+        if value in RESERVED_PROJECT_CODES:
+            raise forms.ValidationError(
+                _('"%s" cannot be used as a project code', value)
+            )
+        return value
 
 
 class UserForm(forms.ModelForm):

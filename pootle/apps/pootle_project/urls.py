@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -12,7 +11,7 @@ from django.conf.urls import url
 from .views import (
     ProjectBrowseView, ProjectExportView, ProjectsBrowseView,
     ProjectsExportView, ProjectsTranslateView, ProjectTranslateView,
-    project_admin, project_admin_permissions)
+    ProjectAdminView, project_admin_permissions)
 
 
 urlpatterns = [
@@ -31,7 +30,7 @@ urlpatterns = [
 
     # Admin
     url(r'^(?P<project_code>[^/]*)/admin/languages/$',
-        project_admin,
+        ProjectAdminView.as_view(),
         name='pootle-project-admin-languages'),
     url(r'^(?P<project_code>[^/]*)/admin/permissions/$',
         project_admin_permissions,

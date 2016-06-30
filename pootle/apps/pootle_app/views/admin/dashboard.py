@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -23,7 +22,7 @@ from django_rq.queues import get_failed_queue, get_queue
 from django_rq.workers import Worker
 
 from pootle.core.decorators import admin_required
-from pootle_misc.aggregate import sum_column
+from pootle.core.utils.aggregate import sum_column
 from pootle_statistics.models import Submission
 from pootle_store.models import Suggestion, Unit
 from pootle_store.util import TRANSLATED

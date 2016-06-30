@@ -15,15 +15,15 @@ import AdminAPIMixin from 'mixins/admin_api';
 export const Project = Backbone.Model.extend({
 
   defaults: {
-    'code': '',
-    'fullname': '',
-    'checkstyle': 'standard',
-    'localfiletype': 'po',
-    'treestyle': 'auto',
-    'source_language': '',
-    'ignored_files': '',
-    'screenshot_search_prefix': '',
-    'disabled': false,
+    code: '',
+    fullname: '',
+    checkstyle: 'standard',
+    localfiletype: 'po',
+    treestyle: 'auto',
+    source_language: '',
+    ignoredfiles: '',
+    screenshot_search_prefix: '',
+    disabled: false,
   },
 
   urlRoot() {
@@ -44,10 +44,11 @@ export const Project = Backbone.Model.extend({
 
   getFieldChoices(fieldName) {
     if (this.fieldChoices && this.fieldChoices.hasOwnProperty(fieldName)) {
-      return this.fieldChoices[fieldName].map((field) => {
+      return this.fieldChoices[fieldName].map((field) => ({
         // FIXME: react-select's issue #25 prevents using non-string values
-        return { value: field[0].toString(), label: field[1] };
-      });
+        value: field[0].toString(),
+        label: field[1],
+      }));
     }
     return [];
   },

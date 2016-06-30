@@ -26,8 +26,8 @@ PTL.user = {
 
       const user = new User(opts.userData, { urlRoot: l('/xhr/users/') });
       const props = {
+        user,
         appRoot: opts.appRoot,
-        user: user,
       };
       ReactDOM.render(<UserProfileEdit {...props} />, editButton);
 
@@ -45,6 +45,7 @@ PTL.user = {
           window.open(e.currentTarget.href, '_blank',
                       `width=${width},height=${height},left=${left},top=${top}`);
         });
+        return true;
       });
     }
 

@@ -10,8 +10,28 @@ import React from 'react';
 
 import LayeredComponent from './LayeredComponent';
 import ModalContainer from './ModalContainer';
-import ModalFooter from './ModalFooter';
-import ModalHeader from './ModalHeader';
+
+
+export const ModalHeader = ({ children }) => (
+  <div className="lightbox-header">
+    {children}
+  </div>
+);
+
+ModalHeader.propTypes = {
+  children: React.PropTypes.node.isRequired,
+};
+
+
+export const ModalFooter = ({ children }) => (
+  <div className="lightbox-footer">
+    {children}
+  </div>
+);
+
+ModalFooter.propTypes = {
+  children: React.PropTypes.node.isRequired,
+};
 
 
 const Modal = React.createClass({
@@ -59,8 +79,10 @@ const Modal = React.createClass({
       <h3 className="lightbox-title">{this.props.title}</h3>
     );
     const closeBtn = (this.props.showClose &&
-      <button className="lightbox-close"
-              onClick={this.handleClose}>×</button>
+      <button
+        className="lightbox-close"
+        onClick={this.handleClose}
+      >×</button>
     );
 
     return (

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -23,9 +22,12 @@ from django.utils.translation import get_language, ugettext as _
 from pootle.core.log import (TRANSLATION_ADDED, TRANSLATION_CHANGED,
                              TRANSLATION_DELETED)
 from pootle.core.mixins import CachedMethods
-from pootle_app.models.permissions import check_permission
+from pootle.core.url_helpers import split_pootle_path
+from pootle_app.models import Directory
+from pootle_app.models.permissions import check_permission, check_user_permission
 from pootle_misc.checks import CATEGORY_CODES, check_names
 from pootle_misc.util import get_date_interval
+from pootle_project.models import Project
 from pootle_statistics.models import (Submission, SubmissionFields,
                                       SubmissionTypes)
 from virtualfolder.helpers import extract_vfolder_from_path
@@ -35,9 +37,11 @@ from .fields import to_db
 from .form_fields import (
     CategoryChoiceField, ISODateTimeField, MultipleArgsField,
     CommaSeparatedCheckboxSelectMultiple)
-from .models import Unit
+from .models import Unit, Suggestion
 from .util import FUZZY, OBSOLETE, TRANSLATED, UNTRANSLATED
 
+
+EXPORT_VIEW_QUERY_LIMIT = 10000
 
 UNIT_SEARCH_FILTER_CHOICES = (
     ("all", "all"),
@@ -255,36 +259,74 @@ def unit_form_factory(language, snplurals=None, request=None):
         )
         similarity = forms.FloatField(required=False)
         mt_similarity = forms.FloatField(required=False)
+        suggestion = forms.ModelChoiceField(
+            queryset=Suggestion.objects.all(),
+            required=False)
+        comment = forms.CharField(required=False)
 
         def __init__(self, *args, **kwargs):
             self.request = kwargs.pop('request', None)
             super(UnitForm, self).__init__(*args, **kwargs)
-            self.updated_fields = []
+            self._updated_fields = []
 
             self.fields['target_f'].widget.attrs['data-translation-aid'] = \
                 self['target_f'].value()
+
+        @property
+        def updated_fields(self):
+            order_dict = {
+                SubmissionFields.STATE: 0,
+                SubmissionFields.TARGET: 1,
+            }
+            return sorted(self._updated_fields, key=lambda x: order_dict[x[0]])
 
         def clean_target_f(self):
             value = self.cleaned_data['target_f']
 
             if self.instance.target.strings != multistring(value or [u'']):
                 self.instance._target_updated = True
-                self.updated_fields.append((SubmissionFields.TARGET,
+                self._updated_fields.append((SubmissionFields.TARGET,
                                             to_db(self.instance.target),
                                             to_db(value)))
 
             return value
 
-        def clean_state(self):
+        def clean_similarity(self):
+            value = self.cleaned_data['similarity']
+
+            if 0 <= value <= 1 or value is None:
+                return value
+
+            raise forms.ValidationError(
+                _('Value of `similarity` should be in in the [0..1] range')
+            )
+
+        def clean_mt_similarity(self):
+            value = self.cleaned_data['mt_similarity']
+
+            if 0 <= value <= 1 or value is None:
+                return value
+
+            raise forms.ValidationError(
+                _('Value of `mt_similarity` should be in in the [0..1] range')
+            )
+
+        def clean(self):
             old_state = self.instance.state  # Integer
             is_fuzzy = self.cleaned_data['state']  # Boolean
             new_target = self.cleaned_data['target_f']
 
+            # If suggestion is provided set `old_state` should be `TRANSLATED`.
+            if self.cleaned_data['suggestion']:
+                old_state = TRANSLATED
+
             if (self.request is not None and
                 not check_permission('administrate', self.request) and
                 is_fuzzy):
-                raise forms.ValidationError(_('Needs work flag must be '
-                                              'cleared'))
+                self.add_error('state',
+                               forms.ValidationError(
+                                   _('Needs work flag must be '
+                                     'cleared')))
 
             if new_target:
                 if old_state == UNTRANSLATED:
@@ -313,34 +355,15 @@ def unit_form_factory(language, snplurals=None, request=None):
 
             if old_state not in [new_state, OBSOLETE]:
                 self.instance._state_updated = True
-                self.updated_fields.append((SubmissionFields.STATE,
+                self._updated_fields.append((SubmissionFields.STATE,
                                             old_state, new_state))
 
-                return new_state
+                self.cleaned_data['state'] = new_state
+            else:
+                self.instance._state_updated = False
+                self.cleaned_data['state'] = old_state
 
-            self.instance._state_updated = False
-
-            return old_state
-
-        def clean_similarity(self):
-            value = self.cleaned_data['similarity']
-
-            if 0 <= value <= 1 or value is None:
-                return value
-
-            raise forms.ValidationError(
-                _('Value of `similarity` should be in in the [0..1] range')
-            )
-
-        def clean_mt_similarity(self):
-            value = self.cleaned_data['mt_similarity']
-
-            if 0 <= value <= 1 or value is None:
-                return value
-
-            raise forms.ValidationError(
-                _('Value of `mt_similarity` should be in in the [0..1] range')
-            )
+            return super(UnitForm, self).clean()
 
     return UnitForm
 
@@ -411,11 +434,14 @@ def unit_comment_form_factory(language):
 
 class UnitSearchForm(forms.Form):
 
-    initial = forms.BooleanField(required=False)
     count = forms.IntegerField(required=False)
+    offset = forms.IntegerField(required=False)
     path = forms.CharField(
         max_length=2048,
         required=True)
+    previous_uids = MultipleArgsField(
+        field=forms.IntegerField(),
+        required=False)
     uids = MultipleArgsField(
         field=forms.IntegerField(),
         required=False)
@@ -459,6 +485,8 @@ class UnitSearchForm(forms.Form):
             ('locations', _('Locations'))),
         initial=['source', 'target'])
 
+    default_count = 10
+
     def __init__(self, *args, **kwargs):
         self.request_user = kwargs.pop("user")
         super(UnitSearchForm, self).__init__(*args, **kwargs)
@@ -475,9 +503,14 @@ class UnitSearchForm(forms.Form):
             self.cleaned_data["user"] = self.request_user
         if self.errors:
             return
-        if self.cleaned_data['count'] is None:
-            self.cleaned_data["count"] = (
-                self.cleaned_data["user"].get_unit_rows())
+        if self.default_count:
+            count = (
+                self.cleaned_data.get("count", self.default_count)
+                or self.default_count)
+            user_count = (
+                self.cleaned_data["user"].get_unit_rows()
+                or self.default_count)
+            self.cleaned_data['count'] = min(count, user_count)
         self.cleaned_data["vfolder"] = None
         pootle_path = self.cleaned_data.get("path")
         if 'virtualfolder' in settings.INSTALLED_APPS:
@@ -514,3 +547,37 @@ class UnitSearchForm(forms.Form):
 
     def clean_user(self):
         return self.cleaned_data["user"] or self.request_user
+
+    def clean_path(self):
+        language_code, project_code = split_pootle_path(
+            self.cleaned_data["path"])[:2]
+        if not (language_code or project_code):
+            permission_context = Directory.objects.projects
+        elif project_code and not language_code:
+            try:
+                permission_context = Project.objects.select_related(
+                    "directory").get(code=project_code).directory
+            except Project.DoesNotExist:
+                raise forms.ValidationError("Unrecognized path")
+        else:
+            # no permission checking on lang translate views
+            return self.cleaned_data["path"]
+        if self.request_user.is_superuser:
+            return self.cleaned_data["path"]
+        can_view_path = check_user_permission(
+            self.request_user, "administrate", permission_context)
+        if can_view_path:
+            return self.cleaned_data["path"]
+        raise forms.ValidationError("Unrecognized path")
+
+
+class UnitExportForm(UnitSearchForm):
+
+    path = forms.CharField(
+        max_length=2048,
+        required=False)
+
+    default_count = None
+
+    def clean_path(self):
+        return self.cleaned_data.get("path", "/") or "/"

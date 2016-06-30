@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -12,6 +11,7 @@ from itertools import groupby
 import json
 import operator
 
+from django.forms import ValidationError
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
@@ -23,26 +23,29 @@ from django.http import Http404, HttpResponse
 from django.utils.decorators import method_decorator
 from django.utils.functional import cached_property
 from django.utils.translation import ugettext as _
+from django.views.decorators.cache import never_cache
 from django.views.defaults import (permission_denied as django_403,
                                    page_not_found as django_404,
                                    server_error as django_500)
 from django.views.generic import View, DetailView
 
+from pootle.core.delegate import search_backend, context_data
+from pootle.core.url_helpers import split_pootle_path
 from pootle_app.models.permissions import (
     check_permission, get_matching_permissions)
-from pootle_misc.stats import get_translation_states
-from pootle_misc.checks import get_qualitycheck_schema
+from pootle_misc.checks import get_qualitycheck_list, get_qualitycheck_schema
 from pootle_misc.forms import make_search_form
+from pootle_misc.util import ajax_required
+from pootle_store.forms import UnitExportForm
 from pootle_store.models import Unit
-from pootle_store.views import get_step_query
-from virtualfolder.models import VirtualFolderTreeItem
 
 from .browser import get_table_headings
-from .helpers import (EXPORT_VIEW_QUERY_LIMIT, SIDEBAR_COOKIE_NAME,
+from .helpers import (SIDEBAR_COOKIE_NAME,
                       get_filter_name, get_sidebar_announcements_context)
 from .http import JsonResponse, JsonResponseBadRequest
 from .url_helpers import get_path_parts, get_previous_url
-from .utils.json import PootleJSONEncoder, jsonify
+from .utils.json import PootleJSONEncoder
+from .utils.stats import get_translation_states
 
 
 def check_directory_permission(permission_codename, request, directory):
@@ -440,6 +443,22 @@ def server_error(request):
     return django_500(request, template_name='errors/500.html')
 
 
+class PootleAdminView(DetailView):
+
+    @set_permissions
+    @requires_permission("administrate")
+    def dispatch(self, request, *args, **kwargs):
+        return super(
+            PootleAdminView, self).dispatch(request, *args, **kwargs)
+
+    @property
+    def permission_context(self):
+        return self.get_object().directory
+
+    def post(self, *args, **kwargs):
+        return self.get(*args, **kwargs)
+
+
 class PootleDetailView(DetailView):
     translate_url_path = ""
     browse_url_path = ""
@@ -459,12 +478,13 @@ class PootleDetailView(DetailView):
             kwargs=self.url_kwargs)
 
     @cached_property
-    def is_admin(self):
+    def has_admin_access(self):
         return check_permission('administrate', self.request)
 
     @property
     def language(self):
-        return None
+        if self.tp:
+            return self.tp.language
 
     @property
     def permission_context(self):
@@ -476,7 +496,8 @@ class PootleDetailView(DetailView):
 
     @property
     def project(self):
-        return None
+        if self.tp:
+            return self.tp.project
 
     @property
     def tp(self):
@@ -501,12 +522,51 @@ class PootleDetailView(DetailView):
             'project': self.project,
             'language': self.language,
             'translation_project': self.tp,
-            'is_admin': self.is_admin,
+            'has_admin_access': self.has_admin_access,
             'resource_path': self.resource_path,
             'resource_path_parts': get_path_parts(self.resource_path),
             'translate_url': self.translate_url,
             'export_url': self.export_url,
             'browse_url': self.browse_url}
+
+    def gather_context_data(self, context):
+        context.update(
+            context_data.gather(
+                sender=self.__class__,
+                context=context, view=self))
+        return context
+
+    def render_to_response(self, context, **response_kwargs):
+        return super(PootleDetailView, self).render_to_response(
+            self.gather_context_data(context),
+            **response_kwargs)
+
+
+class PootleJSON(PootleDetailView):
+
+    response_class = JsonResponse
+
+    @never_cache
+    @method_decorator(ajax_required)
+    @set_permissions
+    @requires_permission("view")
+    def dispatch(self, request, *args, **kwargs):
+        return super(PootleDetailView, self).dispatch(request, *args, **kwargs)
+
+    def get_response_data(self, context):
+        """Override this method if you need to render a template with the context object
+        but wish to include the rendered output within a JSON response
+        """
+        return context
+
+    def render_to_response(self, context, **response_kwargs):
+        """Overriden to call `get_response_data` with output from
+        `get_context_data`
+        """
+        response_kwargs.setdefault('content_type', self.content_type)
+        return self.response_class(
+            self.get_response_data(self.gather_context_data(context)),
+            **response_kwargs)
 
 
 class PootleBrowseView(PootleDetailView):
@@ -540,13 +600,19 @@ class PootleBrowseView(PootleDetailView):
             (self.object, ))
 
     @property
+    def disabled_items(self):
+        return filter(lambda item: item['is_disabled'], self.items)
+
+    @property
     def table(self):
         if self.table_id and self.table_fields and self.items:
             return {
                 'id': self.table_id,
                 'fields': self.table_fields,
                 'headings': get_table_headings(self.table_fields),
-                'items': self.items}
+                'items': self.items,
+                'disabled_items': self.disabled_items,
+            }
 
     def get(self, *args, **kwargs):
         response = super(PootleBrowseView, self).get(*args, **kwargs)
@@ -557,32 +623,53 @@ class PootleBrowseView(PootleDetailView):
 
     def get_context_data(self, *args, **kwargs):
         filters = {}
+        can_translate = False
+        can_translate_stats = False
+        User = get_user_model()
         if self.has_vfolders:
             filters['sort'] = 'priority'
 
-        url_action_continue = self.object.get_translate_url(
-            state='incomplete',
-            **filters)
-        url_action_fixcritical = self.object.get_critical_url(
-            **filters)
-        url_action_review = self.object.get_translate_url(
-            state='suggestions',
-            **filters)
-        url_action_view_all = self.object.get_translate_url(state='all')
+        if self.request.user.is_superuser or self.language:
+            can_translate = True
+            can_translate_stats = True
+            url_action_continue = self.object.get_translate_url(
+                state='incomplete',
+                **filters)
+            url_action_fixcritical = self.object.get_critical_url(
+                **filters)
+            url_action_review = self.object.get_translate_url(
+                state='suggestions',
+                **filters)
+            url_action_view_all = self.object.get_translate_url(state='all')
+        else:
+            if self.project:
+                can_translate = True
+            url_action_continue = None
+            url_action_fixcritical = None
+            url_action_review = None
+            url_action_view_all = None
         ctx, cookie_data = self.sidebar_announcements
         ctx.update(
             super(PootleBrowseView, self).get_context_data(*args, **kwargs))
+
+        language_code, project_code = split_pootle_path(self.pootle_path)[:2]
+
         ctx.update(
             {'page': 'browse',
-             'stats': jsonify(self.stats),
+             'stats': self.stats,
              'translation_states': get_translation_states(self.object),
-             'check_categories': get_qualitycheck_schema(self.object),
+             'checks': get_qualitycheck_list(self.object),
+             'can_translate': can_translate,
+             'can_translate_stats': can_translate_stats,
              'url_action_continue': url_action_continue,
              'url_action_fixcritical': url_action_fixcritical,
              'url_action_review': url_action_review,
              'url_action_view_all': url_action_view_all,
              'table': self.table,
              'is_store': self.is_store,
+             'top_scorers': User.top_scorers(project=project_code,
+                                             language=language_code,
+                                             limit=10),
              'browser_extends': self.template_extends})
         return ctx
 
@@ -600,10 +687,7 @@ class PootleTranslateView(PootleDetailView):
 
     @property
     def display_vfolder_priority(self):
-        if 'virtualfolder' not in settings.INSTALLED_APPS:
-            return False
-        return VirtualFolderTreeItem.objects.filter(
-            pootle_path__startswith=self.object.pootle_path).exists()
+        return False
 
     def get_context_data(self, *args, **kwargs):
         ctx = super(
@@ -636,18 +720,26 @@ class PootleExportView(PootleDetailView):
         ctx = {}
         filter_name, filter_extra = get_filter_name(self.request.GET)
 
-        units_qs = Unit.objects.get_translatable(
-            self.request.user,
-            **self.kwargs)
+        form_data = self.request.GET.copy()
+        form_data["path"] = self.path
 
-        units_qs = get_step_query(self.request, units_qs)
-        unit_total_count = units_qs.count()
+        search_form = UnitExportForm(
+            form_data, user=self.request.user)
+
+        if not search_form.is_valid():
+            raise Http404(
+                ValidationError(search_form.errors).messages)
+
+        total, start, end, units_qs = search_backend.get(Unit)(
+            self.request.user, **search_form.cleaned_data).search()
+
         units_qs = units_qs.select_related('store')
-        if unit_total_count > EXPORT_VIEW_QUERY_LIMIT:
-            units_qs = units_qs[:EXPORT_VIEW_QUERY_LIMIT]
+
+        if total > settings.POOTLE_EXPORT_VIEW_LIMIT:
+            units_qs = units_qs[:settings.POOTLE_EXPORT_VIEW_LIMIT]
             ctx.update(
-                {'unit_total_count': unit_total_count,
-                 'displayed_unit_count': EXPORT_VIEW_QUERY_LIMIT})
+                {'unit_total_count': total,
+                 'displayed_unit_count': settings.POOTLE_EXPORT_VIEW_LIMIT})
 
         unit_groups = [
             (path, list(units))

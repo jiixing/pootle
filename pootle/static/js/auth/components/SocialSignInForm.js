@@ -33,7 +33,7 @@ const SocialSignInForm = React.createClass({
       <button
         className="btn btn-big"
         key={index}
-        onClick={this.handleClick.bind(null, socialAuth.url)}
+        onClick={() => this.handleClick(socialAuth.url)}
       >
         {interpolate(gettext('Sign In With %s'), [socialAuth.name])}
       </button>
@@ -41,7 +41,10 @@ const SocialSignInForm = React.createClass({
   },
 
   render() {
-    const signInWarningMsg = gettext('Signing in with an external service for the first time will automatically create an account for you.');
+    const signInWarningMsg = gettext(
+      'Signing in with an external service for the first time will ' +
+      'automatically create an account for you.'
+    );
 
     return (
       <div className="actions sign-in-social">

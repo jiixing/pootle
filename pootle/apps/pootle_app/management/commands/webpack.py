@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -66,14 +65,18 @@ class Command(BaseCommand):
         )
         webpack_colors = '--colors' if not options['no_color'] else ''
 
-        webpack_args = [webpack_bin, '--config=%s' % webpack_config_file,
-                        webpack_progress, webpack_colors]
+        webpack_args = [webpack_bin, '--config=%s' % webpack_config_file]
+        if webpack_progress:
+            webpack_args.append(webpack_progress)
+        if webpack_colors:
+            webpack_args.append(webpack_colors)
 
         if options['dev']:
             watch = '--watch' if options['watch'] else ''
             webpack_args.extend([watch, '--display-error-details'])
         else:
             os.environ['NODE_ENV'] = 'production'
+            webpack_args.append("--bail")
 
         webpack_args.extend(options['extra'])
 

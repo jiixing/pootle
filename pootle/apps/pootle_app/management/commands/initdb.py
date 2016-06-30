@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -15,10 +14,12 @@ os.environ['DJANGO_SETTINGS_MODULE'] = 'pootle.settings'
 from django.core.management.base import BaseCommand
 
 from pootle.core.initdb import InitDB
+from . import SkipChecksMixin
 
 
-class Command(BaseCommand):
+class Command(SkipChecksMixin, BaseCommand):
     help = 'Populates the database with initial values: users, projects, ...'
+    skip_system_check_tags = ('data', )
 
     def add_arguments(self, parser):
         parser.add_argument(

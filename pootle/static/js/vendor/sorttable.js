@@ -21,8 +21,6 @@
 */
 
 
-var stIsIE = /*@cc_on!@*/false;
-
 sorttable = {
   init: function() {
     // quit if this function has already been called
@@ -41,6 +39,8 @@ sorttable = {
         sorttable.makeSortable(table);
       }
     });
+
+    makeZebra();
 
   },
 
@@ -197,6 +197,8 @@ sorttable = {
     for (var j=0; j<row_array.length; j++) {
       tb.appendChild(row_array[j][1]);
     }
+
+    makeZebra();
 
     delete row_array;
   },
@@ -554,3 +556,24 @@ var forEach = function(object, block, context) {
   }
 };
 
+
+/**
+ * Manually adds odd row classes. This should be removed in favour of
+ * `nth-child` selectors, but first the table needs to remove any non-visible
+ * items.
+ */
+function makeZebra() {
+  var rows = Array.prototype.slice.call(
+    document.querySelectorAll('table.sortable tbody tr')
+  );
+  rows.forEach(function rmZebra(row, i) {
+    row.classList.remove('odd');
+  });
+
+  var rows = Array.prototype.slice.call(
+    document.querySelectorAll('table.sortable tbody tr.is-visible')
+  );
+  rows.forEach(function addZebra(row, i) {
+    row.classList.toggle('odd', i % 2 === 0);
+  });
+}

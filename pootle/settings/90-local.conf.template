@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """Sample configuration file.
@@ -203,17 +202,27 @@ POOTLE_MARKUP_FILTER = (None, {})
 # be used in case the service supports using an API key.
 #
 # Available options are:
+# 'CAIGHDEAN_TRANSLATE': Caighdeán Translate service.
+#             Provides translation from Manx Gaelic (gv) and
+#             Scottish Gaelic (gd), into Irish Gaelic (ga-IE)
+#             See more at https://github.com/kscanne/caighdean
 # 'GOOGLE_TRANSLATE': Google Translate service.
 #             For this service you need to set the API key.
 #             Note that Google Translate API is a paid service
 #             See more at https://cloud.google.com/translate/v2/pricing
+# 'WELSH_TRANSLATE': Welsh Translate service.
+#             Provides translation from English (en) to Welsh (cy)
+#             For this service you need an API key.
+#             See more at http://techiaith.cymru/api/translation/?lang=en
 # 'YANDEX_TRANSLATE': Yandex Translate service.
 #             For this service you need to set the API key.
 #             See more at https://tech.yandex.com/translate/
 #
 POOTLE_MT_BACKENDS = [
-#        ('GOOGLE_TRANSLATE', ''),
-#        ('YANDEX_TRANSLATE', ''),
+#    ('CAIGHDEAN_TRANSLATE', ''),
+#    ('GOOGLE_TRANSLATE', ''),
+#    ('WELSH_TRANSLATE', ''),
+#    ('YANDEX_TRANSLATE', ''),
 ]
 
 

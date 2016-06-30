@@ -38,7 +38,7 @@ export function getParsedHash(hash) {
 
   let h = hash;
   if (h === undefined) {
-    h = this.getHash();
+    h = getHash();
   }
 
   let e = r.exec(h);
@@ -106,9 +106,9 @@ export function fancyEscape(text) {
     const escapeHl = '<span class="highlight-escape">%s</span>';
     const htmlHl = '<span class="highlight-html">&lt;%s&gt;</span>';
     const submap = {
-      '\r\n': escapeHl.replace(/%s/, '\\r\\n') + '<br/>\n',
-      '\r': escapeHl.replace(/%s/, '\\r') + '<br/>\n',
-      '\n': escapeHl.replace(/%s/, '\\n') + '<br/>\n',
+      '\r\n': `${escapeHl.replace(/%s/, '\\r\\n')}<br/>\n`,
+      '\r': `${escapeHl.replace(/%s/, '\\r')}<br/>\n`,
+      '\n': `${escapeHl.replace(/%s/, '\\n')}<br/>\n`,
       '\t': escapeHl.replace(/%s/, '\\t'),
       '&': '&amp;',
       '<': '&lt;',
@@ -190,7 +190,7 @@ export function relativeDate(date) {
  *
  * `onChange` function will be fired when the select choice changes.
  */
-export function makeSelectableInput(selector, options, onChange) {
+export function makeSelectableInput(selector, options, onChange, onSelecting) {
   // XXX: Check if this works with multiple selects per page
   const $el = $(selector);
 
@@ -201,11 +201,11 @@ export function makeSelectableInput(selector, options, onChange) {
   $el.select2(options);
 
   $el.on('change', onChange);
+  $el.on('select2-selecting', onSelecting);
 }
 
 
-export function executeFunctionByName(functionName, ctx) {
-  const args = Array.prototype.slice.call(arguments).splice(2);
+export function executeFunctionByName(functionName, ctx, ...args) {
   const namespaces = functionName.split('.');
   const func = namespaces.pop();
 
