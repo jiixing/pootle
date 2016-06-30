@@ -202,6 +202,7 @@ window.suttacentral = {
         var text = $('.translate-focus .translation-text').text();
         let words = new Set(text.split(this.lookupUtility.markupGenerator.splitRex));
         words.delete('');
+        if (words.length == 0) return;
         lookupUtility.glossary.getEntries([...words]).then(function(results) {
 
             results.sort(function(a, b) {return comparePaliAlphabet(a.term, b.term)});
@@ -243,4 +244,10 @@ window.suttacentral = {
 
 $(document).on('change keyup', 'textarea.translation', suttacentral.unicodeify);
 
-$(document).on('editor_ready', suttacentral.init);
+$(document).on('editor_ready', () => {
+  try {
+    suttacentral.init();
+  } catch (error) {
+    console.error("SuttaCentral Init Failed ", error.message);
+  }
+});
