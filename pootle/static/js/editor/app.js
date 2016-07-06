@@ -1536,6 +1536,13 @@ PTL.editor = {
           (data) => {
             this.setEditUnit(data);
             this.renderUnit();
+            const unit_id = newUnit.id;
+            if (utils.getParsedHash(utils.getHash()).unit != newUnit.id) {
+              console.log('old Unit id == ', utils.getParsedHash(utils.getHash()).unit);
+              let newHash = utils.updateHashPart('unit', newUnit.id);
+              console.log('Updating hash part unit to ', newUnit.id);
+              $.history.load(newHash);
+            }
           },
           this.error
         );
