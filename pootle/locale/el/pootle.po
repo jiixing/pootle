@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pootle 2.7.0\n"
 "Report-Msgid-Bugs-To: https://github.com/translate/pootle/issues/new\n"
-"POT-Creation-Date: 2016-05-24 11:00+0100\n"
-"PO-Revision-Date: 2015-10-01 14:51+0000\n"
+"POT-Creation-Date: 2017-07-12 11:39+0100\n"
+"PO-Revision-Date: 2017-06-29 09:49+0000\n"
 "Last-Translator: Dimitris <dmtrs32@gmail.com>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: el\n"
@@ -19,9 +19,9 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: Pootle 2.5.1-rc1\n"
 "Generated-By: pygettext.py 1.1\n"
-"X-POOTLE-MTIME: 1443711068.000000\n"
+"X-POOTLE-MTIME: 1498729788.000000\n"
 
-#: apps/accounts/adapter.py:64
+#: apps/accounts/adapter.py:68
 msgid ""
 "Some problem happened when tried to send the confirmation email. Please try "
 "again later."
@@ -29,51 +29,62 @@ msgstr ""
 "Υπήρξε κάποιο πρόβλημα κατά την προσπάθεια αποστολής του μηνύματος "
 "επιβεβαίωσης. Παρακαλούμε, προσπαθήστε ξανά αργότερα."
 
-#: apps/accounts/forms.py:42
+#: apps/accounts/forms.py:32
+msgid ""
+"An error occurred logging you in. Please contact your system administrator"
+msgstr ""
+"Συνέβη κάποιο σφάλμα κατά τη σύνδεσή σας. Παρακαλούμε, επικοινωνήστε με τον "
+"διαχειριστή του συστήματός σας."
+
+#: apps/accounts/forms.py:59
 msgid ""
 "Your user seems to have disappeared. Please report this to the site owners."
 msgstr ""
 "Ο χρήστης σας φαίνεται ότι έχει εξαφανιστεί. Παρακαλούμε, αναφέρτε το στους "
-"κατόχους του ιστότοπου."
+"κατόχους του ιστοτόπου."
 
-#: apps/accounts/models.py:62 apps/pootle_app/views/admin/permissions.py:83
+#: apps/accounts/models.py:55 apps/pootle_app/views/admin/permissions.py:83
 msgid "Username"
 msgstr "Όνομα χρήστη"
 
-#: apps/accounts/models.py:63
+#: apps/accounts/models.py:56
 msgid ""
 "Required. 30 characters or fewer. Letters, numbers and @/./+/-/_ characters"
 msgstr ""
 "Απαραίτητο. 30 χαρακτήρες ή λιγότεροι. Γράμματα, αριθμοί και χαρακτήρες @/./"
 "+/-/_"
 
-#: apps/accounts/models.py:67
+#: apps/accounts/models.py:60
 msgid "Enter a valid username."
 msgstr "Εισάγετε ένα έγκυρο όνομα χρήστη."
 
-#: apps/accounts/models.py:71
+#: apps/accounts/models.py:64
+msgid "A user with that username already exists."
+msgstr "Υπάρχει ήδη ένας χρήστης με αυτό το όνομα χρήστη."
+
+#: apps/accounts/models.py:67
 msgid "Email Address"
 msgstr "Διεύθυνση αλληλογραφίας"
 
-#: apps/accounts/models.py:72 apps/pootle_language/models.py:74
-#: apps/pootle_project/models.py:166
+#: apps/accounts/models.py:68 apps/pootle_language/models.py:39
+#: apps/pootle_project/models.py:206
 msgid "Full Name"
 msgstr "Πλήρες Όνομα"
 
-#: apps/accounts/models.py:75 apps/staticpages/models.py:31
+#: apps/accounts/models.py:71 apps/staticpages/models.py:30
 #: templates/admin/staticpages/_table.html:6
 msgid "Active"
 msgstr "Ενεργό"
 
-#: apps/accounts/models.py:76
+#: apps/accounts/models.py:74
 msgid ""
 "Designates whether this user should be treated as active. Unselect this "
 "instead of deleting accounts."
 msgstr ""
-"Υποδεικνύει αν αυτός ο χρήστης πρέπει να θεωρηθεί ως ενεργός. Αποεπιλέξτε το "
-"αντί να διαγράψετε τους λογαριασμούς."
+"Υποδεικνύει εάν αυτός ο χρήστης πρέπει να θεωρηθεί ως ενεργός. Αποεπιλέξτε "
+"το αντί να διαγράψετε τους λογαριασμούς."
 
-#: apps/accounts/models.py:79
+#: apps/accounts/models.py:77
 msgid "Superuser Status"
 msgstr "Κατάσταση υπερχρήστη"
 
@@ -97,195 +108,185 @@ msgstr "Αριθμός γραμμών"
 msgid "Alternative Source Languages"
 msgstr "Εναλλακτικές αρχικές γλώσσες"
 
-#: apps/accounts/models.py:94 templates/admin/detailed_reports.html:156
-msgid "Rate"
-msgstr "Ρυθμός"
-
-#: apps/accounts/models.py:95 apps/reports/forms.py:31
-msgid "Review Rate"
-msgstr "Ρυθμός ελέγχου"
-
-#: apps/accounts/models.py:96 apps/reports/forms.py:36
-msgid "Hourly Rate"
-msgstr "Ωριαίος ρυθμός"
-
-#: apps/accounts/models.py:97
+#: apps/accounts/models.py:94
 msgid "Score"
 msgstr "Βαθμός"
 
-#: apps/accounts/models.py:98 apps/reports/forms.py:20
-msgid "Currency"
-msgstr "Νόμισμα"
-
-#: apps/accounts/models.py:100
+#: apps/accounts/models.py:95
 msgid "Is employee?"
 msgstr "Είναι υπάλληλος;"
 
-#: apps/accounts/models.py:101
+#: apps/accounts/models.py:96
 msgid "Twitter"
 msgstr "Twitter"
 
-#: apps/accounts/models.py:103
+#: apps/accounts/models.py:98
 msgid "Website"
 msgstr "Ιστότοπος"
 
-#: apps/accounts/models.py:104
+#: apps/accounts/models.py:99
 msgid "LinkedIn"
 msgstr "LinkedIn"
 
-#: apps/accounts/models.py:105
+#: apps/accounts/models.py:100
 msgid "Short Bio"
 msgstr "Σύντομο βιογραφικό"
 
-#: apps/accounts/models.py:326
+#: apps/accounts/models.py:240
 msgid "This email address already exists."
 msgstr "Αυτή η ηλ. διεύθυνση υπάρχει ήδη."
 
-#: apps/accounts/views.py:36
-msgid ""
-"An error occurred logging you in. Please contact your system administrator"
-msgstr ""
-"Συνέβη κάποιο σφάλμα κατά τη σύνδεσή σας. Παρακαλούμε, επικοινωνήστε με τον "
-"διαχειριστή του συστήματός σας."
+#: apps/contact/forms.py:26
+msgid "Subject"
+msgstr "Θέμα"
 
-#: apps/contact/forms.py:25
-msgid "Summary"
-msgstr "Περίληψη"
+#: apps/contact/forms.py:28
+msgid "Please enter a message subject"
+msgstr "Παρακαλούμε, εισάγετε θέμα στο μήνυμά σας"
 
-#: apps/contact/forms.py:27
-msgid "Please enter your message summary"
-msgstr "Παρακαλούμε, εισάγετε την περίληψη του μηνύματός σας"
-
-#: apps/contact/forms.py:34 apps/virtualfolder/models.py:32 core/browser.py:16
+#: apps/contact/forms.py:35 apps/virtualfolder/models.py:27 core/browser.py:16
 msgid "Name"
 msgstr "Όνομα"
 
-#: apps/contact/forms.py:35
+#: apps/contact/forms.py:36
 msgid "Please enter your name"
 msgstr "Παρακαλούμε, εισάγετε το όνομά σας"
 
-#: apps/contact/forms.py:38
+#: apps/contact/forms.py:39
 msgid "Email address"
 msgstr "Διεύθυνση αλληλογραφίας"
 
-#: apps/contact/forms.py:39
+#: apps/contact/forms.py:40
 msgid "Please enter your email address"
 msgstr "Παρακαλούμε, εισάγετε την ηλεκτρονική σας διεύθυνση"
 
-#: apps/contact/forms.py:42
+#: apps/contact/forms.py:43
 msgid "Message"
 msgstr "Μήνυμα"
 
-#: apps/contact/forms.py:43
+#: apps/contact/forms.py:44
 msgid "Please enter your message"
 msgstr "Παρακαλούμε, εισάγετε το μήνυμά σας"
 
-#: apps/contact/views.py:34 templates/layout.html:102
+#: apps/contact/forms.py:81
+msgid "String context"
+msgstr "Περιεχόμενο συμβολοσειράς"
+
+#: apps/contact/forms.py:91
+msgid "Question or comment"
+msgstr "Ερώτηση ή σχόλιο"
+
+#: apps/contact/forms.py:92
+msgid "Please enter your question or comment"
+msgstr "Παρακαλούμε, εισάγετε την ερώτησή σας ή το σχόλιό σας"
+
+#: apps/contact/views.py:35 templates/layout.html:120
 msgid "Contact Us"
 msgstr "Επικοινωνήστε μαζί μας"
 
-#: apps/contact/views.py:65
-#, fuzzy
+#: apps/contact/views.py:92
 msgid "Report problem with string"
-msgstr "Αναφορά προβλήματος με αυτήν τη συμβολοσειρά"
+msgstr "Αναφορά προβλήματος με τη συμβολοσειρά"
 
-#: apps/import_export/templates/browser/index.html:10
+#: apps/import_export/templates/browser/index.html:11
 msgid "Download translation files for offline translation"
 msgstr "Κατέβασμα αρχείων μετάφρασης για μετάφραση χωρίς σύνδεση"
 
-#: apps/import_export/templates/browser/index.html:11
+#: apps/import_export/templates/browser/index.html:12
 msgid "Download for offline translation"
 msgstr "Κατέβασμα για μετάφραση χωρίς σύνδεση"
 
-#: apps/import_export/templates/browser/index.html:19
+#: apps/import_export/templates/browser/index.html:16
+msgid "Download translation files for backup"
+msgstr "Κατέβασμα αρχείων μετάφρασης για αντίγραφα ασφαλείας"
+
+#: apps/import_export/templates/browser/index.html:17
+msgid "Download for backup"
+msgstr "Κατέβασμα για αντίγραφο ασφαλείας"
+
+#: apps/import_export/templates/browser/index.html:26
 msgid "Upload translation files or archives in .zip format"
 msgstr "Ανέβασμα αρχείων μετάφρασης ή αρχειοθηκών σε μορφή .zip"
 
-#: apps/import_export/templates/browser/index.html:20
+#: apps/import_export/templates/browser/index.html:27
 msgid "Upload translations"
 msgstr "Ανέβασμα μεταφράσεων"
 
-#: apps/import_export/utils.py:29
+#: apps/import_export/templates/browser/index.html:36
+#, python-format
+msgid "Upload as %(user)s"
+msgstr "Ανέβασμα ως %(user)s"
+
+#: apps/import_export/templates/browser/index.html:54
+msgid "Download offline TM for the translation project"
+msgstr ""
+"Κατέβασμα χωρίς σύνδεση μεταφραστικής μνήμης για το έργο της μετάφρασης"
+
+#: apps/import_export/templates/browser/index.html:55
+msgid "Download offline TM"
+msgstr "Κατέβασμα χωρίς σύνδεση μεταφραστικής μνήμης"
+
+#: apps/import_export/utils.py:38
 #, python-format
 msgid "Unsupported filetype '%s', only PO files are supported at this time\n"
 msgstr ""
-"Μη υποστηριζόμενος τύπος αρχείου  '%s', υποστηρίζονται μόνο αρχεία PO αυτήν "
+"Μη υποστηριζόμενος τύπος αρχείου '%s', υποστηρίζονται μόνο αρχεία PO αυτήν "
 "τη φορά\n"
 
-#: apps/import_export/utils.py:35
+#: apps/import_export/utils.py:44
 #, python-format
 msgid "File '%s' missing X-Pootle-Path header\n"
 msgstr "Στο αρχείο '%s' λείπει η κεφαλίδα X-Pootle-Path\n"
 
-#: apps/import_export/utils.py:40
+#: apps/import_export/utils.py:49
 #, python-format
 msgid "File '%s' missing or invalid X-Pootle-Revision header\n"
 msgstr "Στο αρχείο '%s' λείπει ή είναι άκυρη η κεφαλίδα X-Pootle-Revision\n"
 
-#: apps/import_export/utils.py:48
+#: apps/import_export/utils.py:57
 #, python-format
 msgid "Could not create '%s'. Missing Project/Language? (%s)"
 msgstr "Αδύνατη η δημιουργία του '%s'. Λείπει το έργο/η γλώσσα; (%s)"
 
-#: apps/import_export/utils.py:65
+#: apps/import_export/utils.py:74
 msgid "There was an error uploading your file"
-msgstr "Υπήρξε ένα σφάλμα κατά τη μεταφόρτωση του αρχείου σας."
+msgstr "Υπήρξε ένα σφάλμα κατά το ανέβασμα του αρχείου σας."
 
-#: apps/pootle_app/forms.py:37
+#: apps/pootle_app/forms.py:39
 msgid "Language code does not follow the ISO convention"
 msgstr "Ο κωδικός γλώσσας δεν ακολουθεί τη σύμβαση ISO"
 
-#: apps/pootle_app/forms.py:45 apps/pootle_project/models.py:194
+#: apps/pootle_app/forms.py:54 apps/pootle_project/models.py:230
 msgid "Source Language"
 msgstr "Αρχική γλώσσα"
 
-#: apps/pootle_app/forms.py:94
+#: apps/pootle_app/forms.py:88
 #, python-format
-msgid "\"%s\" cannot be used as a project code"
-msgstr "Το \"%s\" δεν μπορεί να χρησιμοποιηθεί ως κώδικας έργου"
+msgid ""
+"You cannot remove a file type from a Project, if there are files of that "
+"file type ('%s')"
+msgstr ""
+"Δεν μπορείτε να αφαιρέσετε έναν τύπο αρχείου από ένα έργο, εάν υπάρχουν "
+"αρχεία αυτού του τύπου αρχείου ('%s')"
 
-#: apps/pootle_app/forms.py:101 custom/templates/profiles/_tabs.html:5
+#: apps/pootle_app/forms.py:108
 msgid "Password"
 msgstr "Κωδικός πρόσβασης"
 
-#: apps/pootle_app/forms.py:136 apps/pootle_profile/forms.py:27
+#: apps/pootle_app/forms.py:143 apps/pootle_profile/forms.py:28
 msgid "Please enter a valid LinkedIn user profile URL."
 msgstr "Παρακαλούμε, εισάγετε ένα έγκυρο URL της κατατομής χρήστη LinkedIn."
 
-#: apps/pootle_app/views/admin/dashboard.py:85
-msgid "Files"
-msgstr "Αρχεία"
-
-#: apps/pootle_app/views/admin/dashboard.py:86
-msgid "Active projects"
-msgstr "Ενεργά έργα"
-
-#: apps/pootle_app/views/admin/dashboard.py:87
-msgid "Active languages"
-msgstr "Ενεργές γλώσσες"
-
-#: apps/pootle_app/views/admin/dashboard.py:88
-msgid "Translated strings"
-msgstr "Μεταφρασμένες συμβολοσειρές"
-
-#: apps/pootle_app/views/admin/dashboard.py:89
-msgid "Translated words"
-msgstr "Μεταφρασμένες λέξεις"
-
-#: apps/pootle_app/views/admin/dashboard.py:90
-msgid "Active users"
-msgstr "Ενεργοί χρήστες"
-
 #. Translators: this refers to the status of the background job worker
-#: apps/pootle_app/views/admin/dashboard.py:111
+#: apps/pootle_app/views/admin/dashboard.py:58
 #, python-format
 msgid "Running (%d worker)"
 msgid_plural "Running (%d workers)"
-msgstr[0] "Εκτελείται (%d worker)"
-msgstr[1] "Εκτελείται  (%d workers)"
+msgstr[0] "Εκτελείται (%d εργασία)"
+msgstr[1] "Εκτελείται  (%d εργασίες)"
 
 #. Translators: this refers to the status of the background job worker
-#: apps/pootle_app/views/admin/dashboard.py:115
+#: apps/pootle_app/views/admin/dashboard.py:62
 msgid "Stopped"
 msgstr "Σταματημένο"
 
@@ -306,41 +307,406 @@ msgstr "Επιλέξτε ένα ή περισσότερα δικαιώματα"
 msgid "Revoke Permissions"
 msgstr "Ανάκληση δικαιωμάτων"
 
-#: apps/pootle_app/views/admin/util.py:125
+#: apps/pootle_app/views/admin/util.py:126
 msgid "No files in this project."
 msgstr "Δεν υπάρχουν αρχεία σε αυτό το έργο."
 
-#: apps/pootle_app/views/admin/util.py:159 apps/pootle_project/views.py:187
+#: apps/pootle_app/views/admin/util.py:160 apps/pootle_project/views.py:207
 msgid "There are errors in the form. Please review the problems below."
-msgstr "Υπάρχουν σφάλματα στη φόρμα. Παρακαλώ ελέγξτε τα παρακάτω προβλήματα."
+msgstr ""
+"Υπάρχουν σφάλματα στη φόρμα. Παρακαλούμε, επανεξετάστε τα παρακάτω "
+"προβλήματα."
 
-#: apps/pootle_language/models.py:67 apps/pootle_project/models.py:162
+#: apps/pootle_checks/constants.py:24 core/browser.py:47
+msgid "Critical"
+msgstr "Κρίσιμο"
+
+#: apps/pootle_checks/constants.py:25
+msgid "Cosmetic"
+msgstr "Κοσμητικό"
+
+#: apps/pootle_checks/constants.py:26
+msgid "Functional"
+msgstr "Λειτουργικό"
+
+#: apps/pootle_checks/constants.py:27
+msgid "Extraction"
+msgstr "Εξαγωγή"
+
+#: apps/pootle_checks/constants.py:28
+msgid "Other"
+msgstr "Άλλο"
+
+#: apps/pootle_checks/constants.py:31
+msgid "Accelerators"
+msgstr "Επιταχυντές"
+
+#: apps/pootle_checks/constants.py:32
+msgid "Acronyms"
+msgstr "Ακρώνυμα"
+
+#: apps/pootle_checks/constants.py:33
+msgid "Blank"
+msgstr "Κενό"
+
+#: apps/pootle_checks/constants.py:34
+msgid "Brackets"
+msgstr "Παρενθέσεις"
+
+#: apps/pootle_checks/constants.py:35
+msgid "Compendium conflict"
+msgstr "Σύγκρουση σύνοψης"
+
+#: apps/pootle_checks/constants.py:36
+msgid "Translator credits"
+msgstr "Μνείες μεταφραστή"
+
+#: apps/pootle_checks/constants.py:37
+msgid "Dialog sizes"
+msgstr "Μεγέθη διαλόγου"
+
+#: apps/pootle_checks/constants.py:38
+msgid "Double quotes"
+msgstr "Διπλά εισαγωγικά"
+
+#: apps/pootle_checks/constants.py:39
+msgid "Double spaces"
+msgstr "Διπλά κενά"
+
+#: apps/pootle_checks/constants.py:40
+msgid "Repeated word"
+msgstr "Επαναλαμβανόμενη λέξη"
+
+#: apps/pootle_checks/constants.py:41
+msgid "E-mail"
+msgstr "Ηλεκτρονική διεύθυνση"
+
+#: apps/pootle_checks/constants.py:42
+msgid "Ending punctuation"
+msgstr "Στίξη τέλους"
+
+#: apps/pootle_checks/constants.py:43
+msgid "Ending whitespace"
+msgstr "Κενό τέλους"
+
+#: apps/pootle_checks/constants.py:44
+msgid "Escapes"
+msgstr "Διαφυγές"
+
+#: apps/pootle_checks/constants.py:45
+msgid "File paths"
+msgstr "Διαδρομές αρχείου"
+
+#: apps/pootle_checks/constants.py:46
+msgid "Functions"
+msgstr "Λειτουργίες"
+
+#: apps/pootle_checks/constants.py:47
+msgid "GConf values"
+msgstr "Τιμές GConf"
+
+#: apps/pootle_checks/constants.py:48 core/utils/stats.py:29
+msgid "Fuzzy"
+msgstr "Ασαφές"
+
+#: apps/pootle_checks/constants.py:49
+msgid "Old KDE comment"
+msgstr "Παλιό σχόλιο KDE"
+
+#: apps/pootle_checks/constants.py:50
+msgid "Long"
+msgstr "Μακρύ"
+
+#: apps/pootle_checks/constants.py:51
+msgid "Must translate words"
+msgstr "Πρέπει να μεταφραστούν λέξεις"
+
+#: apps/pootle_checks/constants.py:52
+msgid "Newlines"
+msgstr "Νέες γραμμές"
+
+#: apps/pootle_checks/constants.py:53
+msgid "Number of plurals"
+msgstr "Αριθμός πληθυντικών"
+
+#: apps/pootle_checks/constants.py:54
+msgid "Don't translate words"
+msgstr "Μην μεταφράζετε λέξεις"
+
+#: apps/pootle_checks/constants.py:55
+msgid "Numbers"
+msgstr "Αριθμοί"
+
+#: apps/pootle_checks/constants.py:56
+msgid "Options"
+msgstr "Επιλογές"
+
+#: apps/pootle_checks/constants.py:57
+msgid "printf()"
+msgstr "printf()"
+
+#: apps/pootle_checks/constants.py:58
+msgid "Punctuation spacing"
+msgstr "Διάκενο στίξης"
+
+#: apps/pootle_checks/constants.py:59
+msgid "Pure punctuation"
+msgstr "Καθαρή στίξη"
+
+#: apps/pootle_checks/constants.py:60
+msgid "Python brace placeholders"
+msgstr "Άγκιστρα δεσμευτικών θέσης Python"
+
+#: apps/pootle_checks/constants.py:61
+msgid "Number of sentences"
+msgstr "Αριθμός προτάσεων"
+
+#: apps/pootle_checks/constants.py:62
+msgid "Short"
+msgstr "Μικρό"
+
+#: apps/pootle_checks/constants.py:63
+msgid "Simple capitalization"
+msgstr "Απλή κεφαλαιοποίηση"
+
+#: apps/pootle_checks/constants.py:64
+msgid "Simple plural(s)"
+msgstr "Απλοί πληθυντικοί"
+
+#: apps/pootle_checks/constants.py:65
+msgid "Single quotes"
+msgstr "Απλά εισαγωγικά"
+
+#: apps/pootle_checks/constants.py:66
+msgid "Starting capitalization"
+msgstr "Κεφαλαιοποίηση αρχής"
+
+#: apps/pootle_checks/constants.py:67
+msgid "Starting punctuation"
+msgstr "Στίξη αρχής"
+
+#: apps/pootle_checks/constants.py:68
+msgid "Starting whitespace"
+msgstr "Κενό αρχής"
+
+#. Translators: This refers to tabulation characters
+#: apps/pootle_checks/constants.py:70
+msgid "Tabs"
+msgstr "Στηλοθέτες"
+
+#: apps/pootle_checks/constants.py:71
+msgid "Unchanged"
+msgstr "Αμετάβλητο"
+
+#: apps/pootle_checks/constants.py:72 apps/pootle_store/constants.py:66
+#: core/utils/stats.py:30 templates/editor/_filters.html:9
+msgid "Untranslated"
+msgstr "Αμετάφραστα"
+
+#: apps/pootle_checks/constants.py:73
+msgid "URLs"
+msgstr "URLs"
+
+#: apps/pootle_checks/constants.py:74
+msgid "Valid characters"
+msgstr "Έγκυροι χαρακτήρες"
+
+#: apps/pootle_checks/constants.py:75
+msgid "Placeholders"
+msgstr "Δεσμευτικά θέσης"
+
+#: apps/pootle_checks/constants.py:76
+msgid "Valid XML"
+msgstr "Άκυρο XML"
+
+#: apps/pootle_checks/constants.py:77
+msgid "XML tags"
+msgstr "Ετικέτες XML"
+
+#: apps/pootle_checks/constants.py:80
+msgid "ftl format"
+msgstr "Μορφή ftl"
+
+#: apps/pootle_checks/constants.py:83
+msgid "Romanian: Avoid cedilla diacritics"
+msgstr "Ρουμανικά: Να αποφεύγονται τα διακριτικά υποδιαστολής"
+
+#: apps/pootle_checks/constants.py:84
+msgid "Romanian: Use \"niciun\"/\"nicio\""
+msgstr "Ρουμανικά: Χρήση \"niciun\"/\"nicio\""
+
+#: apps/pootle_format/abstracts.py:36
+msgid "Format name"
+msgstr "Μορφοποίηση ονόματος"
+
+#: apps/pootle_format/abstracts.py:41
+msgid "Format title"
+msgstr "Μορφοποίηση τίτλου"
+
+#: apps/pootle_format/abstracts.py:45
+msgid "Enabled"
+msgstr "Ενεργό"
+
+#: apps/pootle_format/abstracts.py:47
+msgid "Monolingual format"
+msgstr "Μονόγλωσση μορφή "
+
+#: apps/pootle_fs/forms.py:24
+msgid "GNU-style"
+msgstr "Τεχνοτροπία GNU"
+
+#: apps/pootle_fs/forms.py:26
+msgid "non GNU-style"
+msgstr "Τεχνοτροπία μη GNU"
+
+#: apps/pootle_fs/forms.py:29
+msgid "Django-style"
+msgstr "Τεχνοτροπία Ντζάνγκο"
+
+#: apps/pootle_fs/forms.py:31
+msgid "Custom"
+msgstr "Προσαρμοσμένο"
+
+#: apps/pootle_fs/forms.py:37
+msgid "Filesystem backend"
+msgstr "Παρασκήνιο συστήματος αρχείων"
+
+#: apps/pootle_fs/forms.py:38
+msgid "Select a filesystem backend"
+msgstr "Επιλέξτε παρασκήνιο συστήματος αρχείων"
+
+#: apps/pootle_fs/forms.py:43
+msgid "Backend URL or path"
+msgstr "URL ή διαδρομή παρασκηνίου"
+
+#: apps/pootle_fs/forms.py:45
+msgid "The URL or path to your translation files"
+msgstr "Το URL ή η διαδρομή προς τα αρχεία μετάφρασης"
+
+#: apps/pootle_fs/forms.py:47
+msgid "Translation mapping presets"
+msgstr "Προεπιλογές απεικόνισης μετάφρασης"
+
+#: apps/pootle_fs/forms.py:55
+msgid "Translation path mapping"
+msgstr "Αντιστοίχηση διαδρομής μετάφρασης"
+
+#: apps/pootle_fs/forms.py:56
+msgid ""
+"Translation path mapping that maps the localisation files on the filesystem "
+"to files on Pootle."
+msgstr ""
+"Η απεικόνιση διαδρομής μετάφρασης που χαρτογραφεί τα αρχεία τοπικοποίησης "
+"στο σύστημα αρχείων στα αρχεία στο Pootle."
+
+#: apps/pootle_fs/forms.py:182
+msgid "Filesystem language codes must be unique"
+msgstr "Οι κωδικοί της γλώσσας συστήματος αρχείων πρέπει να είναι μοναδικοί"
+
+#: apps/pootle_fs/forms.py:186
+msgid "Pootle language mappings must be unique"
+msgstr "Οι απεικονίσεις γλώσσας του Pootle πρέπει να είναι μοναδικές"
+
+#: apps/pootle_language/forms.py:27
+msgid "Member"
+msgstr "Μέλος"
+
+#: apps/pootle_language/forms.py:28
+msgid "Submitter"
+msgstr "Υποβάλλων"
+
+#: apps/pootle_language/forms.py:29 apps/pootle_profile/utils.py:98
+msgid "Reviewer"
+msgstr "Ελεγκτής"
+
+#: apps/pootle_language/forms.py:30
+msgid "Administrator"
+msgstr "Διαχειριστής"
+
+#: apps/pootle_language/forms.py:76
+msgid "Administrators"
+msgstr "Διαχειριστές"
+
+#: apps/pootle_language/forms.py:82
+msgid "Reviewers"
+msgstr "Ελεγκτές"
+
+#: apps/pootle_language/forms.py:87
+msgid "Submitters"
+msgstr "Υποβάλλοντες"
+
+#: apps/pootle_language/forms.py:92
+msgid "Members"
+msgstr "Μέλη"
+
+#: apps/pootle_language/forms.py:96
+msgid "New member"
+msgstr "Νέο μέλος"
+
+#: apps/pootle_language/forms.py:97
+msgid "Add a user to this team"
+msgstr "Προσθήκη χρήστη σε αυτήν την ομάδα"
+
+#: apps/pootle_language/forms.py:103
+msgid "Search for users to add"
+msgstr "Αναζήτηση για προσθήκη χρηστών"
+
+#: apps/pootle_language/forms.py:106
+msgid "Role"
+msgstr "Ρόλος"
+
+#: apps/pootle_language/forms.py:137
+msgid "Role is required when adding a new member"
+msgstr "Απαιτείται ρόλος κατά την προσθήκη νέου μέλους"
+
+#: apps/pootle_language/forms.py:163 core/forms.py:218
+msgid "Reject"
+msgstr "Απόρριψη"
+
+#: apps/pootle_language/forms.py:164 core/forms.py:219
+msgid "Accept"
+msgstr "Αποδοχή"
+
+#: apps/pootle_language/forms.py:166
+msgid "Filter by suggester"
+msgstr "Φίλτρο στις προτάσεις"
+
+#: apps/pootle_language/forms.py:172
+msgid "Filter by state"
+msgstr "Φίλτρο κατά κατάσταση"
+
+#: apps/pootle_language/forms.py:182 apps/pootle_language/views.py:218
+#: core/browser.py:26
+msgid "Project"
+msgstr "Έργο"
+
+#: apps/pootle_language/models.py:32 apps/pootle_project/models.py:201
 msgid "Code"
 msgstr "Κωδικός"
 
-#: apps/pootle_language/models.py:68
+#: apps/pootle_language/models.py:33
 msgid ""
 "ISO 639 language code for the language, possibly followed by an underscore "
 "(_) and an ISO 3166 country code. <a href=\"http://www.w3.org/International/"
 "articles/language-tags/\">More information</a>"
 msgstr ""
 "Ο κωδικός γλώσσας ISO 639 για τη γλώσσα, ακολουθούμενος πιθανώς από μια "
-"υπογράμμιση (_) και έναν κώδικα χώρας ISO 3166. <a href=\"http://www.w3.org/"
+"υπογράμμιση (_) και έναν κωδικό χώρας ISO 3166. <a href=\"http://www.w3.org/"
 "International/articles/language-tags/\">Περισσότερες πληροφορίες</a>"
 
-#: apps/pootle_language/models.py:77 templates/languages/_nav.html:31
+#: apps/pootle_language/models.py:42 templates/languages/_nav.html:35
 #: templates/languages/admin/characters.html:5
 #: templates/languages/admin/characters.html:9
 msgid "Special Characters"
 msgstr "Ειδικοί χαρακτήρες"
 
-#: apps/pootle_language/models.py:78
+#: apps/pootle_language/models.py:43
 msgid "Enter any special characters that users might find difficult to type"
 msgstr ""
 "Εισαγωγή οποιωνδήποτε ειδικών χαρακτήρων που οι χρήστες μπορεί να "
 "δυσκολευτούν να πληκτρολογήσουν"
 
-#: apps/pootle_language/models.py:82
+#: apps/pootle_language/models.py:47
 msgid ""
 "For more information, visit <a href=\"http://docs.translatehouse.org/"
 "projects/localization-guide/en/latest/l10n/pluralforms.html\">our page</a> "
@@ -350,398 +716,246 @@ msgstr ""
 "translatehouse.org/projects/localization-guide/en/latest/l10n/pluralforms."
 "html\">τη σελίδα μας</a> για μορφές πληθυντικών."
 
-#: apps/pootle_language/models.py:88
+#: apps/pootle_language/models.py:53
 msgid "Unknown"
 msgstr "Άγνωστο"
 
-#: apps/pootle_language/models.py:92
+#: apps/pootle_language/models.py:57
 msgid "Number of Plurals"
 msgstr "Αριθμός πληθυντικών"
 
-#: apps/pootle_language/models.py:95
+#: apps/pootle_language/models.py:60
 msgid "Plural Equation"
 msgstr "Εξίσωση πληθυντικού"
 
-#: apps/pootle_misc/checks.py:33 core/browser.py:54
-msgid "Critical"
-msgstr "Κρίσιμο"
-
-#: apps/pootle_misc/checks.py:34
-msgid "Cosmetic"
-msgstr "Κοσμητικό"
-
-#: apps/pootle_misc/checks.py:35
-msgid "Functional"
-msgstr "Λειτουργικό"
-
-#: apps/pootle_misc/checks.py:36
-msgid "Extraction"
-msgstr "Εξαγωγή"
-
-#: apps/pootle_misc/checks.py:37
-msgid "Other"
-msgstr "Άλλα"
-
-#: apps/pootle_misc/checks.py:41
-msgid "Accelerators"
-msgstr "Επιταχυντές"
-
-#: apps/pootle_misc/checks.py:42
-msgid "Acronyms"
-msgstr "Ακρώνυμα"
-
-#: apps/pootle_misc/checks.py:43
-msgid "Blank"
-msgstr "Κενό"
-
-#: apps/pootle_misc/checks.py:44
-msgid "Brackets"
-msgstr "Παρενθέσεις"
-
-#: apps/pootle_misc/checks.py:45
-msgid "Compendium conflict"
-msgstr "Σύγκρουση σύνοψης"
-
-#: apps/pootle_misc/checks.py:46
-msgid "Translator credits"
-msgstr "Μνείες μεταφραστή"
-
-#: apps/pootle_misc/checks.py:47
-msgid "Dialog sizes"
-msgstr "Μεγέθη διαλόγου"
-
-#: apps/pootle_misc/checks.py:48
-msgid "Double quotes"
-msgstr "Διπλά εισαγωγικά"
-
-#: apps/pootle_misc/checks.py:49
-msgid "Double spaces"
-msgstr "Διπλά κενά"
-
-#: apps/pootle_misc/checks.py:50
-msgid "Repeated word"
-msgstr "Επαναλαμβανόμενη λέξη"
-
-#: apps/pootle_misc/checks.py:51
-msgid "E-mail"
-msgstr "Ηλεκτρονική διεύθυνση"
-
-#: apps/pootle_misc/checks.py:52
-msgid "Ending punctuation"
-msgstr "Στίξη τέλους"
-
-#: apps/pootle_misc/checks.py:53
-msgid "Ending whitespace"
-msgstr "Κενό τέλους"
-
-#: apps/pootle_misc/checks.py:54
-msgid "Escapes"
-msgstr "Διαφυγές"
-
-#: apps/pootle_misc/checks.py:55
-msgid "File paths"
-msgstr "Διαδρομές αρχείου"
-
-#: apps/pootle_misc/checks.py:56
-msgid "Functions"
-msgstr "Λειτουργίες"
-
-#: apps/pootle_misc/checks.py:57
-msgid "GConf values"
-msgstr "Τιμές GConf"
-
-#: apps/pootle_misc/checks.py:58 core/utils/stats.py:25
-msgid "Fuzzy"
-msgstr "Ασαφές"
-
-#: apps/pootle_misc/checks.py:59
-msgid "Old KDE comment"
-msgstr "Παλιό σχόλιο KDE"
-
-#: apps/pootle_misc/checks.py:60
-msgid "Long"
-msgstr "Μακρύ"
-
-#: apps/pootle_misc/checks.py:61
-msgid "Must translate words"
-msgstr "Πρέπει να μεταφραστούν λέξεις"
-
-#: apps/pootle_misc/checks.py:62
-msgid "Newlines"
-msgstr "Νέες γραμμές"
-
-#: apps/pootle_misc/checks.py:63
-msgid "Number of plurals"
-msgstr "Αριθμός πληθυντικών"
-
-#: apps/pootle_misc/checks.py:64
-msgid "Don't translate words"
-msgstr "Μην μεταφράζετε λέξεις"
-
-#: apps/pootle_misc/checks.py:65
-msgid "Numbers"
-msgstr "Αριθμοί"
-
-#: apps/pootle_misc/checks.py:66
-msgid "Options"
-msgstr "Επιλογές"
-
-#: apps/pootle_misc/checks.py:67
-msgid "printf()"
-msgstr "printf()"
-
-#: apps/pootle_misc/checks.py:68
-msgid "Punctuation spacing"
-msgstr "Διάκενο στίξης"
-
-#: apps/pootle_misc/checks.py:69
-msgid "Pure punctuation"
-msgstr "Καθαρή στίξη"
-
-#: apps/pootle_misc/checks.py:70
-msgid "Python brace placeholders"
-msgstr "Άγκιστρα δεσμευτικών θέσης Python"
-
-#: apps/pootle_misc/checks.py:71
-msgid "Number of sentences"
-msgstr "Αριθμός προτάσεων"
-
-#: apps/pootle_misc/checks.py:72
-msgid "Short"
-msgstr "Σύντομο"
-
-#: apps/pootle_misc/checks.py:73
-msgid "Simple capitalization"
-msgstr "Απλή κεφαλαιοποίηση"
-
-#: apps/pootle_misc/checks.py:74
-msgid "Simple plural(s)"
-msgstr "Απλοί πληθυντικοί"
-
-#: apps/pootle_misc/checks.py:75
-msgid "Single quotes"
-msgstr "Απλά εισαγωγικά"
-
-#: apps/pootle_misc/checks.py:76
-msgid "Starting capitalization"
-msgstr "Κεφαλαιοποίηση αρχής"
-
-#: apps/pootle_misc/checks.py:77
-msgid "Starting punctuation"
-msgstr "Στίξη αρχής"
-
-#: apps/pootle_misc/checks.py:78
-msgid "Starting whitespace"
-msgstr "Κενό αρχής"
-
-#. Translators: This refers to tabulation characters
-#: apps/pootle_misc/checks.py:80
-msgid "Tabs"
-msgstr "Στηλοθέτες"
-
-#: apps/pootle_misc/checks.py:81
-msgid "Unchanged"
-msgstr "Αμετάβλητο"
-
-#: apps/pootle_misc/checks.py:82 apps/pootle_store/util.py:28
-#: core/helpers.py:48 core/utils/stats.py:26 templates/editor/_filters.html:9
-msgid "Untranslated"
-msgstr "Αμετάφραστα"
-
-#: apps/pootle_misc/checks.py:83
-msgid "URLs"
-msgstr "URLs"
-
-#: apps/pootle_misc/checks.py:84
-msgid "Valid characters"
-msgstr "Έγκυροι χαρακτήρες"
-
-#: apps/pootle_misc/checks.py:85
-msgid "Placeholders"
-msgstr "Δεσμευτικά θέσης"
-
-#: apps/pootle_misc/checks.py:86
-msgid "Valid XML"
-msgstr "Άκυρο XML"
-
-#: apps/pootle_misc/checks.py:87
-msgid "XML tags"
-msgstr "Ετικέτες XML"
-
-#: apps/pootle_misc/checks.py:89
-msgid "Broken HTML Entities"
-msgstr "Σπασμένες οντότητες HTML"
-
-#: apps/pootle_misc/checks.py:90
-msgid "Java format"
-msgstr "Μορφή Java"
-
-#: apps/pootle_misc/checks.py:91
-msgid "Template format"
-msgstr "Μορφή προτύπου"
-
-#: apps/pootle_misc/checks.py:92
-msgid "Mustache placeholders"
-msgstr "Δεσμευτικά θέσεις μουστάκια"
-
-#: apps/pootle_misc/checks.py:93
-msgid "Mustache placeholder pairs"
-msgstr "Ζευγάρια δεσμευτικών θέσης μουστάκια"
-
-#: apps/pootle_misc/checks.py:94
-msgid "Mustache like placeholder pairs"
-msgstr "Μουστάκια σαν ζευγάρια δεσμευτικών θέσης"
-
-#: apps/pootle_misc/checks.py:95
-msgid "C format placeholders"
-msgstr "Δεσμευτικά θέσης μορφής C"
-
-#: apps/pootle_misc/checks.py:96
-msgid "Non printable"
-msgstr "Μη εκτυπώσιμος"
-
-#: apps/pootle_misc/checks.py:97
-msgid "Unbalanced tag braces"
-msgstr "Μη εξισορροπημένα άγκιστρα ετικέτας"
-
-#: apps/pootle_misc/checks.py:98
-msgid "Changed attributes"
-msgstr "Αλλαγμένα γνωρίσματα"
-
-#: apps/pootle_misc/checks.py:99
-msgid "Unescaped ampersands"
-msgstr "Σύμβολα \"&\" χωρίς διαφυγή"
-
-#: apps/pootle_misc/checks.py:100
-msgid "Incorrectly escaped ampersands"
-msgstr "Λαθεμένα σύμβολα \"&\" με διαφυγή"
-
-#: apps/pootle_misc/checks.py:101
-msgid "Whitespaces"
-msgstr "Κενά διαστήματα"
-
-#: apps/pootle_misc/checks.py:102
-msgid "Date format"
-msgstr "Μορφή ημερομηνίας"
-
-#: apps/pootle_misc/checks.py:103
-msgid "Uppercase placeholders"
-msgstr "Κεφαλαία δεσμευτικά θέσης"
-
-#: apps/pootle_misc/checks.py:104
-msgid "Percent sign placeholders"
-msgstr "Δεσμευτικά θέσης συμβόλου ποσοστού"
-
-#: apps/pootle_misc/checks.py:106
-msgid "Percent sign closure placeholders"
-msgstr "Δεσμευτικά θέσεις κλεισίματος συμβόλου ποσοστού"
-
-#: apps/pootle_misc/checks.py:107
-msgid "$ placeholders"
-msgstr "$ δεσμευτικά θέσης"
-
-#: apps/pootle_misc/checks.py:108
-msgid "$ closure placeholders"
-msgstr "$ δεσμευτικά θέσης κλεισίματος"
-
-#: apps/pootle_misc/checks.py:109
-msgid "Java-encoded unicode"
-msgstr "unicode κωδικοποιημένο Java"
-
-#: apps/pootle_misc/checks.py:110
-msgid "Objective-C format"
-msgstr "Μορφή Objective-C"
-
-#: apps/pootle_misc/checks.py:111
-msgid "Android format"
-msgstr "Μορφή Android"
-
-#: apps/pootle_misc/checks.py:112
-msgid "Tags differ"
-msgstr "Διαφορά ετικετών"
-
-#: apps/pootle_misc/checks.py:113
-msgid "Curly braces"
-msgstr "Άγκιστρα"
-
-#: apps/pootle_misc/checks.py:114
-msgid "Potential unwanted placeholders"
-msgstr "Δυνητικά ανεπιθύμητα δεσμευτικά θέσεων"
-
-#: apps/pootle_misc/checks.py:115
-msgid "Double quotes in tags"
-msgstr "Διπλά εισαγωγικά σε ετικέτες"
-
-#: apps/pootle_misc/checks.py:116
-msgid "Percent brace placeholders"
-msgstr "Δεσμευτικά θέσης αγκίστρου ποσοστού"
-
-#: apps/pootle_misc/checks.py:117
-#, fuzzy
-msgid "Plurr format"
-msgstr "Μορφή Android"
-
-#. Translators: This is the name of a filter
-#: apps/pootle_misc/forms.py:90 core/helpers.py:52
+#: apps/pootle_language/views.py:212
+msgid "Unit"
+msgstr "Μονάδα"
+
+#: apps/pootle_language/views.py:213 apps/pootle_statistics/models.py:58
+msgid "State"
+msgstr "Κατάσταση"
+
+#: apps/pootle_language/views.py:214 apps/pootle_statistics/models.py:56
+msgid "Source"
+msgstr "Πηγή"
+
+#: apps/pootle_language/views.py:215
+msgid "Suggestion"
+msgstr "Πρόταση"
+
+#: apps/pootle_language/views.py:216
+msgid "Suggested by"
+msgstr "Προτάθηκε από"
+
+#: apps/pootle_language/views.py:217
+msgid "Suggested at"
+msgstr "Προτάθηκε στο"
+
+#: apps/pootle_language/views.py:239
+#, python-format
+msgid "Rejected %s suggestion with comment. User will be notified"
+msgid_plural "Rejected %s suggestions with comment. Users will be notified"
+msgstr[0] "Απόρριψη της %s πρότασης με σχόλιο. Ο χρήστης θα ενημερωθεί."
+msgstr[1] "Απόρριψη των %s προτάσεων με σχόλιο. Οι χρήστες θα ενημερωθούν."
+
+#: apps/pootle_language/views.py:244
+#, python-format
+msgid "Accepted %s suggestion with comment. User will be notified"
+msgid_plural "Accepted %s suggestions with comment. Users will be notified"
+msgstr[0] "Αποδοχή της %s πρότασης με σχόλιο. Ο χρήστης θα ενημερωθεί."
+msgstr[1] "Αποδοχή των %s προτάσεων με σχόλιο. Οι χρήστες θα ενημερωθούν."
+
+#: apps/pootle_language/views.py:249
+#, python-format
+msgid "Rejected %s suggestion"
+msgid_plural "Rejected %s suggestions"
+msgstr[0] "Απόρριψη της %s πρότασης"
+msgstr[1] "Απόρριψη των %s προτάσεων"
+
+#: apps/pootle_language/views.py:254
+#, python-format
+msgid "Accepted %s suggestion"
+msgid_plural "Accepted %s suggestions"
+msgstr[0] "Αποδοχή  της %s πρότασης"
+msgstr[1] "Αποδοχή  των %s προτάσεων"
+
+#: apps/pootle_misc/forms.py:102
 msgid "Search"
 msgstr "Αναζήτηση"
 
-#: apps/pootle_misc/forms.py:91
+#: apps/pootle_misc/forms.py:103
 msgid "Search (Ctrl+Shift+S)<br/>Type and press Enter to search"
 msgstr ""
 "Αναζήτηση (Ctrl+Shift+S)<br/>Πληκτρολογήστε και έπειτα πατήστε εισαγωγή για "
 "αναζήτηση"
 
-#: apps/pootle_misc/forms.py:99 apps/pootle_store/forms.py:476
-msgid "Exact Match"
-msgstr "Ακριβής συμφωνία"
+#: apps/pootle_misc/forms.py:111 apps/pootle_store/forms.py:369
+msgid "Phrase match"
+msgstr ""
 
-#: apps/pootle_misc/forms.py:106 apps/pootle_store/forms.py:482
+#: apps/pootle_misc/forms.py:112 apps/pootle_store/forms.py:370
+msgid "Case-sensitive match"
+msgstr ""
+
+#: apps/pootle_misc/forms.py:117 apps/pootle_store/forms.py:376
 msgid "Source Text"
 msgstr "Αρχικό κείμενο"
 
-#: apps/pootle_misc/forms.py:107 apps/pootle_store/forms.py:483
+#: apps/pootle_misc/forms.py:118 apps/pootle_store/forms.py:377
 msgid "Target Text"
 msgstr "Τελικό κείμενο"
 
-#: apps/pootle_misc/forms.py:108 apps/pootle_store/forms.py:484
+#: apps/pootle_misc/forms.py:119 apps/pootle_store/forms.py:378
 msgid "Comments"
 msgstr "Σχόλια"
 
-#: apps/pootle_misc/forms.py:109 apps/pootle_store/forms.py:485
+#: apps/pootle_misc/forms.py:120 apps/pootle_store/forms.py:379
 msgid "Locations"
 msgstr "Τοποθεσίες"
 
-#: apps/pootle_misc/templatetags/render_pager.py:22
+#: apps/pootle_misc/templatetags/common_tags.py:53
+#, python-brace-format
+msgid "{percentage} untranslated"
+msgstr "{percentage} αμετάφραστο"
+
+#: apps/pootle_misc/templatetags/common_tags.py:55
+#, python-brace-format
+msgid "{percentage} needs work"
+msgstr "{percentage} χρειάζεται δουλειά"
+
+#: apps/pootle_misc/templatetags/common_tags.py:57
+#, python-brace-format
+msgid "{percentage} translated"
+msgstr "{percentage} μεταφράστηκε"
+
+#: apps/pootle_misc/templatetags/render_pager.py:23
 msgid "First"
 msgstr "Πρώτο"
 
-#: apps/pootle_misc/templatetags/render_pager.py:24
+#: apps/pootle_misc/templatetags/render_pager.py:25
 msgid "Previous"
 msgstr "Προηγούμενο"
 
-#: apps/pootle_misc/templatetags/render_pager.py:41
+#: apps/pootle_misc/templatetags/render_pager.py:42
 msgid "Next"
 msgstr "Επόμενο"
 
-#: apps/pootle_misc/templatetags/render_pager.py:43
+#: apps/pootle_misc/templatetags/render_pager.py:44
 #, python-format
 msgid "Last (%d)"
 msgstr "Τελευταίο (%d)"
 
-#: apps/pootle_misc/templatetags/search.py:26
+#: apps/pootle_misc/templatetags/search.py:28
 msgid "Search unavailable"
-msgstr ""
+msgstr "Μη διαθέσιμη αναζήτηση"
 
-#: apps/pootle_profile/views.py:54
+#: apps/pootle_profile/templatetags/profile_tags.py:35
+#, python-format
+msgid "My current score at %s is %s"
+msgstr "Η τρέχουσα βαθμολογία μου στο %s είναι %s "
+
+#: apps/pootle_profile/templatetags/profile_tags.py:38
+#: apps/pootle_profile/templatetags/profile_tags.py:63
+msgid "Tweet this!"
+msgstr "Στείλτε το στο Tweet αυτό!"
+
+#: apps/pootle_profile/templatetags/profile_tags.py:52
+#, python-format
+msgid "#%s contributor in %s in the last 30 days"
+msgstr "Ο  #%s συντελεστής στο %s τις τελευταίες 30 ημέρες"
+
+#: apps/pootle_profile/templatetags/profile_tags.py:56
+#, python-format
+msgid "I am #%s contributor in %s in the last 30 days at %s!"
+msgstr "Είμαι ο συντελεστής #%s στο %s τις τελευταίες 30 ημέρες στο %s!"
+
+#: apps/pootle_profile/templatetags/profile_tags.py:65
+msgid "No contributions in the last 30 days"
+msgstr "Χωρίς συνεισφορά τις τελευταίες 30 ημέρες"
+
+#: apps/pootle_profile/templatetags/profile_tags.py:76
+msgid "My Website"
+msgstr "Ο ιστότοπός μου"
+
+#: apps/pootle_profile/templatetags/profile_tags.py:86
+msgid "My LinkedIn Profile"
+msgstr "Η κατατομή μου LinkedIn"
+
+#: apps/pootle_profile/templatetags/profile_tags.py:95
+msgid "Site administrator"
+msgstr "Διαχειριστής ιστοτόπου"
+
+#: apps/pootle_profile/templatetags/profile_tags.py:101
+#, python-format
+msgid "%s's language teams"
+msgstr "Ομάδες γλώσσας του %s"
+
+#: apps/pootle_profile/templatetags/profile_tags.py:104
+#, python-format
+msgid "%s is not a member of any language teams"
+msgstr "Ο %s δεν είναι μέλος οποιασδήποτε ομάδας γλώσσας"
+
+#: apps/pootle_profile/templatetags/profile_tags.py:121
+msgid ""
+"Some translations are provided by anonymous volunteers. These are registered "
+"under this special meta-account."
+msgstr ""
+"Μερικές μεταφράσεις παρέχονται από ανώνυμους εθελοντές. Αυτές καταχωρίζονται "
+"κάτω από αυτόν τον ειδικό μεταλογαριασμό."
+
+#: apps/pootle_profile/templatetags/profile_tags.py:125
+msgid ""
+"Some translations are imported from external files. These are registered "
+"under this special meta-account."
+msgstr ""
+"Κάποιες μεταφράσεις εισάγονται από εξωτερικά αρχεία. Αυτές καταχωρίζονται "
+"κάτω από αυτόν τον ειδικό μεταλογαριασμό."
+
+#: apps/pootle_profile/templatetags/profile_tags.py:135
+msgid ""
+"Show others who you are, tell about yourself<br/>and make your public "
+"profile look gorgeous!"
+msgstr ""
+"Εμφανίστε στους άλλους ποιος είσαστε, πείτε για σας<br/>και κάντε τη δημόσια "
+"κατατομή σας να φαίνεται εξαίσια!"
+
+#: apps/pootle_profile/templatetags/profile_tags.py:138
+msgid "You can set or change your avatar image at www.gravatar.com"
+msgstr "Μπορείτε να ορίσετε ή να αλλάξετε την εικόνα σας στο www.gravatar.com"
+
+#: apps/pootle_profile/utils.py:50
+msgid "Anonymous User"
+msgstr "Ανώνυμος χρήστης"
+
+#: apps/pootle_profile/utils.py:96 templates/layout.html:134
+msgid "Admin"
+msgstr "Διαχειριστής"
+
+#: apps/pootle_profile/utils.py:100
+msgid "Translator"
+msgstr "Μεταφραστής"
+
+#: apps/pootle_profile/views.py:61
 msgid "Select one or more languages"
 msgstr "Επιλέξτε μία ή περισσότερες γλώσσες"
 
-#: apps/pootle_project/forms.py:65 core/browser.py:31
+#: apps/pootle_project/forms.py:58 core/browser.py:31
 msgid "Language"
 msgstr "Γλώσσα"
 
-#: apps/pootle_project/models.py:156
+#: apps/pootle_project/models.py:179
+#, python-format
+msgid "\"%(code)s\" cannot be used as a project code"
+msgstr "Το \"%(code)s\" δεν μπορεί να χρησιμοποιηθεί ως κωδικός έργου"
+
+#. Translators: this refers to the project quality checker
+#: apps/pootle_project/models.py:188
+#, python-format
+msgid "\"%(code)s\" cannot be used as a project checker"
+msgstr "Ο \"%(code)s\" δεν μπορεί να χρησιμοποιηθεί ως ελεγκτής έργου"
+
+#: apps/pootle_project/models.py:195
 msgid ""
 "A short code for the project. This should only contain ASCII characters, "
 "numbers, and the underscore (_) character."
@@ -749,79 +963,98 @@ msgstr ""
 "Ένας σύντομος κώδικας για το έργο. Αυτός πρέπει να περιέχει μόνο χαρακτήρες "
 "ASCII, αριθμούς και τον χαρακτήρα υπογράμμισης (_)."
 
-#: apps/pootle_project/models.py:177
+#: apps/pootle_project/models.py:213
 msgid "Quality Checks"
 msgstr "Έλεγχοι ποιότητας"
 
-#: apps/pootle_project/models.py:180
-msgid "File Type"
-msgstr "Τύπος αρχείου"
+#: apps/pootle_project/models.py:219
+msgid "Automatic detection of GNU/non-GNU file layouts (slower)"
+msgstr "Αυτόματη ανίχνευση των διατάξεων αρχείων GNU/μη-GNU (πιο αργό)"
 
-#: apps/pootle_project/models.py:184
-msgid "Automatic detection (slower)"
-msgstr "Αυτόματη ανίχνευση (πιο αργό)"
-
-#: apps/pootle_project/models.py:185
+#: apps/pootle_project/models.py:220
 msgid "GNU style: files named by language code"
 msgstr "Τεχνοτροπία GNU: τα αρχεία ονομάζονται σύμφωνα με τον κωδικό γλώσσας"
 
-#: apps/pootle_project/models.py:186
+#: apps/pootle_project/models.py:221
 msgid "Non-GNU: Each language in its own directory"
 msgstr "Μη GNU: Κάθε γλώσσα στον δικό της κατάλογο"
 
-#: apps/pootle_project/models.py:190
+#: apps/pootle_project/models.py:222
+msgid "Allow Pootle FS to manage filesystems (Experimental)"
+msgstr ""
+"Να επιτρέπεται στο Pootle FS να διαχειρίζεται τα συστήματα αρχείων "
+"(πειραματικό)"
+
+#: apps/pootle_project/models.py:226
 msgid "Project Tree Style"
 msgstr "Τεχνοτροπία δένδρου έργου"
 
-#: apps/pootle_project/models.py:198
+#: apps/pootle_project/models.py:234
 msgid "Ignore Files"
 msgstr "Παράβλεψη αρχείων"
 
-#: apps/pootle_project/models.py:203
+#: apps/pootle_project/models.py:240
 msgid "Errors Report Email"
 msgstr "Μήνυμα αναφοράς σφαλμάτων"
 
-#: apps/pootle_project/models.py:204
+#: apps/pootle_project/models.py:241
 msgid "An email address where issues with the source text can be reported."
 msgstr ""
 "Μια διεύθυνση αλληλογραφίας όπου θέματα με το πηγαίο κείμενο μπορούν να "
 "αναφερθούν."
 
-#: apps/pootle_project/models.py:208
+#. Translators: This is the URL prefix to search for context screenshots
+#: apps/pootle_project/models.py:246
 msgid "Screenshot Search Prefix"
 msgstr "Πρόθεμα αναζήτησης στιγμιοτύπου"
 
-#: apps/pootle_project/models.py:213
+#: apps/pootle_project/models.py:251
 msgid "Disabled"
 msgstr "Ανενεργό"
 
-#: apps/pootle_project/views.py:274
-#, fuzzy, python-format
+#: apps/pootle_project/views.py:297
+#, python-format
 msgid ""
-"Translation project (%s) has been created. We are now updating its stores "
+"Translation project (%s) has been created. We are now updating its files "
 "from file templates."
-msgstr "Το έργο της μετάφρασης έχει ενημερωθεί με τα τελευταία πρότυπα."
+msgstr ""
+"Το έργο της μετάφρασης (%s) έχει δημιουργηθεί. Ενημερώνουμε τώρα τα αρχεία "
+"του από τα πρότυπα αρχεία."
 
-#: apps/pootle_project/views.py:281
-#, fuzzy, python-format
+#: apps/pootle_project/views.py:304
+#, python-format
 msgid "Translation project (%s) has been deleted"
-msgstr "Τα αρχεία έργου μετάφρασης έχουν ξανασαρωθεί."
+msgstr "Το έργο μετάφρασης (%s) έχει διαγραφεί"
 
-#: apps/pootle_statistics/models.py:64 templates/editor/export_view.html:105
-msgid "Source"
-msgstr "Πηγή"
-
-#: apps/pootle_statistics/models.py:65
+#: apps/pootle_statistics/models.py:57
 msgid "Target"
 msgstr "Στόχος"
 
-#: apps/pootle_statistics/models.py:66
-msgid "State"
-msgstr "Κατάσταση"
-
-#: apps/pootle_statistics/models.py:67
+#: apps/pootle_statistics/models.py:59
 msgid "Comment"
 msgstr "Σχόλιο"
+
+#: apps/pootle_statistics/models.py:60
+msgid "Check"
+msgstr "Έλεγχος"
+
+#: apps/pootle_store/abstracts.py:221 apps/pootle_store/abstracts.py:228
+msgid "Path"
+msgstr "Διαδρομή"
+
+#: apps/pootle_store/constants.py:65
+msgid "Obsolete"
+msgstr "Πεπαλαιωμένο"
+
+#: apps/pootle_store/constants.py:67 apps/pootle_store/forms.py:189
+#: apps/pootle_store/forms.py:597 templates/editor/_filters.html:10
+msgid "Needs work"
+msgstr "Χρειάζεται δουλειά"
+
+#: apps/pootle_store/constants.py:68 core/utils/stats.py:28
+#: templates/editor/_filters.html:7
+msgid "Translated"
+msgstr "Μεταφρασμένα"
 
 #: apps/pootle_store/decorators.py:25
 msgid "Insufficient rights to access this directory."
@@ -835,231 +1068,142 @@ msgstr "Ανεπαρκή δικαιώματα για πρόσβαση στην �
 msgid "Insufficient rights to access translation mode."
 msgstr "Ανεπαρκή δικαιώματα για πρόσβαση στην κατάσταση μετάφρασης."
 
-#: apps/pootle_store/decorators.py:30 apps/pootle_store/views.py:647
+#: apps/pootle_store/decorators.py:30
 msgid "Insufficient rights to access review mode."
 msgstr "Ανεπαρκή δικαιώματα για πρόσβαση κατάστασης ελέγχου."
 
-#: apps/pootle_store/filetypes.py:19
-msgid "Gettext PO"
-msgstr "Gettext PO"
-
-#: apps/pootle_store/filetypes.py:23
-msgid "XLIFF (.xlf)"
-msgstr "XLIFF (.xlf)"
-
-#: apps/pootle_store/filetypes.py:24
-msgid "XLIFF (.xliff)"
-msgstr "XLIFF (.xliff)"
-
-#: apps/pootle_store/filetypes.py:30
-msgid "Qt ts"
-msgstr "Qt ts"
-
-#: apps/pootle_store/filetypes.py:36
-msgid "TMX"
-msgstr "TMX"
-
-#: apps/pootle_store/filetypes.py:42
-msgid "TBX"
-msgstr "TBX"
-
-#: apps/pootle_store/filetypes.py:48
-msgid "Haiku catkeys"
-msgstr "Haiku catkeys"
-
-#: apps/pootle_store/filetypes.py:55
-msgid "Excel CSV"
-msgstr "Excel CSV"
-
-#: apps/pootle_store/filetypes.py:61
-msgid "Mozilla .lang"
-msgstr "Mozilla .lang"
-
-#: apps/pootle_store/forms.py:132
-#: apps/pootle_store/templatetags/store_tags.py:165
-#: apps/pootle_store/templatetags/store_tags.py:182
-#: apps/pootle_store/templatetags/store_tags.py:189
-#: apps/pootle_store/templatetags/store_tags.py:211
+#: apps/pootle_store/forms.py:101
+#: apps/pootle_store/templatetags/store_tags.py:46
+#: apps/pootle_store/templatetags/store_tags.py:63
+#: apps/pootle_store/templatetags/store_tags.py:70
 #, python-format
 msgid "Plural Form %d"
 msgstr "Πληθυντικός τύπος %d"
 
-#: apps/pootle_store/forms.py:254 apps/pootle_store/util.py:29
-#: core/helpers.py:49 templates/editor/_filters.html:10
-msgid "Needs work"
-msgstr "Χρειάζεται δουλειά"
-
-#: apps/pootle_store/forms.py:301
-msgid "Value of `similarity` should be in in the [0..1] range"
-msgstr "Η τιμή `similarity (ομοιότητα)` πρέπει να είναι στην περιοχή [0..1]"
-
-#: apps/pootle_store/forms.py:311
-msgid "Value of `mt_similarity` should be in in the [0..1] range"
-msgstr "Η τιμή `mt_similarity` πρέπει να είναι στην περιοχή [0..1]"
-
-#: apps/pootle_store/forms.py:328
+#: apps/pootle_store/forms.py:247
 msgid "Needs work flag must be cleared"
 msgstr "Πρέπει να καθαριστεί η σημαία ασαφούς"
 
-#: apps/pootle_store/forms.py:389
+#: apps/pootle_store/forms.py:302
 msgid "Translator comment"
 msgstr "Σχόλιο μεταφραστή"
 
-#: apps/pootle_store/models.py:149
-msgid "Pending"
-msgstr "Εκκρεμές"
+#: apps/pootle_store/forms.py:483
+#, python-format
+msgid "Suggestion '%s' has already been accepted or rejected."
+msgstr "Η πρόταση '%s' έχει ήδη γίνει αποδεκτή ή έχει απορριφθεί."
 
-#: apps/pootle_store/models.py:150
-msgid "Accepted"
-msgstr "Αποδεκτό"
+#: apps/pootle_store/forms.py:501 core/decorators.py:146
+#: core/views/decorators.py:70
+msgid "Insufficient rights to access this page."
+msgstr "Ανεπαρκή δικαιώματα για πρόσβαση σε αυτήν τη σελίδα."
 
-#: apps/pootle_store/models.py:151
-msgid "Rejected"
-msgstr "Απορριπτέο"
+#: apps/pootle_store/forms.py:571
+#, fuzzy, python-format
+msgid "Suggestion '%s' already exists."
+msgstr "Η πρόταση '%s' έχει ήδη γίνει αποδεκτή ή έχει απορριφθεί."
 
-#: apps/pootle_store/models.py:1346
-msgid "Path"
-msgstr "Διαδρομή"
+#: apps/pootle_store/forms.py:577
+#, python-format
+msgid "Suggestion '%s' equals to current unit target value."
+msgstr ""
 
-#: apps/pootle_store/templatetags/store_tags.py:156
-#: apps/pootle_store/templatetags/store_tags.py:160
+#: apps/pootle_store/templatetags/store_tags.py:37
+#: apps/pootle_store/templatetags/store_tags.py:41
 msgid "Singular"
 msgstr "Ενικός"
 
-#: apps/pootle_store/templatetags/store_tags.py:157
-#: apps/pootle_store/templatetags/store_tags.py:161
+#: apps/pootle_store/templatetags/store_tags.py:38
+#: apps/pootle_store/templatetags/store_tags.py:42
 msgid "Plural"
 msgstr "Πληθυντικός"
 
-#: apps/pootle_store/unit/timeline.py:80
-#, fuzzy, python-format
-msgid "Accepted suggestion from %(author)s"
-msgstr "Αποδοχή της πρότασης από τον %s"
-
-#: apps/pootle_store/unit/timeline.py:81
-#, fuzzy, python-format
-msgid "Rejected suggestion from %(author)s"
-msgstr "Απορριφθείσα πρόταση από %s"
-
-#: apps/pootle_store/unit/timeline.py:89
-#, fuzzy, python-format
-msgid "Accepted suggestion from %(author)s with comment: %(comment)s"
-msgstr "αποδεκτή η πρόταση για το %(source_string)s"
-
-#: apps/pootle_store/unit/timeline.py:94
-#, fuzzy, python-format
-msgid "Rejected suggestion from %(author)s with comment: %(comment)s"
-msgstr "απόρριψη πρότασης για το %(source_string)s"
-
-#: apps/pootle_store/unit/timeline.py:100
+#: apps/pootle_store/unit/timeline.py:74
 msgid "Added suggestion"
 msgstr "Προσθήκη της πρότασης"
 
-#: apps/pootle_store/util.py:27
-msgid "Obsolete"
-msgstr "Πεπαλαιωμένο"
+#: apps/pootle_store/unit/timeline.py:86
+#, python-format
+msgid "Accepted suggestion from %(author)s"
+msgstr "Αποδοχή της πρότασης από τον %(author)s"
 
-#: apps/pootle_store/util.py:30 core/helpers.py:47 core/utils/stats.py:24
-#: templates/editor/_filters.html:7
-msgid "Translated"
-msgstr "Μεταφρασμένα"
+#: apps/pootle_store/unit/timeline.py:94
+#, python-format
+msgid "Accepted suggestion from %(author)s with comment: %(comment)s"
+msgstr "Αποδεκτή η πρόταση από τον %(author)s με σχόλιο: %(comment)s"
 
-#: apps/pootle_store/views.py:203
+#: apps/pootle_store/unit/timeline.py:115
+#, python-format
+msgid "Rejected suggestion from %(author)s"
+msgstr "Απόρριψη της πρότασης του %(author)s"
+
+#: apps/pootle_store/unit/timeline.py:123
+#, python-format
+msgid "Rejected suggestion from %(author)s with comment: %(comment)s"
+msgstr "Απόρριψη πρότασης από τον %(author)s με σχόλιο: %(comment)s"
+
+#: apps/pootle_store/unit/timeline.py:157
+msgid "Unit created"
+msgstr "Δημιουργήθηκε μονάδα"
+
+#: apps/pootle_store/unit/timeline.py:188
+msgid "Comment:"
+msgstr "Σχόλιο:"
+
+#: apps/pootle_store/unit/timeline.py:191
+msgid "Removed comment"
+msgstr "Αφαιρέθηκε το σχόλιο"
+
+#: apps/pootle_store/unit/timeline.py:216
+#, python-format
+msgid "Muted %(check_name)s check"
+msgstr "Έλεγχος σίγασης των %(check_name)s"
+
+#: apps/pootle_store/unit/timeline.py:225
+#, python-format
+msgid "Unmuted %(check_name)s check"
+msgstr "Ο έλεγχος %(check_name)s επανεργοποιήθηκε"
+
+#: apps/pootle_store/utils.py:137
+msgid "Suggestion accepted with comment"
+msgstr "Αποδεκτές προτάσεις με σχόλιο"
+
+#: apps/pootle_store/utils.py:139
+msgid "Suggestion rejected with comment"
+msgstr "Απόρριψη πρότασης με σχόλιο"
+
+#: apps/pootle_store/views.py:180 apps/virtualfolder/views.py:105
 msgid "Path too long."
-msgstr ""
+msgstr "Υπερβολικά μεγάλη διαδρομή."
 
-#: apps/pootle_store/views.py:205 core/decorators.py:44
+#: apps/pootle_store/views.py:182 apps/virtualfolder/views.py:107
+#: core/decorators.py:47
 msgid "Arguments missing."
 msgstr "Λείπουν ορίσματα."
 
-#: apps/pootle_store/views.py:260
+#: apps/pootle_store/views.py:237
 msgid "Failed to remove comment."
 msgstr "Αποτυχία στην απομάκρυνση σχολίου."
 
-#: apps/pootle_store/views.py:295
+#: apps/pootle_store/views.py:269
 msgid "Comment submission failed."
 msgstr "Αποτυχία υποβολής σχολίου."
-
-#: apps/pootle_store/views.py:576
-msgid "Failed to process submission."
-msgstr "Αποτυχία διαδικασίας υποβολής."
-
-#: apps/pootle_store/views.py:617
-msgid "Failed to process suggestion."
-msgstr "Αποτυχία διαδικασίας πρότασης."
 
 #: apps/pootle_terminology/forms.py:47
 msgid "This term already exists in this file."
 msgstr "Αυτός ο όρος υπάρχει ήδη σε αυτό το αρχείο."
 
-#: apps/pootle_translationproject/receivers.py:36
-#, fuzzy, python-format
-msgid "Translation project (%s) created"
-msgstr "Η κύρια σελίδα έργου μετάφρασης"
-
-#: apps/pootle_translationproject/receivers.py:47
-#, fuzzy, python-format
-msgid "Translation project (%s) creation failed"
-msgstr "Η κύρια σελίδα έργου μετάφρασης"
-
-#: apps/reports/forms.py:26
-msgid "Translation Rate"
-msgstr "Βαθμός μετάφρασης"
-
-#: apps/reports/forms.py:41
-msgid "Effective from"
-msgstr "Ενεργό από"
-
-#: apps/reports/models.py:31 apps/reports/models.py:55
-#: templates/editor/export_view.html:106
-#: templates/translation_projects/terminology/manage.html:35
-#: templates/user/settings.html:28
-msgid "Translation"
-msgstr "Μετάφραση"
-
-#: apps/reports/models.py:32 apps/reports/models.py:56
-#: templates/admin/detailed_reports.html:232
-msgid "Review"
-msgstr "Επισκόπηση"
-
-#: apps/reports/models.py:33
-msgid "Suggestion"
-msgstr "Πρόταση"
-
-#: apps/reports/models.py:57
-msgid "Hourly Work"
-msgstr "Εργασία ανά ώρα"
-
-#: apps/reports/models.py:58
-msgid "Correction"
-msgstr "Διόρθωση"
-
-#: apps/reports/models.py:62
-msgid "Type"
-msgstr "Τύπος"
-
-#: apps/reports/models.py:64
-msgid "Amount"
-msgstr "Ποσότητα"
-
-#: apps/reports/models.py:66
-msgid "Date"
-msgstr "Ημερομηνία"
-
-#: apps/reports/models.py:67 apps/virtualfolder/models.py:61
-msgid "Description"
-msgstr "Περιγραφή"
-
-#: apps/reports/views.py:314
+#: apps/pootle_translationproject/receivers.py:38
 #, python-format
-msgid "User %s not found"
-msgstr "Δε βρέθηκε ο χρήστης %s"
+msgid "Translation project (%s) created"
+msgstr "Το έργο μετάφρασης (%s) δημιουργήθηκε"
 
-#: apps/reports/views.py:391
-msgid "Invalid request method"
-msgstr "Άκυρη μέθοδος ερωτήματος"
+#: apps/pootle_translationproject/receivers.py:52
+#, python-format
+msgid "Translation project (%s) creation failed"
+msgstr "Η δημιουργία του έργου μετάφρασης (%s) απέτυχε"
 
-#: apps/staticpages/forms.py:58
+#: apps/staticpages/forms.py:59
 #, python-format
 msgid ""
 "I have read and accept: <a href=\"%(url)s\" class=\"%(classes)s\">%(title)s</"
@@ -1068,45 +1212,42 @@ msgstr ""
 "Διάβασα και αποδέχτηκα: <a href=\"%(url)s\" class=\"%(classes)s\">%(title)s</"
 "a>"
 
-#: apps/staticpages/models.py:33
+#: apps/staticpages/models.py:32
 msgid "Whether this page is active or not."
 msgstr "Εάν αυτή η σελίδα είναι ενεργή ή όχι."
 
-#: apps/staticpages/models.py:36 templates/admin/staticpages/_table.html:7
+#: apps/staticpages/models.py:35 templates/admin/staticpages/_table.html:7
 msgid "Virtual Path"
 msgstr "Εικονική διαδρομή"
 
-#: apps/staticpages/models.py:43
+#: apps/staticpages/models.py:42 apps/virtualfolder/models.py:32
 msgid "Title"
 msgstr "Τίτλος"
 
 #. Translators: Content that will be used to display this static page
-#: apps/staticpages/models.py:46
+#: apps/staticpages/models.py:45
 msgid "Display Content"
 msgstr "Εμφάνιση περιεχομένου"
 
-#: apps/staticpages/models.py:48
+#: apps/staticpages/models.py:47
 #, python-format
 msgid "Allowed markup: %s"
 msgstr "Να επιτρέπεται επισήμανση: %s"
 
-#: apps/staticpages/models.py:51 templates/admin/staticpages/_table.html:9
+#: apps/staticpages/models.py:50 templates/admin/staticpages/_table.html:9
 msgid "Redirect to URL"
 msgstr "Ανακατεύθυνση σε URL"
 
-#: apps/staticpages/models.py:53
-#, fuzzy
+#: apps/staticpages/models.py:52
 msgid "If set, this page will redirect to this URL"
-msgstr ""
-"Εάν οριστεί, κάθε παραπομπή σε αυτή τη σελίδα θα ανακατευθύνεται σε αυτό το "
-"URL"
+msgstr "Εάν οριστεί,  αυτή η σελίδα θα ανακατευθυνθεί  σε αυτό το URL"
 
 #. Translators: 'URL' and 'content' refer to form fields.
-#: apps/staticpages/models.py:98
+#: apps/staticpages/models.py:97
 msgid "URL or content must be provided."
 msgstr "Πρέπει να δοθούν URL ή περιεχόμενο."
 
-#: apps/staticpages/models.py:104
+#: apps/staticpages/models.py:103
 msgid "Virtual path already in use."
 msgstr "Η εικονική διαδρομή χρησιμοποιείται ήδη."
 
@@ -1118,60 +1259,55 @@ msgstr "Νομική σελίδα"
 msgid "Regular Page"
 msgstr "Κανονική σελίδα"
 
-#: apps/staticpages/views.py:119 templates/admin/staticpages/_table.html:8
+#: apps/staticpages/views.py:118 templates/admin/staticpages/_table.html:8
 msgid "Page Title"
 msgstr "Τίτλος σελίδας"
 
 #. Translators: 'projects' must not be translated.
-#: apps/staticpages/views.py:136
+#: apps/staticpages/views.py:135
 msgid ""
 "projects/<project_code> or <language_code> or <language_code>/<project_code>"
 msgstr "έργα/<project_code> ή <language_code> ή <language_code>/<project_code>"
 
-#: apps/staticpages/views.py:231
-#, fuzzy
+#: apps/staticpages/views.py:230
 msgid "Text is missing"
-msgstr "Λείπουν ορίσματα."
-
-#: apps/virtualfolder/models.py:37
-msgid "Location"
-msgstr "Τοποθεσία"
-
-#: apps/virtualfolder/models.py:40
-msgid "Root path where this virtual folder is applied."
-msgstr "Η ριζική διαδρομή όπου εφαρμόζεται αυτός ο εικονικός φάκελος."
+msgstr "Λείπει κείμενο"
 
 #. Translators: This is a noun.
-#: apps/virtualfolder/models.py:44
+#: apps/virtualfolder/models.py:39
 msgid "Filter"
 msgstr "Φίλτρο"
 
-#: apps/virtualfolder/models.py:46
-msgid "Filtering rules that tell which stores this virtual folder comprises."
+#: apps/virtualfolder/models.py:41
+msgid "Filtering rules that tell which files this virtual folder comprises."
 msgstr ""
-"Φιλτράρισμα των κανόνων που λένε ποιες αποθήκες  περιλαμβάνει αυτός ο "
-"εικονικός φάκελος."
+"Φιλτράρισμα των κανόνων που λένε ποια αρχεία  περιλαμβάνει αυτός ο εικονικός "
+"φάκελος."
 
-#: apps/virtualfolder/models.py:50 core/browser.py:21
+#: apps/virtualfolder/models.py:45 core/browser.py:21
 msgid "Priority"
 msgstr "Προτεραιότητα"
 
-#: apps/virtualfolder/models.py:52
+#: apps/virtualfolder/models.py:47
 msgid ""
 "Number specifying importance. Greater priority means it is more important."
 msgstr ""
 "Ο αριθμός που καθορίζει σπουδαιότητα. Μεγαλύτερη προτεραιότητα σημαίνει ότι "
 "είναι πιο σημαντικό."
 
-#: apps/virtualfolder/models.py:56
+#: apps/virtualfolder/models.py:51
 msgid "Is public?"
 msgstr "Είναι δημόσια;"
 
-#: apps/virtualfolder/models.py:58
+#: apps/virtualfolder/models.py:53
 msgid "Whether this virtual folder is public or not."
 msgstr "Εάν αυτός ο εικονικός φάκελος είναι δημόσιος ή όχι."
 
-#: apps/virtualfolder/models.py:63
+#: apps/virtualfolder/models.py:56
+msgid "Description"
+msgstr "Περιγραφή"
+
+#: apps/virtualfolder/models.py:58
 #, python-format
 msgid ""
 "Use this to provide more information or instructions. Allowed markup: %s"
@@ -1179,7 +1315,7 @@ msgstr ""
 "Χρησιμοποιήστε αυτό για να δώσετε περισσότερες πληροφορίες ή οδηγίες. "
 "Επιτρεπόμενη επισήμανση: %s"
 
-#: checks.py:62
+#: checks.py:74
 msgid ""
 "There are user accounts with duplicate emails. This will not be allowed in "
 "Pootle 2.8."
@@ -1187,7 +1323,7 @@ msgstr ""
 "Υπάρχουν λογαριασμοί χρήστη με διπλότυπες ηλ. διευθύνσεις. Αυτό δεν θα "
 "επιτρέπεται στο Pootle 2.8."
 
-#: checks.py:64
+#: checks.py:76
 msgid ""
 "Try using 'pootle find_duplicate_emails', and then update user emails with "
 "'pootle update_user_email username email'. You might also want to consider "
@@ -1198,65 +1334,67 @@ msgstr ""
 "email'. Μπορεί επίσης να θελήσετε να εξετάσετε τη χρήση των εντολών pootle "
 "merge_user και purge_user. "
 
-#: checks.py:88
+#: checks.py:100
 msgid "Your version of Django is too old."
 msgstr "Η έκδοσή σας του Django είναι πολύ παλιά."
 
-#: checks.py:89
+#: checks.py:101
 #, python-format
 msgid "Try pip install --upgrade 'Django==%s'"
 msgstr "Δοκιμάστε pip install --upgrade 'Django==%s'"
 
-#: checks.py:96
+#: checks.py:108
 msgid "Your version of lxml is too old."
 msgstr "Η έκδοσή σας του lxml είναι υπερβολικά παλιά."
 
-#: checks.py:97
+#: checks.py:109
 msgid "Try pip install --upgrade lxml"
 msgstr "Δοκιμάστε pip install --upgrade lxml"
 
-#: checks.py:103
+#: checks.py:115
 msgid "Your version of Translate Toolkit is too old."
 msgstr "Η έκδοσή σας του Translate Toolkit είναι υπερβολικά παλιά."
 
-#: checks.py:104
+#: checks.py:116
 msgid "Try pip install --upgrade translate-toolkit"
 msgstr "Δοκιμάστε pip install --upgrade translate-toolkit"
 
-#: checks.py:124
+#: checks.py:136
 #, python-format
 msgid "Could not connect to Redis (%s)"
 msgstr "Αδύνατη η σύνδεση με το Redis (%s)"
 
-#: checks.py:125
+#: checks.py:137
 #, python-format
 msgid "Make sure Redis is running on %(host)s:%(port)s"
 msgstr "Βεβαιωθείτε ότι το Redis εκτελείται στο %(host)s:%(port)s"
 
-#: checks.py:135
+#: checks.py:147
 msgid "Your version of Redis is too old."
 msgstr "Η έκδοση του Redis είναι πολύ παλιά."
 
-#: checks.py:136
+#: checks.py:148
 #, python-format
 msgid "Update your system's Redis server package to at least version %s"
 msgstr ""
 "Ενημερώστε το πακέτο διακομιστή Redis του συστήματός σας στην έκδοση "
 "τουλάχιστον %s."
 
-#: checks.py:146
-msgid "No RQ Worker running."
-msgstr "Δεν εκτελείται κανένα RQ Worker."
+#. Translators: a worker processes background tasks
+#: checks.py:159
+msgid "No worker running."
+msgstr "Δεν εκτελείται καμία εργασία."
 
-#: checks.py:147
-msgid "Run new workers with manage.py rqworker"
-msgstr "Εκτέλεση νέων workers με manage.py rqworker"
+#. Translators: a worker processes background tasks
+#: checks.py:161
+msgid "Run new workers with 'pootle rqworker'"
+msgstr "Εκτέλεση νέων εργασιών με 'pootle rqworker'"
 
-#: checks.py:162
+#: checks.py:176
 msgid "Cache backend is not set to Redis."
 msgstr "Η κρυφή μνήμη παρασκηνίου δεν ορίστηκε στο Redis."
 
-#: checks.py:163
+#: checks.py:177
 #, python-format
 msgid ""
 "Set default cache backend to django_redis.cache.RedisCache\n"
@@ -1266,44 +1404,45 @@ msgstr ""
 "RedisCache\n"
 "Τρέχουσες ρυθμίσεις: %r"
 
-#: checks.py:173
+#: checks.py:187
 msgid "Could not initiate a Redis cache connection"
 msgstr "Αδύνατη η αρχικοποίηση σύνδεσης κρυφής μνήμης Redis"
 
-#: checks.py:174 checks.py:188
+#: checks.py:188 checks.py:202
 msgid "Double-check your CACHES settings"
 msgstr "Διπλοελέγξτε τις ρυθμίσεις των ΚΡΥΦΩΝ ΜΝΗΜΩΝ"
 
-#: checks.py:186
+#: checks.py:200
 msgid ""
 "Distinct django_redis.cache.RedisCache configurations are required for "
-"`default`, `redis` and `stats`."
+"`default`, `redis` and `lru`."
 msgstr ""
+"Απαιτούνται απομακρυσμένες ρυθμίσεις django_redis.cache.RedisCache για "
+"`default`, `redis` και `lru`."
 
-#: checks.py:194
+#: checks.py:208
 msgid "DEBUG mode is on. Do not do this in production!"
 msgstr ""
 "Η κατάσταση ΑΠΟΣΦΑΛΜΑΤΩΣΗΣ είναι ενεργή. Μην το κάνετε αυτό στην παραγωγή!"
 
-#: checks.py:195
+#: checks.py:209
 msgid "Set DEBUG = False in Pootle settings"
 msgstr "Ορισμός του DEBUG = False στις ρυθμίσεις Pootle"
 
-#: checks.py:201
+#: checks.py:215
 msgid "The sqlite database backend is unsupported"
 msgstr "Η βάση δεδομένων παρασκηνίου sqlite δεν υποστηρίζεται"
 
-#: checks.py:202
-msgid "Set your default database engine to postgresql_psycopg2 or mysql"
+#: checks.py:216
+msgid "Set your default database engine to postgresql or mysql"
 msgstr ""
-"Ορισμός της προεπιλεγμένης σας μηχανής βάσης δεδομένων σε "
-"postgresql_psycopg2 ή mysql"
+"Ορισμός της προεπιλεγμένης σας μηχανής βάσης δεδομένων σε postgresql ή mysql"
 
-#: checks.py:209
+#: checks.py:223
 msgid "Not using cached_db as session engine"
 msgstr "Να μην χρησιμοποιείται η cached_db ως μηχανή λειτουργίας"
 
-#: checks.py:210
+#: checks.py:224
 #, python-format
 msgid ""
 "Set SESSION_ENGINE to django.contrib.sessions.backend.cached_db\n"
@@ -1312,11 +1451,11 @@ msgstr ""
 "Ορισμός του SESSION_ENGINE σε django.contrib.sessions.backend.cached_db\n"
 "Τρέχουσες ρυθμίσεις: %r"
 
-#: checks.py:218
+#: checks.py:232
 msgid "POOTLE_CONTACT_EMAIL is not set."
 msgstr "Το POOTLE_CONTACT_EMAIL δεν ορίστηκε."
 
-#: checks.py:219
+#: checks.py:233
 msgid ""
 "Set POOTLE_CONTACT_EMAIL to allow users to contact administrators through "
 "the Pootle contact form."
@@ -1324,13 +1463,13 @@ msgstr ""
 "Ορίστε το POOTLE_CONTACT_EMAIL ώστε να επιτρέπει στους χρήστες να "
 "επικοινωνούν με τους διαχειριστές μέσω της μορφής επαφής του Pootle."
 
-#: checks.py:227
+#: checks.py:241
 #, python-format
 msgid "POOTLE_CONTACT_EMAIL is using the following default setting %r."
 msgstr ""
 "Το POOTLE_CONTACT_EMAIL χρησιμοποιεί την παρακάτω προεπιλεγμένη ρύθμιση %r."
 
-#: checks.py:229
+#: checks.py:243
 msgid ""
 "POOTLE_CONTACT_EMAIL is the address that will receive messages sent by the "
 "contact form."
@@ -1338,11 +1477,11 @@ msgstr ""
 "POOTLE_CONTACT_EMAIL είναι η διεύθυνση που θα δεχθεί μηνύματα που στάλθηκαν "
 "από τη μορφή επαφής."
 
-#: checks.py:236
+#: checks.py:250
 msgid "DEFAULT_FROM_EMAIL is not set."
 msgstr "Το DEFAULT_FROM_EMAIL δεν ορίστηκε."
 
-#: checks.py:237 checks.py:247
+#: checks.py:251 checks.py:261
 msgid ""
 "DEFAULT_FROM_EMAIL is used in all outgoing Pootle email.\n"
 "Don't forget to review your mail server settings."
@@ -1351,37 +1490,122 @@ msgstr ""
 "Pootle.\n"
 "Μην ξεχάσετε να ελέγξετε τις ρυθμίσεις του διακομιστή αλληλογραφίας."
 
-#: checks.py:245
+#: checks.py:259
 #, python-format
 msgid "DEFAULT_FROM_EMAIL is using the following default setting %r."
 msgstr ""
 "Το DEFAULT_FROM_EMAIL χρησιμοποιεί την παρακάτω προεπιλεγμένη ρύθμιση %r."
 
-#: checks.py:256
+#: checks.py:272
+#, python-format
+msgid "POOTLE_TM_SERVER['%s'] has no INDEX_NAME."
+msgstr "Ο POOTLE_TM_SERVER['%s'] δεν έχει INDEX_NAME."
+
+#: checks.py:273
+#, python-format
+msgid "Set an INDEX_NAME for POOTLE_TM_SERVER['%s']."
+msgstr "Ορίστε ένα INDEX_NAME για τον POOTLE_TM_SERVER['%s']."
+
+#: checks.py:279
+#, python-format
+msgid "Duplicate '%s' INDEX_NAME in POOTLE_TM_SERVER."
+msgstr "Διπλότυπο του '%s' INDEX_NAME στο POOTLE_TM_SERVER."
+
+#: checks.py:281
+msgid "Set different INDEX_NAME for all servers in POOTLE_TM_SERVER."
+msgstr ""
+"Ορίστε διαφορετικό INDEX_NAME για όλους τους διακομιστές στο "
+"POOTLE_TM_SERVER."
+
+#: checks.py:291
+#, python-format
+msgid "POOTLE_TM_SERVER['%s'] has no ENGINE."
+msgstr "Το POOTLE_TM_SERVER['%s'] δεν έχει ENGINE."
+
+#: checks.py:292
+#, python-format
+msgid "Set a ENGINE for POOTLE_TM_SERVER['%s']."
+msgstr "Ορίστε μια ENGINE για τον POOTLE_TM_SERVER['%s']."
+
+#: checks.py:299
+#, python-format
+msgid "POOTLE_TM_SERVER['%s'] has no HOST."
+msgstr "Ο POOTLE_TM_SERVER['%s'] δεν έχει HOST."
+
+#: checks.py:300
+#, python-format
+msgid "Set a HOST for POOTLE_TM_SERVER['%s']."
+msgstr "Ορίστε έναν HOST για τον POOTLE_TM_SERVER['%s']."
+
+#: checks.py:307
+#, python-format
+msgid "POOTLE_TM_SERVER['%s'] has no PORT."
+msgstr "Ο POOTLE_TM_SERVER['%s'] δεν έχει PORT."
+
+#: checks.py:308
+#, python-format
+msgid "Set a PORT for POOTLE_TM_SERVER['%s']."
+msgstr "Ορίστε μια PORT για το POOTLE_TM_SERVER['%s']."
+
+#: checks.py:317
+#, python-format
+msgid "POOTLE_TM_SERVER['%s'] has a WEIGHT less than 0.0 or greater than 1.0"
+msgstr ""
+"Ο POOTLE_TM_SERVER['%s'] έχει WEIGHT μικρότερο από 0,0 ή μεγαλύτερο από 1,0"
+
+#: checks.py:319
+#, python-format
+msgid ""
+"Set a WEIGHT between 0.0 and 1.0 (both included) for POOTLE_TM_SERVER['%s']."
+msgstr ""
+"Ορίστε ένα WEIGHT μεταξύ 0,0 και 1,0 (συμπεριλαμβανομένων και των δύο) για "
+"το POOTLE_TM_SERVER['%s']."
+
+#: checks.py:327
+#, python-format
+msgid "POOTLE_SCORES has no %s."
+msgstr "Το POOTLE_SCORES δεν έχει το %s."
+
+#: checks.py:328
+#, python-format
+msgid "Set %s in POOTLE_SCORES."
+msgstr "Ορίστε το %s στο POOTLE_SCORES."
+
+#: checks.py:336
+#, python-format
+msgid "Invalid value for %s in POOTLE_SCORES."
+msgstr "Άκυρη τιμή για το %s στο POOTLE_SCORES."
+
+#: checks.py:339
+#, python-format
+msgid "Set a valid value for %s in POOTLE_SCORES."
+msgstr "Ορίστε μια έγκυρη τιμή για το %s στο POOTLE_SCORES."
+
+#: checks.py:355
 msgid "POOTLE_MARKUP_FILTER is missing."
 msgstr "Το POOTLE_MARKUP_FILTER λείπει."
 
-#: checks.py:257
+#: checks.py:356
 msgid "Set POOTLE_MARKUP_FILTER."
 msgstr "Ορισμός του POOTLE_MARKUP_FILTER."
 
-#: checks.py:262
+#: checks.py:361
 msgid "Invalid value in POOTLE_MARKUP_FILTER."
 msgstr "Άκυρη τιμή στο POOTLE_MARKUP_FILTER."
 
-#: checks.py:263
+#: checks.py:362
 msgid "Set a valid value for POOTLE_MARKUP_FILTER."
 msgstr "Δώστε μια έγκυρη τιμή στο POOTLE_MARKUP_FILTER."
 
-#: checks.py:277
+#: checks.py:378
 msgid "Invalid markup in POOTLE_MARKUP_FILTER."
 msgstr "Άκυρη επισήμανση στο POOTLE_MARKUP_FILTER."
 
-#: checks.py:278
+#: checks.py:379
 msgid "Set a valid markup for POOTLE_MARKUP_FILTER."
 msgstr "Δώστε μια έγκυρη επισήμανση στο POOTLE_MARKUP_FILTER."
 
-#: checks.py:283
+#: checks.py:384
 #, python-format
 msgid ""
 "POOTLE_MARKUP_FILTER is set to '%s' markup, but the package that provides "
@@ -1390,278 +1614,330 @@ msgstr ""
 "Το POOTLE_MARKUP_FILTER ορίστηκε στην επισήμανση '%s', αλλά το πακέτο που το "
 "δίνει δεν μπορεί να βρεθεί."
 
-#: checks.py:285
+#: checks.py:386
 msgid "Install the package or change POOTLE_MARKUP_FILTER."
 msgstr "Εγκαταστήστε το πακέτο ή αλλάξτε το POOTLE_MARKUP_FILTER."
 
-#: checks.py:296
-#, python-format
-msgid "POOTLE_TM_SERVER['%s'] has no INDEX_NAME."
-msgstr ""
+#: checks.py:392
+msgid "POOTLE_MARKUP_FILTER set to 'None' is deprecated."
+msgstr "Ο ορισμός του POOTLE_MARKUP_FILTER σε 'κανένα' είναι παρωχημένος."
 
-#: checks.py:297
-#, python-format
-msgid "Set an INDEX_NAME for POOTLE_TM_SERVER['%s']."
-msgstr ""
+#: checks.py:393
+msgid "Set your markup to 'html' explicitly."
+msgstr "Ορίστε την σήμανσή σας ρητά σε 'html'"
 
-#: checks.py:303
-#, python-format
-msgid "Duplicate '%s' INDEX_NAME in POOTLE_TM_SERVER."
-msgstr ""
-
-#: checks.py:305
-msgid "Set different INDEX_NAME for all servers in POOTLE_TM_SERVER."
-msgstr ""
-
-#: checks.py:315
-#, python-format
-msgid "POOTLE_TM_SERVER['%s'] has no ENGINE."
-msgstr ""
-
-#: checks.py:316
-#, python-format
-msgid "Set a ENGINE for POOTLE_TM_SERVER['%s']."
-msgstr ""
-
-#: checks.py:323
-#, python-format
-msgid "POOTLE_TM_SERVER['%s'] has no HOST."
-msgstr ""
-
-#: checks.py:324
-#, python-format
-msgid "Set a HOST for POOTLE_TM_SERVER['%s']."
-msgstr ""
-
-#: checks.py:331
-#, python-format
-msgid "POOTLE_TM_SERVER['%s'] has no PORT."
-msgstr ""
-
-#: checks.py:332
-#, python-format
-msgid "Set a PORT for POOTLE_TM_SERVER['%s']."
-msgstr ""
-
-#: checks.py:341
-#, python-format
-msgid "POOTLE_TM_SERVER['%s'] has a WEIGHT less than 0.0 or greater than 1.0"
-msgstr ""
-
-#: checks.py:343
+#: checks.py:398
 #, python-format
 msgid ""
-"Set a WEIGHT between 0.0 and 1.0 (both included) for POOTLE_TM_SERVER['%s']."
+"POOTLE_MARKUP_FILTER is using '%s' markup, which is deprecated and will be "
+"removed in future."
 msgstr ""
+"Το POOTLE_MARKUP_FILTER χρησιμοποιεί την σήμανση '%s', που είναι παρωχημένη "
+"και θα αφαιρεθεί στο μέλλον."
 
-#: checks.py:351
-#, python-format
-msgid "POOTLE_SCORE_COEFFICIENTS has no %s."
+#: checks.py:401
+msgid "Convert your staticpages to Markdown and set your markup to 'markdown'."
 msgstr ""
+"Μετατρέψτε τις σελίδες στατιστικής σε Markdown και ορίστε τη σήμανσή σας σε "
+"'markdown'."
 
-#: checks.py:352
-#, python-format
-msgid "Set %s in POOTLE_SCORE_COEFFICIENTS."
-msgstr ""
-
-#: checks.py:359
-#, fuzzy, python-format
-msgid "Invalid value for %s in POOTLE_SCORE_COEFFICIENTS."
-msgstr "Άκυρη τιμή στο POOTLE_MARKUP_FILTER."
-
-#: checks.py:361
-#, fuzzy, python-format
-msgid "Set a valid value for %s in POOTLE_SCORE_COEFFICIENTS."
-msgstr "Δώστε μια έγκυρη τιμή στο POOTLE_MARKUP_FILTER."
-
-#: checks.py:385
+#: checks.py:422
 msgid "The default 'admin' user still has a password set to 'admin'."
 msgstr ""
 "Ο προεπιλεγμένος χρήστης 'admin' έχει ακόμα έναν κωδικό πρόσβασης που "
 "ορίστηκε σε 'admin'."
 
-#: checks.py:387
+#: checks.py:424
 msgid "Remove the 'admin' user or change its password."
 msgstr "Αφαιρέστε τον χρήστη 'admin' ή αλλάξτε τον κωδικό πρόσβασής του."
 
-#: checks.py:402
-msgid "Database connection does not implement on_commit."
-msgstr "Σύνδεση με βάση δεδομένων δεν εφαρμόζεται στο on_commit."
+#: checks.py:438
+msgid "Database connection uses transaction_hooks."
+msgstr "Η σύνδεση με βάση δεδομένων χρησιμοποιεί  transaction_hooks."
 
-#: checks.py:403
+#: checks.py:439
 msgid ""
-"Set the DATABASES['default']['ENGINE'] to use a backend from "
-"transaction_hooks.backends."
+"Set the DATABASES['default']['ENGINE'] to use a Django backend from django."
+"db.backends."
 msgstr ""
-"Ορίστε το DATABASES['default']['ENGINE'] να χρησιμοποιήσει ένα παρασκήνιο "
-"από το transaction_hooks.backends."
+"Ορίστε το DATABASES['default']['ENGINE']  για να χρησιμοποιήσει ένα "
+"παρασκήνιο Django από το django.db.backends."
 
-#: checks.py:423
+#: checks.py:459
 msgid "Email server is not available."
 msgstr "Ο διαχειριστής ηλ. αλληλογραφίας δεν είναι διαθέσιμος."
 
-#: checks.py:424
+#: checks.py:460
 msgid "Review your email settings and make sure your email server is working."
 msgstr ""
 "Επανεξετάστε τις ρυθμίσεις της ηλ. αλληλογραφίας και βεβαιωθείτε ότι ο "
 "διακομιστής ηλ. αλληλογραφίας δουλεύει."
 
-#: checks.py:446
+#: checks.py:487
 msgid "Revision is missing or has an incorrect value."
-msgstr ""
+msgstr "Η αναθεώρηση λείπει ή έχει εσφαλμένη τιμή."
 
-#: checks.py:447
+#: checks.py:488
 msgid "Run `revision --restore` to reset the revision counter."
 msgstr ""
+"Εκτελέστε το `revision --restore` για να επαναφέρετε τον μετρητή αναθεώρησης."
 
-#: core/browser.py:26
-msgid "Project"
-msgstr "Έργο"
+#: checks.py:502
+msgid "No canonical URL provided and default site set to example.com."
+msgstr ""
+"Δεν παρέχεται κανένα URL της canonical και ο προεπιλεγμένος ιστότοπος "
+"ορίστηκε στο example.com."
+
+#: checks.py:504
+msgid ""
+"Set the `POOTLE_CANONICAL_URL` in settings or update the default site if you "
+"are using django.contrib.sites."
+msgstr ""
+"Ορίστε το `POOTLE_CANONICAL_URL` στις ρυθμίσεις ή ενημερώστε τον "
+"προεπιλεγμένο ιστότοπο, εάν χρησιμοποιείτε το django.contrib.sites."
+
+#: checks.py:508
+msgid "Canonical URL is set to http://localhost."
+msgstr "Το URL της Canonical έχει οριστεί στο http://localhost."
+
+#: checks.py:510
+msgid ""
+"Set the `POOTLE_CANONICAL_URL` to an appropriate value for your site or "
+"leave it empty if you are using `django.contrib.sites`."
+msgstr ""
+"Ορίστε το `POOTLE_CANONICAL_URL` σε μια κατάλληλη τιμή για τον ιστότοπό σας "
+"ή αφήστε το κενό, εάν χρησιμοποιείτε `django.contrib.sites`."
+
+#: checks.py:540
+msgid "POOTLE_FS_WORKING_PATH setting is not set."
+msgstr "Η ρύθμιση POOTLE_FS_WORKING_PATH δεν ορίστηκε."
+
+#: checks.py:544
+#, python-format
+msgid "Path ('%s') pointed to by POOTLE_FS_WORKING_PATH doesn't exist."
+msgstr ""
+"Η διαδρομή ('%s') που δείχνεται από το POOTLE_FS_WORKING_PATH δεν υπάρχει."
+
+#: checks.py:546
+msgid ""
+"Create the directory pointed to by `POOTLE_FS_WORKING_PATH`, or change the "
+"setting."
+msgstr ""
+"Δημιουργήστε τον κατάλογο που δείχνεται από το `POOTLE_FS_WORKING_PATH`, ή "
+"αλλάξτε τη ρύθμιση."
+
+#: checks.py:551
+#, python-format
+msgid ""
+"Path ('%s') pointed to by POOTLE_FS_WORKING_PATH is not writable by Pootle."
+msgstr ""
+"Η διαδρομή ('%s') που δείχνεται από το POOTLE_FS_WORKING_PATH δεν είναι "
+"εγγράψιμη από το Pootle."
+
+#: checks.py:554
+msgid ""
+"Add the write permission to the `POOTLE_FS_WORKING_PATH` or change the "
+"setting."
+msgstr ""
+"Προσθέστε το δικαίωμα εγγραφής στο`POOTLE_FS_WORKING_PATH` , ή αλλάξτε τη "
+"ρύθμιση."
+
+#: checks.py:573
+msgid "MySQL requires time zone settings."
+msgstr "Το MySQL απαιτεί ρυθμίσεις ζώνης χρόνου."
+
+#: checks.py:593
+msgid "Pootle does not yet support Python 3."
+msgstr "Το Pootle δεν υποστηρίζει ακόμα το Python 3."
+
+#: checks.py:594 checks.py:600
+msgid "Use a Python 2.7 virtualenv."
+msgstr "Χρησιμοποιήστε το Python 2.7 virtualenv."
+
+#: checks.py:599
+msgid "Pootle no longer supports Python versions older than 2.7"
+msgstr ""
+"Το Pootle δεν υποστηρίζει πια εκδόσεις του Python πιο παλιές από το 2.7"
 
 #. Translators: noun. The graphical representation of translation status
 #: core/browser.py:37
 msgid "Progress"
 msgstr "Πρόοδος"
 
-#. Translators: Heading representing the total number of words of a file
-#. or directory
-#: core/browser.py:44 core/utils/stats.py:23
-#: templates/admin/detailed_reports.html:318
-msgid "Total"
-msgstr "Σύνολο"
-
-#: core/browser.py:49
-msgid "Last updated"
-msgstr "Τελευταία ενημέρωση"
-
-#. Translators: The number of suggestions pending review
-#: core/browser.py:60 templates/browser/_actions.html:24
-#: templates/editor/_filters.html:11
-msgid "Suggestions"
-msgstr "Προτάσεις"
-
-#: core/browser.py:65
-msgid "Need Translation"
-msgstr "Χρειάζεται μετάφραση"
-
-#: core/browser.py:70
+#: core/browser.py:42
 msgid "Last Activity"
 msgstr "Τελευταία δραστηριότητα"
 
-#: core/browser.py:121
-msgid "Back to language"
-msgstr "Επιστροφή στη γλώσσα"
+#. Translators: The number of suggestions pending review
+#: core/browser.py:53 templates/browser/_actions.html:28
+#: templates/editor/_filters.html:11 templates/languages/_nav.html:28
+#: templates/languages/admin/language_team_suggestions.html:5
+#: templates/languages/admin/language_team_suggestions.html:9
+msgid "Suggestions"
+msgstr "Προτάσεις"
 
-#: core/browser.py:123
-msgid "Back to parent folder"
-msgstr "Επιστροφή στον γονικό φάκελο"
-
-#: core/decorators.py:319 core/views.py:96
-msgid "Insufficient rights to access this page."
-msgstr "Ανεπαρκή δικαιώματα για πρόσβαση σε αυτήν τη σελίδα."
-
-#: core/decorators.py:332 core/views.py:107
-msgid "You do not have rights to administer Pootle."
-msgstr "Δεν έχετε δικαιώματα διαχείρισης του Pootle."
-
-#: core/forms.py:115
-msgid "Time to answer has expired"
-msgstr "Ο χρόνος απάντησης έληξε"
-
-#: core/forms.py:134
-msgid "Enter a number"
-msgstr "Εισάγετε έναν αριθμό"
-
-#: core/forms.py:149
-msgid "Incorrect"
-msgstr "Λάθος"
-
-#: core/helpers.py:34
-msgid "User missing"
-msgstr "Λείπει ο χρήστης"
-
-#. Translators: This refers to "All strings"
-#: core/helpers.py:46 templates/browser/_actions.html:50
-#: templates/editor/_filters.html:6
-msgid "All"
-msgstr "Όλα"
-
-#: core/helpers.py:50 templates/editor/_filters.html:8
+#: core/browser.py:58 templates/browser/_actions.html:43
+#: templates/editor/_filters.html:8
 msgid "Incomplete"
 msgstr "Ατελές"
 
-#: core/helpers.py:53 templates/editor/_filters.html:18
-msgid "Checks"
-msgstr "Έλεγχοι"
+#. Translators: Heading representing the total number of words of a file
+#. or directory
+#: core/browser.py:65 core/utils/stats.py:27
+msgid "Total"
+msgstr "Σύνολο"
 
-#: core/helpers.py:54 templates/editor/_filters.html:13
-msgid "My submissions"
-msgstr "Οι υποβολές μου"
+#: core/browser.py:70
+msgid "Last updated"
+msgstr "Τελευταία ενημέρωση"
 
-#: core/helpers.py:55 templates/admin/dashboard.html:13
-msgid "Submissions"
-msgstr "Υποβολές"
+#: core/browser.py:119
+msgid "Back to language"
+msgstr "Επιστροφή στη γλώσσα"
 
-#. Translators: This is a type of filtering criterion that
-#. selects the strings that have been submitted by me at some point
-#. in time but have been overwritten by other users.
-#: core/helpers.py:56 templates/editor/_filters.html:17
-msgid "My overwritten submissions"
-msgstr "Οι υποβολές μου που αντικαταστάθηκαν"
+#: core/browser.py:121
+msgid "Back to parent folder"
+msgstr "Επιστροφή στον γονικό φάκελο"
 
-#: core/helpers.py:57
-msgid "Overwritten submissions"
-msgstr "Οι υποβολές που αντικαταστάθηκαν"
+#: core/decorators.py:159 core/views/mixins.py:26
+msgid "You do not have rights to administer Pootle."
+msgstr "Δεν έχετε δικαιώματα διαχείρισης του Pootle."
 
-#: core/initdb.py:129
+#: core/forms.py:151
+msgid "Time to answer has expired"
+msgstr "Ο χρόνος απάντησης έληξε"
+
+#: core/forms.py:170
+msgid "Enter a number"
+msgstr "Εισάγετε έναν αριθμό"
+
+#: core/forms.py:185
+msgid "Incorrect"
+msgstr "Λάθος"
+
+#: core/forms.py:214
+msgid "With selected"
+msgstr "Με επιλεγμένο"
+
+#: core/forms.py:221
+msgid "Add comment"
+msgstr "Προσθήκη σχολίου"
+
+#: core/forms.py:227
+msgid "Select all items matching filter criteria, including those not shown"
+msgstr ""
+"Επιλέξτε όλα τα στοιχεία που συμφωνούν με τα κριτήρια φιλτραρίσματος, "
+"συμπεριλαμβανομένων αυτών που δεν εμφανίζονται"
+
+#: core/forms.py:247
+msgid "You must specify an action to take"
+msgstr "Πρέπει να καθορίσετε μια ενέργεια που θα κάνετε"
+
+#: core/forms.py:248
+msgid "A valid search field must be specified"
+msgstr "Πρέπει να καθοριστεί ένα έγκυρο πεδίο αναζήτησης"
+
+#: core/initdb.py:135
 msgid "Can access a project"
 msgstr "Επιτρεπτή η πρόσβαση στο έργο"
 
-#: core/initdb.py:133
+#: core/initdb.py:139
 msgid "Cannot access a project"
 msgstr "Αδύνατη η πρόσβαση στο έργο"
 
-#: core/initdb.py:137
+#: core/initdb.py:143
 msgid "Can make a suggestion for a translation"
 msgstr "Να μπορεί να γίνει πρόταση για μια μετάφραση"
 
-#: core/initdb.py:141
+#: core/initdb.py:147
 msgid "Can submit a translation"
 msgstr "Να μπορεί να υποβληθεί μια μετάφραση"
 
-#: core/initdb.py:145
+#: core/initdb.py:151
 msgid "Can review suggestions"
 msgstr "Δυνατότητα ελέγχου προτάσεων"
 
-#: core/initdb.py:149
+#: core/initdb.py:155
 msgid "Can perform administrative tasks"
-msgstr ""
+msgstr "Δυνατότητα εκτέλεσης διαχειριστικών εργασιών"
 
-#: core/views.py:151
+#: core/views/base.py:122
+msgid "Entire Project"
+msgstr "Ολόκληρο έργο"
+
+#: core/views/display.py:103 core/views/display.py:125
+#, python-format
+msgid "%(user)s removed translation for %(source)s"
+msgstr "Μεταφράσεις του %(user)s που αφαιρέθηκαν για την %(source)s"
+
+#: core/views/display.py:105
+#, python-format
+msgid "%(user)s accepted suggestion for %(source)s"
+msgstr "Προτάσεις του %(user)s έγιναν αποδεκτές για την %(source)s"
+
+#: core/views/display.py:107
+#, python-format
+msgid "%(user)s uploaded file"
+msgstr "Ο %(user)s ανέβασε αρχείο"
+
+#: core/views/display.py:109
+#, python-format
+msgid "%(user)s muted %(check)s for %(source)s"
+msgstr "Ο %(user)s εσίγασε %(check)s για %(source)s"
+
+#: core/views/display.py:111
+#, python-format
+msgid "%(user)s unmuted %(check)s for %(source)s"
+msgstr "Ο %(user)s  διέκοψε τη σίγαση %(check)s για %(source)s"
+
+#: core/views/display.py:113
+#, python-format
+msgid "%(user)s added suggestion for %(source)s"
+msgstr "Ο %(user)s προσέθεσε πρόταση για %(source)s"
+
+#: core/views/display.py:115
+#, python-format
+msgid "%(user)s rejected suggestion for %(source)s"
+msgstr "Ο %(user)s απέρριψε πρόταση για %(source)s"
+
+#: core/views/display.py:118
+#, python-format
+msgid "%(user)s translated %(source)s"
+msgstr "Ο %(user)s μετάφρασε %(source)s"
+
+#: core/views/display.py:120
+#, python-format
+msgid "%(user)s edited %(source)s"
+msgstr "Ο %(user)s επεξεργάστηκε %(source)s"
+
+#. Translators: pre-translate is translating with first 100% TM match
+#: core/views/display.py:123
+#, python-format
+msgid "%(user)s pre-translated %(source)s"
+msgstr "Ο %(user)s προμετάφρασε %(source)s"
+
+#: core/views/display.py:127
+#, python-format
+msgid "%(user)s reviewed %(source)s"
+msgstr "Ο %(user)s έλεγξε %(source)s"
+
+#: core/views/display.py:129
+#, python-format
+msgid "%(user)s marked as needs work %(source)s"
+msgstr "Ο %(user)s σημείωσε ότι χρειάζεται δουλειά %(source)s"
+
+#: core/views/mixins.py:66
 msgid "You cannot access this page."
 msgstr "Αδύνατη η πρόσβαση σε αυτήν τη σελίδα"
 
-#: custom/templates/layout.html:11
-msgid "Getting Started"
-msgstr "Έναρξη"
-
-#: custom/templates/layout.html:15
-msgid "License Terms"
-msgstr "Όροι άδειας"
-
-#: custom/templates/profiles/_tabs.html:4 templates/layout.html:114
-#: templates/user/settings.html:4 templates/user/settings.html.py:7
-msgid "Settings"
-msgstr "Ρυθμίσεις"
-
-#: middleware/errorpages.py:81
+#: middleware/errorpages.py:83
 #, python-format
 msgid "Error accessing %(filename)s, Filesystem sent error: %(errormsg)s"
 msgstr ""
 "Σφάλμα πρόσβασης %(filename)s, το σύστημα αρχείων επέστρεψε σφάλμα: "
 "%(errormsg)s"
 
-#: middleware/errorpages.py:118
+#: middleware/errorpages.py:119
 #, python-format
 msgid ""
 "You need to <a class=\"js-login\" href=\"%(login_link)s\">login</a> to "
@@ -1680,27 +1956,45 @@ msgstr "Πολιτική απορρήτου"
 msgid "Legal"
 msgstr "Νομική σημείωση"
 
+#. Translators: Label that refers to a legally mandated statement of the
+#. ownership and authorship of a document, which must be included in ...
+#. websites published in Germany and certain other German-speaking countries,
+#. such as Austria and Switzerland. See https://en.wikipedia.org/wiki/Impressum
+#: strings.py:46
+msgid "Imprint"
+msgstr "Νομικές πληροφορίες"
+
 #. Translators: Label that refers to the site's license requirements
-#: strings.py:43
+#: strings.py:48
 msgid "License"
 msgstr "Άδεια"
 
 #. Translators: Label that refers to the site's license requirements
-#: strings.py:45
+#: strings.py:50
+msgid "License Statement"
+msgstr "Δήλωση άδειας"
+
+#. Translators: Label that refers to the site's license requirements
+#: strings.py:52
 msgid "Contributor License"
 msgstr "Άδεια συντελεστή"
 
 #. Translators: Label that refers to the site's terms of use
-#: strings.py:47
+#: strings.py:54
 msgid "Terms of Use"
 msgstr "Όροι χρήσης"
 
 #. Translators: Label that refers to the site's terms of service
-#: strings.py:49
+#: strings.py:56
 msgid "Terms of Service"
 msgstr "Όροι εξυπηρέτησης"
 
-#: templates/about.html:7 templates/layout.html:170
+#. Translators: Label that refers to the site's getting started guide
+#: strings.py:58
+msgid "Getting Started"
+msgstr "Έναρξη"
+
+#: templates/about.html:7 templates/layout.html:188
 msgid "About"
 msgstr "Σχετικά με"
 
@@ -1710,20 +2004,20 @@ msgstr "Σχετικά με αυτόν τον διακομιστή Pootle"
 
 #: templates/about.html:16
 msgid ""
-"This site is running Pootle &mdash; powerful web software to empower teams "
-"to do translation and translation management. This community tool is Free "
+"This site is running Pootle — powerful web software to empower teams to do "
+"translation and translation management. This community tool is Free "
 "Software, and any team can use it and contribute to the Pootle community. "
-"Read more on the <a href=\"http://pootle.translatehouse.org/\"><i class="
-"\"icon-external-link\"></i> project website</a>."
+"Read more on the <a href=\"http://pootle.translatehouse.org/\">project "
+"website</a>."
 msgstr ""
-"Αυτός ο τόπος τρέχει Pootle &mdash; ένα ισχυρό λογισμικό ιστού για να "
+"Αυτός ο ιστότοπος τρέχει Pootle — ένα ισχυρό λογισμικό ιστού για να "
 "ενισχύσει τις ομάδες που μεταφράζουν και διαχειρίζονται μεταφράσεις. Αυτό το "
 "εργαλείο της κοινότητας είναι ελεύθερο λογισμικό και οποιαδήποτε ομάδα "
 "μπορεί να το χρησιμοποιήσει και να συμβάλει στην κοινότητα Pootle. Διαβάστε "
-"περισσότερα στον <a href=\"http://pootle.translatehouse.org/\"><i class="
-"\"icon-external-link\"></i>ιστότοπο του έργου</a>."
+"περισσότερα στον <a href=\"http://pootle.translatehouse.org/\">ιστότοπο του "
+"έργου</a>."
 
-#: templates/about.html:26
+#: templates/about.html:25
 #, python-format
 msgid ""
 "Pootle %(pootle_version)s is powered by Translate Toolkit "
@@ -1756,6 +2050,26 @@ msgstr ""
 msgid "Pootle e-mail confirmation"
 msgstr "Επιβεβαίωση ηλ. διεύθυνσης Pootle"
 
+#: templates/account/email/password_reset_key_message.txt:2
+msgid "We have received a request to reset your password."
+msgstr "Δεχθήκαμε ένα αίτημα για επαναφορά του κωδικού πρόσβασής σας."
+
+#: templates/account/email/password_reset_key_message.txt:3
+msgid "To reset your password, follow this link:"
+msgstr ""
+"Για να επαναφέρετε τον κωδικό πρόσβασής σας, ακολουθήστε αυτόν τον σύνδεσμο:"
+
+#: templates/account/email/password_reset_key_message.txt:6
+msgid ""
+"If you do not want to reset your password, you may simply ignore the message."
+msgstr ""
+"Εάν δεν θέλετε να επαναφέρετε τον κωδικό πρόσβασής σας, μπορείτε απλά  να "
+"αγνοήσετε το μήνυμα."
+
+#: templates/account/email/password_reset_key_subject.txt:2
+msgid "Pootle password reset e-mail"
+msgstr "Επαναφορά του κωδικού πρόσβασης Pootle για ηλ. αλληλογραφία."
+
 #: templates/account/signup_closed.html:5
 #: templates/account/signup_closed.html:8
 #: templates/account/signup_closed.html:13
@@ -1769,7 +2083,7 @@ msgstr ""
 "αργότερα."
 
 #: templates/admin/_generic_formset.html:22
-#: templates/translation_projects/terminology/manage.html:49
+#: templates/translation_projects/terminology/manage.html:54
 msgid "Save Changes"
 msgstr "Αποθήκευση αλλαγών"
 
@@ -1778,29 +2092,31 @@ msgid "Info"
 msgstr "Πληροφορίες"
 
 #: templates/admin/_tabs.html:11 templates/admin/dashboard.html:21
-#: templates/admin/users.html:4 templates/admin/users.html.py:7
+#: templates/admin/users.html:4 templates/admin/users.html:7
 #: templates/user/base.html:4
 msgid "Users"
 msgstr "Χρήστες"
 
 #: templates/admin/_tabs.html:16 templates/admin/languages.html:4
-#: templates/admin/languages.html.py:7 templates/projects/_nav.html:28
+#: templates/admin/languages.html:7 templates/projects/_nav.html:23
 #: templates/projects/admin/languages.html:7
-#: templates/projects/all/_nav.html:28
+#: templates/projects/all/_nav.html:19
 msgid "Languages"
 msgstr "Γλώσσες"
 
-#: templates/admin/_tabs.html:21 templates/admin/projects.html:4
-#: templates/admin/projects.html.py:7 templates/projects/base.html:5
+#: templates/admin/_tabs.html:21 templates/admin/project_fs.html:5
+#: templates/admin/project_fs.html:19 templates/admin/projects.html:4
+#: templates/admin/projects.html:7
+#: templates/languages/admin/language_team.html:104
+#: templates/projects/base.html:5
 msgid "Projects"
 msgstr "Έργα"
 
 #: templates/admin/_tabs.html:26 templates/admin/permissions.html:4
-#: templates/admin/permissions.html.py:7 templates/languages/_nav.html:26
-#: templates/languages/admin/permissions.html:5 templates/projects/_nav.html:33
+#: templates/admin/permissions.html:7 templates/projects/_nav.html:30
 #: templates/projects/admin/permissions.html:7
-#: templates/projects/all/_nav.html:33
-#: templates/translation_projects/_nav.html:31
+#: templates/projects/all/_nav.html:24
+#: templates/translation_projects/_nav.html:29
 #: templates/translation_projects/admin/permissions.html:5
 msgid "Permissions"
 msgstr "Δικαιώματα"
@@ -1810,12 +2126,7 @@ msgstr "Δικαιώματα"
 msgid "Static Pages"
 msgstr "Στατικές σελίδες"
 
-#: templates/admin/_tabs.html:36 templates/admin/reports.html:45
-#: templates/admin/reports.html.py:48
-msgid "Reports"
-msgstr "Αναφορές"
-
-#: templates/admin/base.html:4 templates/admin/base.html.py:7
+#: templates/admin/base.html:4 templates/admin/base.html:7
 msgid "Administration"
 msgstr "Διαχείριση"
 
@@ -1823,125 +2134,37 @@ msgstr "Διαχείριση"
 msgid "Server Statistics"
 msgstr "Στατιστικά εξυπηρετητή"
 
+#: templates/admin/dashboard.html:13
+msgid "Submissions"
+msgstr "Υποβολές"
+
 #: templates/admin/dashboard.html:17
 msgid "Pending suggestions"
 msgstr "Εκκρεμείς προτάσεις"
 
 #: templates/admin/dashboard.html:29
-msgid "More..."
-msgstr "Περισσότερα..."
-
-#: templates/admin/dashboard.html:37
 msgid "Background Jobs"
 msgstr "Παρασκηνιακές εργασίες"
 
-#: templates/admin/dashboard.html:43
+#: templates/admin/dashboard.html:35
 msgid "Status"
 msgstr "Κατάσταση"
 
-#: templates/admin/dashboard.html:50
+#: templates/admin/dashboard.html:42
 msgid "Pending jobs"
 msgstr "Εκκρεμείς εργασίες"
 
-#: templates/admin/dashboard.html:54
+#: templates/admin/dashboard.html:46
 msgid "Failed jobs"
 msgstr "Αποτυχημένες εργασίες"
 
-#: templates/admin/dashboard.html:64
+#: templates/admin/dashboard.html:56
 msgid "System Checks"
 msgstr "Έλεγχοι συστήματος"
 
-#: templates/admin/dashboard.html:74
+#: templates/admin/dashboard.html:66
 msgid "No issues have been detected. All is good!"
 msgstr "Δεν ανιχνεύτηκε κανένα πρόβλημα. Όλα είναι καλά!"
-
-#: templates/admin/detailed_reports.html:6
-#, python-format
-msgid "Report for %(user)s, "
-msgstr "Αναφορά για %(user)s, "
-
-#: templates/admin/detailed_reports.html:136
-#, python-format
-msgid "Report for %(user)s"
-msgstr "Αναφορά για %(user)s"
-
-#: templates/admin/detailed_reports.html:140
-#: templates/admin/reports/header.html:11 templates/user/detailed_stats.html:7
-msgid "Previous month"
-msgstr "Προηγούμενος μήνας"
-
-#: templates/admin/detailed_reports.html:142
-#: templates/admin/reports/header.html:15 templates/user/detailed_stats.html:9
-msgid "Next month"
-msgstr "Επόμενος μήνας"
-
-#: templates/admin/detailed_reports.html:149
-msgid "Local server time"
-msgstr "Χρόνος τοπικού διακομιστή"
-
-#: templates/admin/detailed_reports.html:150
-msgid "Unit"
-msgstr "Μονάδα"
-
-#: templates/admin/detailed_reports.html:151
-msgid "Action"
-msgstr "Ενέργεια"
-
-#: templates/admin/detailed_reports.html:152
-msgid "Source words"
-msgstr "Λέξεις προέλευσης"
-
-#: templates/admin/detailed_reports.html:153
-msgid "Similarity"
-msgstr "Ομοιότητα"
-
-#: templates/admin/detailed_reports.html:154
-msgid "Words"
-msgstr "Λέξεις"
-
-#: templates/admin/detailed_reports.html:157
-msgid "Subtotal"
-msgstr "Μερικό σύνολο"
-
-#: templates/admin/detailed_reports.html:184
-#: templates/admin/detailed_reports.html:222
-msgid "MT"
-msgstr ""
-
-#: templates/admin/detailed_reports.html:218
-#, fuzzy
-msgid "Subactions"
-msgstr "Λειτουργίες"
-
-#: templates/admin/detailed_reports.html:219
-#, fuzzy
-msgid "Raw Translation"
-msgstr "Μετάφραση"
-
-#: templates/admin/detailed_reports.html:249
-#: templates/admin/detailed_reports.html:308
-msgid "registered tasks"
-msgstr "καταχωρισμένες εργασίες"
-
-#: templates/admin/detailed_reports.html:260
-msgid "No activity recorded in a given period"
-msgstr "Δεν καταγράφηκε καμιά δραστηριότητα σε μια δεδομένη περίοδο"
-
-#: templates/admin/detailed_reports.html:269
-msgid "Suggestion (subtotal)"
-msgstr "Πρόταση (μερικό άθροισμα)"
-
-#: templates/admin/detailed_reports.html:279
-msgid "Translation (subtotal)"
-msgstr "Μετάφραση (μερικό άθροισμα)"
-
-#: templates/admin/detailed_reports.html:294
-msgid "Review (subtotal)"
-msgstr "Έλεγχος (μερικό άθροισμα)"
-
-#: templates/admin/detailed_reports.html:326
-msgid "Please select a valid user."
-msgstr "Παρακαλούμε, επιλέξτε έναν έγκυρο χρήστη."
 
 #: templates/admin/permissions.html:10
 msgid ""
@@ -1952,7 +2175,6 @@ msgstr ""
 "προεπιλεγμένα δικαιώματα σε αυτόν τον εξυπηρετητή Pootle."
 
 #: templates/admin/permissions.html:14
-#: templates/languages/admin/permissions.html:11
 #: templates/projects/admin/permissions.html:13
 #: templates/translation_projects/admin/permissions.html:11
 msgid ""
@@ -1966,56 +2188,116 @@ msgstr ""
 "αναφέρεται σε δικαιώματα που όλοι οι συνδεμένοι χρήστες θα έχουν από "
 "προεπιλογή, εκτός και άλλα ειδικά δικαιώματα αποδόθηκαν σε αυτούς."
 
-#: templates/admin/reports.html:58 templates/user/stats.html:60
-msgid "Daily activity"
-msgstr "Ημερήσια δραστηριότητα"
+#: templates/admin/project_fs.html:26
+#, python-format
+msgid "Filesystem configuration: %(project_code)s"
+msgstr "Ρύθμιση συστήματος αρχείων: %(project_code)s"
+
+#: templates/admin/project_fs.html:28
+msgid ""
+"Pootle FS is still experimental, we’d love you to use it, but it does "
+"require a level of expertise in localisation, Python and Pootle in case "
+"anything goes wrong."
+msgstr ""
+"Το Pootle FS είναι ακόμα πειραματικό, θα θέλαμε να το χρησιμοποιήσετε, αλλά "
+"απαιτεί κάποιο επίπεδο εμπειρίας στην τοπικοποίηση, στο Python και το Pootle "
+"σε περίπτωση που κάτι πάει στραβά."
+
+#: templates/admin/project_fs.html:37
+msgid "Backend configuration"
+msgstr "Διαμόρφωση παρασκηνίου"
+
+#: templates/admin/project_fs.html:48
+msgid "Update filesystem configuration"
+msgstr "Ενημέρωση ρυθμίσεων συστήματος αρχείων"
+
+#: templates/admin/project_fs.html:51
+msgid "Translation path mapping should be of the format:"
+msgstr "Η απεικόνιση της διαδρομής μετάφρασης πρέπει να είναι της μορφής:"
+
+#: templates/admin/project_fs.html:59
+msgid ""
+"Only `&lt;language_code&gt;` is required, although it must end with `.&lt;"
+"ext&gt;`"
+msgstr ""
+"Απαιτείται μόνο `&lt;language_code&gt;`, αν και πρέπει να τελειώνει με `.&lt;"
+"ext&gt;`"
+
+#: templates/admin/project_fs.html:65
+msgid ""
+"If you are using the localfs backend the translation path mapping will be "
+"combined with the path specified in backend URL"
+msgstr ""
+"Εάν χρησιμοποιείτε το παρασκήνιο τοπικού συστήματος αρχείων η απεικόνιση της "
+"διαδρομής μετάφρασης θα συνδυαστεί με τη διαδρομή που ορίστηκε στο URL "
+"παρασκηνίου."
+
+#: templates/admin/project_fs.html:71
+msgid ""
+"For other backends the translation path mapping will be relative to the root "
+"of the repository."
+msgstr ""
+"Για άλλα παρασκήνια η απεικόνιση διαδρομής μετάφρασης θα είναι σχετική προς "
+"τη ρίζα του αποθετηρίου."
+
+#: templates/admin/project_fs.html:81
+msgid "Language mapping configuration"
+msgstr "Ρύθμιση της απεικόνισης γλώσσας"
+
+#: templates/admin/project_fs.html:91
+msgid "Remove"
+msgstr "Αφαίρεση"
+
+#: templates/admin/project_fs.html:92
+msgid "Pootle code"
+msgstr "Κώδικας Pootle"
+
+#: templates/admin/project_fs.html:93
+msgid "Filesystem code"
+msgstr "Κώδικας συστήματος αρχείων"
+
+#: templates/admin/project_fs.html:97
+#: templates/admin/staticpages/page_create.html:4
+msgid "Add"
+msgstr "Προσθήκη"
+
+#: templates/admin/project_fs.html:104
+msgid "Update"
+msgstr "Ενημέρωση"
 
 #: templates/admin/reports/header.html:5
 msgid "User"
 msgstr "Χρήστης"
 
-#: templates/admin/reports/header.html:22
+#: templates/admin/reports/header.html:12
+msgid "Previous month"
+msgstr "Προηγούμενος μήνας"
+
+#: templates/admin/reports/header.html:16
+msgid "Next month"
+msgstr "Επόμενος μήνας"
+
+#: templates/admin/reports/header.html:24
 msgid "Detailed Report"
 msgstr "Λεπτομερής αναφορά"
 
-#: templates/admin/reports/header.html:24
+#: templates/admin/reports/header.html:26
 msgid "Detailed Statistics"
 msgstr "Λεπτομερή στατιστικά"
 
-#: templates/admin/reports/paid_task_form.html:5
-msgid "Add Task"
-msgstr "Προσθήκη εργασίας"
-
-#: templates/admin/reports/paid_task_form.html:23
-msgid "words"
-msgstr "λέξεις"
-
-#: templates/admin/reports/paid_task_form.html:24
-msgid "hours"
-msgstr "ώρες"
-
-#: templates/admin/reports/paid_task_form.html:35
-msgid "Add record"
-msgstr "Προσθήκη εγγραφής"
-
-#: templates/admin/reports/user_rates_form.html:4
-msgid "Set Rates"
-msgstr "Ορισμός ρυθμών"
-
-#: templates/admin/reports/user_rates_form.html:31
-#: templates/admin/staticpages/_form.html:34
-#: templates/languages/admin/characters.html:20 templates/user/settings.html:39
-msgid "Save"
-msgstr "Αποθήκευση"
-
 #: templates/admin/staticpages/_form.html:7
-#: templates/translation_projects/terminology/manage.html:36
+#: templates/translation_projects/terminology/manage.html:41
 msgid "Delete"
 msgstr "Διαγραφή"
 
 #: templates/admin/staticpages/_form.html:21
 msgid "or"
 msgstr "ή"
+
+#: templates/admin/staticpages/_form.html:34
+#: templates/languages/admin/characters.html:20 templates/user/settings.html:39
+msgid "Save"
+msgstr "Αποθήκευση"
 
 #: templates/admin/staticpages/_form.html:37
 msgid ""
@@ -2060,10 +2342,6 @@ msgstr "προβολή"
 msgid "No pages yet."
 msgstr "Χωρίς σελίδες ακόμα."
 
-#: templates/admin/staticpages/page_create.html:4
-msgid "Add"
-msgstr "Προσθήκη"
-
 #: templates/admin/staticpages/page_list.html:7
 msgid "Legal Pages"
 msgstr "Νομικές σελίδες"
@@ -2088,103 +2366,70 @@ msgstr "Ανακοινώσεις"
 msgid "Add Announcement"
 msgstr "Προσθήκη ανακοίνωσης"
 
-#: templates/browser/_actions.html:6
+#: templates/browser/_actions.html:8
 msgid "Fix critical errors"
 msgstr "Διόρθωση κρίσιμων σφαλμάτων"
 
-#: templates/browser/_actions.html:11
-#, fuzzy
+#: templates/browser/_actions.html:13
 msgid "Critical errors"
-msgstr "Κρίσιμα σφάλματα:"
+msgstr "Κρίσιμα σφάλματα"
 
-#: templates/browser/_actions.html:19
+#: templates/browser/_actions.html:23
 msgid "Review suggestions"
 msgstr "Έλεγχος προτάσεων"
 
-#: templates/browser/_actions.html:32
+#: templates/browser/_actions.html:38
 msgid "Continue translation"
 msgstr "Συνέχιση μετάφρασης"
 
-#: templates/browser/_actions.html:37
-#, fuzzy
-msgid "Needs translation"
-msgstr "Χρειάζεται μετάφραση"
-
-#: templates/browser/_actions.html:45
+#: templates/browser/_actions.html:53
 msgid "View all"
 msgstr "Προβολή όλων"
 
-#: templates/browser/_progressbar.html:3
-#, python-format
-msgid "<span class=\"value translated\">0</span>%% translated"
-msgstr "<span class='value translated'>0</span>%% μεταφράστηκαν"
+#. Translators: This refers to "All strings"
+#: templates/browser/_actions.html:58 templates/editor/_filters.html:6
+msgid "All"
+msgstr "Όλα"
 
-#: templates/browser/_progressbar.html:4
-#, python-format
-msgid "<span class=\"value fuzzy\">0</span>%% needs work"
-msgstr "<span class='value fuzzy'>0</span>%% ασαφή"
-
-#: templates/browser/_progressbar.html:5
-#, python-format
-msgid "<span class=\"value untranslated\">0</span>%% untranslated"
-msgstr "<span class='value untranslated'>0</span>%% αμετάφραστα"
-
-#: templates/browser/index.html:19
+#: templates/browser/index.html:17
 msgid "Expand details"
 msgstr "Επέκταση λεπτομερειών"
 
-#: templates/browser/index.html:26
+#: templates/browser/index.html:24
 msgid "Translation Statistics"
 msgstr "Στατιστικά μετάφρασης"
 
-#: templates/browser/index.html:47
+#: templates/browser/index.html:46
 msgid "Failing Checks"
 msgstr "Αποτυχημένοι έλεγχοι"
 
-#: templates/browser/index.html:66
-#, fuzzy
-msgid "more..."
+#: templates/browser/index.html:65
+msgid "More..."
 msgstr "Περισσότερα..."
 
-#: templates/browser/index.html:67
-msgid "less..."
-msgstr ""
+#: templates/browser/index.html:66
+msgid "Less..."
+msgstr "Λιγότερα..."
 
 #: templates/browser/index.html:77
-#, fuzzy
-msgid "Top contributors Last 30 days"
-msgstr "Κορυφαίοι συντελεστές"
-
-#: templates/browser/index.html:84
-#, fuzzy
 msgid "Updates"
-msgstr "Ενημέρωση"
+msgstr "Ενημερώσεις"
 
-#: templates/browser/index.html:88 templates/browser/index.html.py:96
-#, fuzzy
-msgid "Last action:"
-msgstr "Τελευταία ενέργεια"
+#: templates/browser/index.html:82
+msgid "Last updated:"
+msgstr "Τελευταία ενημέρωση:"
 
-#: templates/browser/index.html:92
-#, fuzzy
+#: templates/browser/index.html:97
 msgid "Translations"
-msgstr "Μετάφραση"
+msgstr "Μεταφράσεις"
 
-#: templates/browser/index.html:137
+#: templates/browser/index.html:101
+msgid "Last action:"
+msgstr "Τελευταία ενέργεια:"
+
+#: templates/browser/index.html:148
 msgid "This project is disabled and visible to administrators only."
 msgstr "Αυτό το έργο είναι ανενεργό και ορατό μόνο σε διαχειριστές."
-
-#: templates/browser/index.html:142
-msgid ""
-"Some data on this page is currently being calculated, and the page will be "
-"refreshed automatically in <strong>30 seconds</strong>."
-msgstr ""
-"Μερικά δεδομένα σε αυτή τη σελίδα υπολογίζονται τώρα και η σελίδα θα "
-"ανανεωθεί σε <strong>30 δευτερόλεπτα</strong>."
-
-#: templates/browser/index.html:146
-msgid "Refresh now"
-msgstr "Ανανέωση τώρα"
 
 #: templates/contact_form/xhr_contact_form.html:8
 msgid "Please fill in all the fields."
@@ -2209,28 +2454,25 @@ msgstr ""
 msgid "score"
 msgstr "βαθμολογία"
 
-#: templates/core/_top_scorers.html:15
-#: templates/core/_top_scorers_as_table.html:7
-#: templates/core/_top_scorers_as_ul.html:7
+#: templates/core/_top_scorers.html:16 templates/core/_top_scorers_as_ul.html:8
 #, python-format
 msgid "#%(position)s"
 msgstr "#%(position)s"
 
-#: templates/core/_top_scorers.html:31
+#: templates/core/_top_scorers.html:33
 msgid "No user contributions yet."
 msgstr "Χωρίς συνεισφορά από τον χρήστη ακόμα."
 
 #: templates/core/_top_scorers_as_ul.html:3
-#, fuzzy
 msgid "Top contributors:"
-msgstr "Κορυφαίοι συντελεστές"
+msgstr "Κορυφαίοι συντελεστές:"
 
-#: templates/core/captcha.html:4 templates/core/captcha.html.py:7
-#: templates/core/xhr_captcha.html:8
+#: templates/core/captcha.html:4 templates/core/captcha.html:7
+#: templates/core/xhr_captcha.html:14
 msgid "Are You Human?"
 msgstr "Είσαστε άνθρωπος;"
 
-#: templates/core/xhr_captcha.html:9
+#: templates/core/xhr_captcha.html:15
 msgid ""
 "To protect the server against attacks we have to verify that submissions are "
 "made by human users."
@@ -2238,11 +2480,11 @@ msgstr ""
 "Για προστασία του εξυπηρετητή από επιθέσεις πρέπει να επιβεβαιώσουμε ότι οι "
 "υποβολές γίνονται από ανθρώπινους χρήστες."
 
-#: templates/core/xhr_captcha.html:10
+#: templates/core/xhr_captcha.html:16
 msgid "Please answer this question:"
 msgstr "Παρακαλώ απαντήστε αυτήν την ερώτηση:"
 
-#: templates/core/xhr_captcha.html:13
+#: templates/core/xhr_captcha.html:19
 msgid "Confirm"
 msgstr "Επιβεβαίωση"
 
@@ -2253,6 +2495,21 @@ msgstr "Επιστροφή στην περιήγηση"
 #: templates/editor/_filters.html:12
 msgid "My suggestions"
 msgstr "Οι προτάσεις μου"
+
+#: templates/editor/_filters.html:13
+msgid "My submissions"
+msgstr "Οι υποβολές μου"
+
+#. Translators: This is a type of filtering criterion that
+#. selects the strings that have been submitted by me at some point
+#. in time but have been overwritten by other users.
+#: templates/editor/_filters.html:17
+msgid "My overwritten submissions"
+msgstr "Οι υποβολές μου που αντικαταστάθηκαν"
+
+#: templates/editor/_filters.html:18
+msgid "Checks"
+msgstr "Έλεγχοι"
 
 #: templates/editor/_filters.html:23
 msgid "Select type"
@@ -2294,206 +2551,160 @@ msgstr "Σύνολο συμβολοσειρών"
 msgid "Go to the next string (Ctrl+Down)"
 msgstr "Μετάβαση στην επόμενη συμβολοσειρά (Ctrl+κάτω βέλος)"
 
-#: templates/editor/export_view.html:6 templates/languages/_nav.html:18
-#: templates/projects/_nav.html:20 templates/projects/all/_nav.html:20
-#: templates/translation_projects/_nav.html:18
-msgid "Export View"
-msgstr "Εξαγωγή προβολής"
-
-#: templates/editor/export_view.html:7 templates/editor/export_view.html:98
-msgid "All Projects"
-msgstr "Όλα τα έργα"
-
-#: templates/editor/export_view.html:8 templates/editor/export_view.html:99
-msgid "All Languages"
-msgstr "Όλες οι γλώσσες"
-
-#: templates/editor/export_view.html:143
-msgid "No strings."
-msgstr "Χωρίς συμβολοσειρές."
-
-#: templates/editor/export_view.html:149
-#, python-format
+#: templates/editor/email/suggestions_accepted_with_comment.txt:2
 msgid ""
-"We displayed the first unit out of %(total_count)s. Please refine your "
-"search."
-msgid_plural ""
-"We displayed the first %(unit_count)s units out of %(total_count)s. Please "
-"refine your search."
-msgstr[0] ""
-"Εμφανίσαμε την πρώτη μονάδα από %(total_count)s. Παρακαλούμε, βελτιώστε την "
-"αναζήτησή σας."
-msgstr[1] ""
-"Εμφανίσαμε τις πρώτες % (unit_count)s μονάδες από %(total_count)s. "
-"Παρακαλούμε, βελτιώστε την αναζήτησή σας."
+"The following suggestions submitted by you have been accepted with the "
+"comment:"
+msgstr "Οι παρακάτω προτάσεις που υποβάλλατε έγιναν αποδεκτές με το σχόλιο:"
 
-#: templates/editor/main.html:4 templates/languages/_nav.html:10
-#: templates/projects/_nav.html:11 templates/projects/all/_nav.html:11
-#: templates/translation_projects/_nav.html:10
+#: templates/editor/email/suggestions_accepted_with_comment.txt:10
+#: templates/editor/email/suggestions_rejected_with_comment.txt:10
+msgid "We hope this feedback will help you improve your future contributions."
+msgstr ""
+"Ελπίζουμε ότι αυτή η ανάδραση θα σας βοηθήσει να βελτιώσετε τις μελλοντικές "
+"σας συνεισφορές."
+
+#: templates/editor/email/suggestions_rejected_with_comment.txt:2
+msgid ""
+"The following suggestions submitted by you have been rejected with the "
+"comment:"
+msgstr "Οι παρακάτω προτάσεις που υποβάλλατε έχουν απορριφθεί με το σχόλιο:"
+
+#: templates/editor/main.html:4 templates/languages/_nav.html:12
+#: templates/projects/_nav.html:13 templates/projects/all/_nav.html:11
+#: templates/translation_projects/_nav.html:13
 msgid "Translate"
 msgstr "Μετάφρασε"
 
-#: templates/editor/units/edit.html:13
+#: templates/editor/units/edit.html:12
 #, python-format
 msgid "<a href=\"%(url)s\">Unit #%(id)s</a>"
 msgstr "<a href=\"%(url)s\">Μονάδα #%(id)s</a>"
 
-#: templates/editor/units/edit.html:20
+#: templates/editor/units/edit.html:19
 msgid "Priority:"
 msgstr "Προτεραιότητα:"
 
-#: templates/editor/units/edit.html:27
+#: templates/editor/units/edit.html:26
 msgid "Context:"
 msgstr "Περιεχόμενο:"
 
-#: templates/editor/units/edit.html:37
+#: templates/editor/units/edit.html:36
 msgid "Locations:"
 msgstr "Τοποθεσίες:"
 
-#: templates/editor/units/edit.html:53
+#: templates/editor/units/edit.html:55
 msgid "Terminology:"
 msgstr "Ορολογία:"
 
-#: templates/editor/units/edit.html:56
+#: templates/editor/units/edit.html:58
 msgid "Insert the translated term into the editor"
 msgstr "Εισάγετε τον μεταφρασμένο όρο στον επεξεργαστή"
 
-#: templates/editor/units/edit.html:69
+#: templates/editor/units/edit.html:70
 msgid "Comments:"
 msgstr "Σχόλια:"
 
-#: templates/editor/units/edit.html:79
+#: templates/editor/units/edit.html:80
 msgid "Click to open the image in a popup"
 msgstr "Πατήστε για να ανοίξετε την εικόνα σε αναδυόμενο παράθυρο"
 
-#: templates/editor/units/edit.html:93
+#: templates/editor/units/edit.html:94
 msgid "Screenshots..."
 msgstr "Στιγμιότυπα..."
 
-#: templates/editor/units/edit.html:116 templates/editor/units/edit.html:143
+#: templates/editor/units/edit.html:118 templates/editor/units/edit.html:140
 msgid "Copy into translation"
 msgstr "Αντιγραφή στη μετάφραση"
 
-#: templates/editor/units/edit.html:138
+#: templates/editor/units/edit.html:134
 msgid "Report a problem with this string"
 msgstr "Αναφορά προβλήματος με αυτήν τη συμβολοσειρά"
 
-#: templates/editor/units/edit.html:161 templates/editor/units/edit.html:172
-#: templates/editor/units/edit.html:268
+#: templates/editor/units/edit.html:152 templates/editor/units/edit.html:163
+#: templates/editor/units/edit.html:257
 msgid "Submit"
 msgstr "Υποβολή"
 
-#: templates/editor/units/edit.html:162
+#: templates/editor/units/edit.html:153
 msgid "Submit translation and go to the next string (Ctrl+Enter)"
 msgstr "Υποβολή μετάφρασης και μετάβαση στην επόμενη συμβολοσειρά (Ctrl+Enter)"
 
-#: templates/editor/units/edit.html:167 templates/editor/units/edit.html:173
+#: templates/editor/units/edit.html:158 templates/editor/units/edit.html:164
 msgid "Suggest"
 msgstr "Πρόταση"
 
-#: templates/editor/units/edit.html:168
+#: templates/editor/units/edit.html:159
 msgid "Suggest translation and go to the next string (Ctrl+Enter)"
 msgstr "Πρόταση μετάφρασης και μετάβαση στην επόμενη συμβολοσειρά (Ctrl+Enter)"
 
-#: templates/editor/units/edit.html:172
+#: templates/editor/units/edit.html:163
 msgid "Switch to translation mode (Ctrl+Shift+Space)"
 msgstr "Εναλλαγή στην κατάσταση μετάφρασης (Ctrl+Shift+Space)"
 
-#: templates/editor/units/edit.html:173
+#: templates/editor/units/edit.html:164
 msgid "Switch to suggestion mode (Ctrl+Shift+Space)"
 msgstr "Εναλλαγή στην κατάσταση πρότασης (Ctrl+Shift+Space)"
 
-#: templates/editor/units/edit.html:178
+#: templates/editor/units/edit.html:169
 msgid "Mark this string as needing further work (Ctrl+Space)"
 msgstr ""
 "Σημείωση αυτής της συμβολοσειράς ότι χρειάζεται παραπέρα εργασία (Ctrl+Space)"
 
-#: templates/editor/units/edit.html:195
+#: templates/editor/units/edit.html:189
+msgid "Showing match from similar translations"
+msgstr ""
+
+#: templates/editor/units/edit.html:212
 msgid "Show Timeline"
 msgstr "Εμφάνιση χρονοδιαγράμματος"
 
-#: templates/editor/units/edit.html:197
+#: templates/editor/units/edit.html:214
 msgid "Add Comment"
 msgstr "Προσθήκη σχολίου"
 
-#: templates/editor/units/edit.html:199
+#: templates/editor/units/edit.html:216
 msgid "Raw View"
 msgstr "Ακατέργαστη προβολή"
 
-#: templates/editor/units/edit.html:209
+#: templates/editor/units/edit.html:227
 #, python-format
 msgid "reviewed by <a href=\"%(profile_url)s\">%(reviewer)s</a>"
 msgstr "ελέγχθηκε από <a href=\"%(profile_url)s\">%(reviewer)s</a>"
 
-#: templates/editor/units/edit.html:219
-msgid "Insert RLM (Right-To-Left Mark) into the editor"
-msgstr "Εισαγωγή RLM (σημάδι από δεξιά προς τα αριστερά) στον επεξεργαστή"
-
-#: templates/editor/units/edit.html:222
-msgid "Insert LRM (Left-To-Right Mark) into the editor"
-msgstr "Εισαγωγή LRM (σημάδι από αριστερά προς τα δεξιά) στον επεξεργαστή"
-
-#: templates/editor/units/edit.html:225
-msgid "Insert RLE (Right-To-Left Embedding) into the editor"
-msgstr "Εισαγωγή RLE (ενσωμάτωση από δεξιά προς τα αριστερά) στον επεξεργαστή"
-
-#: templates/editor/units/edit.html:228
-msgid "Insert LRE (Left-To-Right Embedding) into the editor"
-msgstr "Εισαγωγή LRE (ενσωμάτωση από αριστερά προς τα δεξιά) στον επεξεργαστή"
-
-#: templates/editor/units/edit.html:231
-msgid "Insert RLO (Right-To-Left Override) into the editor"
+#: templates/editor/units/edit.html:238
+#, python-format
+msgid ""
+"Insert %(character_name)s (Unicode value %(character_code)s) into the editor"
 msgstr ""
-"Εισαγωγή RLO (αντικατάσταση από δεξιά προς τα αριστερά) στον επεξεργαστή"
+"Εισαγωγή %(character_name)s (Unicode value %(character_code)s) στον "
+"επεξεργαστή"
 
-#: templates/editor/units/edit.html:234
-msgid "Insert LRO (Left-To-Right Override) into the editor"
-msgstr ""
-"Εισαγωγή LRO (αντικατάσταση από αριστερά προς τα δεξιά) στον επεξεργαστή"
-
-#: templates/editor/units/edit.html:237
-msgid "Insert PDF (Pop Directional Format ) into the editor"
-msgstr "Εισαγωγή PDF (Pop Directional Format) στον επεξεργαστή"
-
-#: templates/editor/units/edit.html:240
-msgid "Insert ZWJ (Zero Width Joiner) into the editor"
-msgstr "Εισαγωγή ZWJ (σύνδεση μηδενικού πλάτους) στον επεξεργαστή"
-
-#: templates/editor/units/edit.html:243
-msgid "Insert ZWNJ (Zero Width Non Joiner) into the editor"
-msgstr "Εισαγωγή ZWNJ (μη σύνδεση μηδενικού πλάτους) στον επεξεργαστή"
-
-#: templates/editor/units/edit.html:250
-msgid "Insert this symbol into the editor"
-msgstr "Εισαγωγή αυτού του συμβόλου στον επεξεργαστή"
-
-#: templates/editor/units/edit.html:288
+#: templates/editor/units/edit.html:276
 msgid "User suggestions"
 msgstr "Προτάσεις χρήστη"
 
-#: templates/editor/units/edit.html:305
-#, fuzzy
+#: templates/editor/units/edit.html:296
 msgid "More options"
-msgstr "Αλλαγή επιλογών"
+msgstr "Περισσότερες επιλογές"
 
-#: templates/editor/units/edit.html:307
-#, fuzzy
+#: templates/editor/units/edit.html:298
 msgid "Less options"
-msgstr "Αλλαγή επιλογών"
+msgstr "Λιγότερες επιλογές"
 
-#: templates/editor/units/edit.html:312
+#: templates/editor/units/edit.html:303
 msgid "Accept suggestion"
 msgstr "Αποδοχή πρότασης"
 
-#: templates/editor/units/edit.html:317
+#: templates/editor/units/edit.html:308
 msgid "Reject suggestion"
 msgstr "Απόρριψη πρότασης"
 
-#: templates/editor/units/edit.html:323
+#: templates/editor/units/edit.html:314
 msgid "Remove suggestion"
 msgstr "Αφαίρεση πρότασης"
 
-#: templates/editor/units/edit.html:343
+#: templates/editor/units/edit.html:326
 msgid "A long time ago"
 msgstr "Πολύ παλιότερα"
 
@@ -2501,63 +2712,46 @@ msgstr "Πολύ παλιότερα"
 msgid "Comment: "
 msgstr "Σχόλιο: "
 
-#: templates/editor/units/xhr_checks.html:5
+#: templates/editor/units/xhr_checks.html:4
 msgid "Critical issues with the translation"
 msgstr "Κρίσιμα προβλήματα με τη μετάφραση"
 
-#: templates/editor/units/xhr_checks.html:5
+#: templates/editor/units/xhr_checks.html:4
+#: templates/languages/admin/language_team.html:123
 msgid "Critical errors:"
 msgstr "Κρίσιμα σφάλματα:"
 
-#: templates/editor/units/xhr_checks.html:12
-#: templates/editor/units/xhr_checks.html:32
+#: templates/editor/units/xhr_checks.html:11
+#: templates/editor/units/xhr_checks.html:29
 msgid "Mute quality check"
 msgstr "Αφαίρεση ελέγχου ποιότητας"
 
-#: templates/editor/units/xhr_checks.html:13
-#: templates/editor/units/xhr_checks.html:33
+#: templates/editor/units/xhr_checks.html:12
+#: templates/editor/units/xhr_checks.html:30
 msgid "Unmute quality check"
 msgstr "Ακύρωση αφαίρεσης ελέγχου ποιότητας"
 
-#: templates/editor/units/xhr_checks.html:25
+#: templates/editor/units/xhr_checks.html:22
 msgid "Possible issues with the translation"
 msgstr "Πιθανά προβλήματα με τη μετάφραση"
 
-#: templates/editor/units/xhr_checks.html:25
+#: templates/editor/units/xhr_checks.html:22
 msgid "Watch out for:"
 msgstr "Προσέξτε:"
 
-#: templates/editor/units/xhr_comment.html:13
+#: templates/editor/units/xhr_comment.html:16
 msgid "Remove comment"
 msgstr "Αφαίρεση σχολίου"
 
-#: templates/editor/units/xhr_comment.html:16
-msgid "Last comment:"
-msgstr "Τελευταίο σχόλιο:"
+#: templates/editor/units/xhr_comment.html:19
+msgid "Сomment:"
+msgstr "Σχόλιο:"
 
 #: templates/editor/units/xhr_timeline.html:3
 msgid "Timeline"
 msgstr "Χρονοδιάγραμμα"
 
-#: templates/editor/units/xhr_timeline.html:32
-msgid "Last comment removed"
-msgstr "Το τελευταίο σχόλιο αφαιρέθηκε"
-
-#: templates/editor/units/xhr_timeline.html:38
-#, fuzzy, python-format
-msgid "Muted <a href=\"%(check_url)s\">%(check_name)s</a> check"
-msgstr "<a href=\"%(url)s\">%(num)d λέξεις</a>"
-
-#: templates/editor/units/xhr_timeline.html:42
-#, fuzzy, python-format
-msgid "Unmuted <a href=\"%(check_url)s\">%(check_name)s</a> check"
-msgstr "<a href=\"%(url)s\">%(num)d λέξεις</a>"
-
-#: templates/editor/units/xhr_timeline.html:54
-msgid "Unit created"
-msgstr "Δημιουργήθηκε μονάδα"
-
-#: templates/errors/400.html:4 templates/errors/400.html.py:11
+#: templates/errors/400.html:4 templates/errors/400.html:11
 msgid "Bad Request"
 msgstr "Εσφαλμένο αίτημα"
 
@@ -2569,7 +2763,7 @@ msgstr "Σφάλμα 400"
 msgid "The operation is not permitted."
 msgstr "Αυτή η λειτουργία δεν επιτρέπεται."
 
-#: templates/errors/403.html:4 templates/errors/403.html.py:8
+#: templates/errors/403.html:4 templates/errors/403.html:8
 msgid "Permission Denied"
 msgstr "Άρνηση πρόσβασης"
 
@@ -2577,7 +2771,7 @@ msgstr "Άρνηση πρόσβασης"
 msgid "You don't seem to have permissions to access this page."
 msgstr "Δεν φαίνεται να έχετε δικαιώματα πρόσβασης σε αυτήν τη σελίδα."
 
-#: templates/errors/404.html:4 templates/errors/404.html.py:8
+#: templates/errors/404.html:4 templates/errors/404.html:8
 msgid "Page Not Found"
 msgstr "Δεν βρέθηκε η σελίδα"
 
@@ -2585,7 +2779,7 @@ msgstr "Δεν βρέθηκε η σελίδα"
 msgid "We're sorry, but the requested page could not be found."
 msgstr "Λυπόμαστε, αλλά η σελίδα που ζητήσατε δεν μπόρεσε να βρεθεί."
 
-#: templates/errors/500.html:4 templates/errors/500.html.py:8
+#: templates/errors/500.html:4 templates/errors/500.html:8
 msgid "Server Error"
 msgstr "Σφάλμα εξυπηρετητή"
 
@@ -2607,7 +2801,7 @@ msgstr ""
 "Εάν χρειαζόσαστε βοήθεια, μπορείτε να αναφέρετε αυτό το σφάλμα ως <strong>"
 "%(ref)s</strong>."
 
-#: templates/errors/db.html:4 templates/errors/db.html.py:8
+#: templates/errors/db.html:4 templates/errors/db.html:8
 msgid "Database Error"
 msgstr "Σφάλμα της βάσης δεδομένων"
 
@@ -2634,69 +2828,127 @@ msgstr ""
 msgid "The reported error was:"
 msgstr "Το αναφερθέν σφάλμα ήταν:"
 
-#: templates/languages/_nav.html:5 templates/projects/_nav.html:5
+#: templates/includes/formtable.html:22
+#, python-format
+msgid "Page %(page_number)s of %(page_count)s."
+msgstr "Σελίδα  %(page_number)s από %(page_count)s."
+
+#: templates/includes/formtable.html:27
+#, python-format
+msgid "Results per page: %(n)s"
+msgstr "Αποτελέσματα ανά σελίδα: %(n)s"
+
+#: templates/includes/formtable.html:85
+msgid "Select all"
+msgstr "Επιλογή όλων"
+
+#: templates/includes/formtable.html:98
+msgid "Go"
+msgstr "Μετάβαση"
+
+#: templates/languages/_nav.html:6 templates/projects/_nav.html:6
 #: templates/projects/all/_nav.html:5
-#: templates/translation_projects/_nav.html:5
+#: templates/translation_projects/_nav.html:6
 msgid "Browse"
 msgstr "Περιήγηση"
 
-#: templates/languages/admin/permissions.html:9
-msgid "Below you can add, edit, and delete the permissions for this language."
-msgstr ""
-"Μπορείτε παρακάτω να προσθέσετε, να επεξεργαστείτε και να διαγράψετε τα "
-"δικαιώματα για αυτήν τη γλώσσα."
+#: templates/languages/_nav.html:21
+msgid "Team"
+msgstr "Ομάδα"
 
-#: templates/layout.html:82
+#: templates/languages/admin/includes/suggestions_header.html:14
+msgid "Filter suggestions"
+msgstr "Προτάσεις φίλτρου"
+
+#: templates/languages/admin/language_team.html:5
+msgid "Language team"
+msgstr "Ομάδα γλώσσας"
+
+#. Translators: This refers to the management of language team members
+#: templates/languages/admin/language_team.html:31
+msgid "Member admin"
+msgstr "Διαχειριστικό μέλος"
+
+#: templates/languages/admin/language_team.html:45
+msgid "Add team member"
+msgstr "Προσθήκη μέλους ομάδας"
+
+#: templates/languages/admin/language_team.html:58
+#: templates/languages/admin/language_team.html:71
+#: templates/languages/admin/language_team.html:84
+#: templates/languages/admin/language_team.html:97
+msgid "Remove selected"
+msgstr "Αφαίρεση επιλεγμένου"
+
+#: templates/languages/admin/language_team.html:118
+msgid "Unit and suggestions admin"
+msgstr "Μονάδα και προτάσεις διαχείρισης"
+
+#: templates/languages/admin/language_team.html:133
+msgid "Pending suggestions:"
+msgstr "Εκκρεμείς προτάσεις:"
+
+#: templates/languages/admin/language_team.html:143
+msgid "Total words:"
+msgstr "Σύνολο λέξεων:"
+
+#: templates/languages/admin/language_team.html:147
+msgid "Translated:"
+msgstr "Μεταφρασμένα:"
+
+#: templates/languages/admin/language_team.html:155
+msgid "Needs work:"
+msgstr "Χρειάζεται δουλειά:"
+
+#: templates/layout.html:88
 msgid "Pootle requires JavaScript"
 msgstr "Το Pootle χρειάζεται το JavaScript"
 
-#: templates/layout.html:83
+#: templates/layout.html:89
 msgid ""
 "Please enable JavaScript in your browser preferences and reload the page."
 msgstr ""
 "Παρακαλώ ενεργοποιήστε το JavaScript στις προτιμήσεις του περιηγητή σας και "
 "επαναφορτώστε τη σελίδα."
 
-#: templates/layout.html:92
+#: templates/layout.html:98
 msgid "skip to navigation"
 msgstr "παράλειψη περιήγησης"
 
-#: templates/layout.html:113
+#: templates/layout.html:131
 msgid "Public Profile"
 msgstr "Δημόσια κατατομή"
 
-#: templates/layout.html:115 templates/user/profile.html:67
-#: templates/user/stats.html:46 templates/user/stats.html.py:50
-msgid "Statistics"
-msgstr "Στατιστικά"
+#: templates/layout.html:132 templates/user/settings.html:4
+#: templates/user/settings.html:7
+msgid "Settings"
+msgstr "Ρυθμίσεις"
 
-#: templates/layout.html:117
-msgid "Admin"
-msgstr "Διαχειριστής"
-
-#: templates/layout.html:120
+#: templates/layout.html:137
 msgid "Sign out"
 msgstr "Έξοδος"
 
-#: templates/layout.html:124
+#: templates/layout.html:141
 msgid "Sign In"
 msgstr "Είσοδος"
 
 #: templates/projects/admin/email/translation_project_created.txt:2
-#, fuzzy, python-format
+#, python-format
 msgid ""
 "A Translation project (%(tp)s) has been created at %(url)s, and has updated "
 "successfully."
-msgstr "Το έργο της μετάφρασης έχει ενημερωθεί με τα τελευταία πρότυπα."
+msgstr ""
+"Το έργο της μετάφρασης (%(tp)s) έχει δημιουργηθεί στο %(url)s και "
+"ενημερώθηκε επιτυχώς."
 
 #: templates/projects/admin/email/translation_project_creation_failed.txt:2
-#, fuzzy, python-format
+#, python-format
 msgid ""
 "An error occurred creating Translation project (%(tp)s). Please contact your "
 "system administrator."
 msgstr ""
-"Συνέβη κάποιο σφάλμα κατά τη σύνδεσή σας. Παρακαλούμε, επικοινωνήστε με τον "
-"διαχειριστή του συστήματός σας."
+"Συνέβη κάποιο σφάλμα κατά τη δημιουργία του έργου μετάφρασης (%(tp)s). "
+"Παρακαλούμε, επικοινωνήστε με τον διαχειριστή του συστήματός σας."
 
 #: templates/projects/admin/languages.html:11
 msgid "Here you can add, edit, or delete the languages for this project."
@@ -2704,7 +2956,15 @@ msgstr ""
 "Εδώ μπορείτε να προσθέσετε, να επεξεργαστείτε ή να διαγράψετε τις γλώσσες "
 "για αυτό το έργο."
 
-#: templates/projects/admin/languages.html:14
+#: templates/projects/admin/languages.html:15
+msgid ""
+"Adding new languages from this screen is disabled. You will need to update "
+"your sources directly, and update Pootle from there."
+msgstr ""
+"Η προσθήκη νέων γλωσσών από αυτήν την οθόνη είναι ανενεργή. Θα χρειαστεί να "
+"ενημερώσετε τις πηγές σας άμεσα και να ενημερώσετε το Pootle από εκεί."
+
+#: templates/projects/admin/languages.html:17
 msgid ""
 "There are no templates for this project, so adding new languages from this "
 "screen is disabled."
@@ -2745,7 +3005,7 @@ msgstr "Όχι ευχαριστώ. Αποσύνδεση"
 msgid "Continue"
 msgstr "Συνέχεια"
 
-#: templates/translation_projects/_nav.html:26
+#: templates/translation_projects/_nav.html:22
 msgid "Terminology"
 msgstr "Ορολογία"
 
@@ -2765,7 +3025,7 @@ msgstr "Περιγραφή..."
 msgid "Details..."
 msgstr "Λεπτομέρειες..."
 
-#: templates/translation_projects/terminology/_term_edit.html:31
+#: templates/translation_projects/terminology/_term_edit.html:32
 msgid "Translator Comments"
 msgstr "Σχόλια μεταφραστή"
 
@@ -2773,17 +3033,22 @@ msgstr "Σχόλια μεταφραστή"
 msgid "Manage Terminology"
 msgstr "Διαχείριση ορολογίας"
 
-#: templates/translation_projects/terminology/manage.html:34
+#: templates/translation_projects/terminology/manage.html:39
 msgid "Term"
 msgstr "Όρος"
 
-#: templates/translation_projects/terminology/manage.html:58
+#: templates/translation_projects/terminology/manage.html:40
+#: templates/user/settings.html:28
+msgid "Translation"
+msgstr "Μετάφραση"
+
+#: templates/translation_projects/terminology/manage.html:63
 msgid "No terminology file has been found"
 msgstr "Δεν βρέθηκε κανένα αρχείο ορολογίας."
 
 #. Translators: 'pootle-terminology' and 'Terminology' are not
 #. translated
-#: templates/translation_projects/terminology/manage.html:62
+#: templates/translation_projects/terminology/manage.html:67
 msgid ""
 "In order to use the terminology feature, make sure to add a terminology file "
 "to your translation project. The terminology file must be named 'pootle-"
@@ -2812,108 +3077,13 @@ msgstr ""
 "Μόλις ανεβάσετε τα αρχεία, θα μπορείτε να προσθέσετε, να επεξεργαστείτε και "
 "να διαγράψετε όρους."
 
-#: templates/user/profile.html:13
-msgid "You can set or change your avatar image at www.gravatar.com"
-msgstr "Μπορείτε να ορίσετε ή να αλλάξετε την εικόνα σας στο www.gravatar.com"
-
-#: templates/user/profile.html:16
-msgid "Anonymous User"
-msgstr "Ανώνυμος χρήστης"
-
-#: templates/user/profile.html:28
-msgid "Score:"
-msgstr "Βαθμολογία:"
-
-#: templates/user/profile.html:31
-#, python-format
-msgid "My current score at %(server_title)s is %(score)s "
-msgstr "Η τρέχουσα βαθμολογία μου στους %(server_title)s είναι %(score)s "
-
-#: templates/user/profile.html:31 templates/user/profile.html.py:43
-msgid "Tweet this!"
-msgstr "Στείλτε το στο Tweet αυτό!"
-
-#: templates/user/profile.html:40
-msgid "No contributions in the last month"
-msgstr "Χωρίς συνεισφορά τον τελευταίο μήνα"
-
-#: templates/user/profile.html:43
-#, python-format
-msgid ""
-"I am #%(pos)s contributor in %(lang_name)s for this month at "
-"%(server_title)s! "
-msgstr ""
-"Συνεισέφερα #%(pos)s στο %(lang_name)s για αυτόν τον μήνα στο "
-"%(server_title)s! "
-
-#: templates/user/profile.html:44
-#, python-format
-msgid "#%(pos)s contributor in %(lang_name)s for this month"
-msgstr "#%(pos)s συνεισφέροντες στο %(lang_name)s για αυτόν τον μήνα"
-
-#: templates/user/profile.html:49
-#, python-format
-msgid ""
-"#%(pos)s contributor in <a href=\"%(url)s\">%(lang_name)s</a> for this month"
-msgstr ""
-"#%(pos)s συνεισφέροντες στο <a href=\"%(url)s\">%(lang_name)s</a> για αυτόν "
-"τον μήνα"
-
-#: templates/user/profile.html:60
+#: templates/user/includes/profile_activity.html:5
 msgid "Latest activity:"
 msgstr "Τελευταία δραστηριότητα:"
 
-#: templates/user/profile.html:76
-msgid "My Website"
-msgstr "Ο ιστότοπός μου"
-
-#: templates/user/profile.html:82
-msgid "My LinkedIn Profile"
-msgstr "Η κατατομή μου LinkedIn"
-
-#: templates/user/profile.html:91
-msgid ""
-"Show others who you are, tell about yourself<br/>and make your public "
-"profile look gorgeous!"
-msgstr ""
-"Εμφανίστε στους άλλους ποιος είσαστε, πείτε για σας<br/>και κάντε τη δημόσια "
-"κατατομή σας να φαίνεται εξαίσια!"
-
-#: templates/user/profile.html:101
-msgid ""
-"Some translations are provided by anonymous volunteers. These are registered "
-"under this special meta-account."
-msgstr ""
-"Μερικές μεταφράσεις παρέχονται από ανώνυμους εθελοντές. Αυτές καταχωρίζονται "
-"κάτω από αυτόν τον ειδικό μεταλογαριασμό."
-
-#: templates/user/profile.html:103
-msgid ""
-"Some translations are imported from external files. These are registered "
-"under this special meta-account."
-msgstr ""
-"Κάποιες μεταφράσεις εισάγονται από εξωτερικά αρχεία. Αυτές καταχωρίζονται "
-"κάτω από αυτόν τον ειδικό μεταλογαριασμό."
-
-#: templates/user/reports/user_rates_widget.html:4
-msgid "Rates"
-msgstr "Ρυθμοί"
-
-#: templates/user/reports/user_rates_widget.html:8
-msgid "Currency:"
-msgstr "Νόμισμα:"
-
-#: templates/user/reports/user_rates_widget.html:18
-msgid "Translation Rate:"
-msgstr "Ρυθμός μετάφρασης:"
-
-#: templates/user/reports/user_rates_widget.html:29
-msgid "Review Rate:"
-msgstr "Ρυθμός ελέγχου:"
-
-#: templates/user/reports/user_rates_widget.html:41
-msgid "Hourly Rate:"
-msgstr "Ωριαίος ρυθμός:"
+#: templates/user/includes/profile_score.html:3
+msgid "Total score:"
+msgstr "Συνολική επίδοση:"
 
 #: templates/user/settings.html:12
 msgid "User Account"
@@ -2932,6 +3102,14 @@ msgstr ""
 msgid "Reset Password"
 msgstr "Επαναφορά κωδικού πρόσβασης"
 
+#: templates/user/stats.html:13 templates/user/stats.html:17
+msgid "Statistics"
+msgstr "Στατιστικά"
+
+#: templates/user/stats.html:27
+msgid "Daily activity"
+msgstr "Ημερήσια δραστηριότητα"
+
 #: templates/welcome.html:4
 msgid "Welcome"
 msgstr "Καλώς ήλθατε"
@@ -2949,8 +3127,488 @@ msgid "Sign in"
 msgstr "Σύνδεση"
 
 #: templates/welcome.html:32
-msgid "Top Contributors This Month"
-msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
+msgid "Top Contributors for the Last 30 Days"
+msgstr "Κορυφαίοι συντελεστές για τις τελευταίες 30 ημέρες"
+
+#: settings/10-base.conf:7
+#, fuzzy
+msgid "Pootle Translation Server"
+msgstr "Έργο μετάφρασης WordForge"
+
+#~ msgid "Exact Match"
+#~ msgstr "Ακριβής συμφωνία"
+
+#~ msgid "Failed to process suggestion."
+#~ msgstr "Αποτυχία διαδικασίας πρότασης."
+
+#, fuzzy
+#~ msgid "Showing %(n)s result per page"
+#~ msgid_plural "Showing %(n)s results per page"
+#~ msgstr[0] "Εμφανίζει %(count)s αποτελέσματα ανά σελίδα"
+#~ msgstr[1] "Εμφανίζει %(count)s αποτελέσματα ανά σελίδα"
+
+#~ msgid ""
+#~ "<span class='value translated'>%(translated_percent_display)s</span> "
+#~ "translated"
+#~ msgstr ""
+#~ "<span class='value translated'>%(translated_percent_display)s</span> "
+#~ "μεταφράστηκαν"
+
+#~ msgid ""
+#~ "<span class='value fuzzy'>%(fuzzy_percent_display)s</span> needs work"
+#~ msgstr ""
+#~ "<span class='value fuzzy'>%(fuzzy_percent_display)s</span> χρειάζονται "
+#~ "επεξεργασία"
+
+#~ msgid ""
+#~ "<span class='value untranslated'>%(untranslated_percent_display)s</span> "
+#~ "untranslated"
+#~ msgstr ""
+#~ "<span class='value untranslated'>%(untranslated_percent_display)s</span> "
+#~ "αμετάφραστα"
+
+#~ msgid "Score:"
+#~ msgstr "Βαθμολογία:"
+
+#~ msgid "My current score at %(server_title)s is %(score)s "
+#~ msgstr "Η τρέχουσα βαθμολογία μου στους %(server_title)s είναι %(score)s "
+
+#~ msgid ""
+#~ "I am #%(pos)s contributor in %(lang_name)s in the last 30 days at "
+#~ "%(server_title)s! "
+#~ msgstr ""
+#~ "Η συνεισφορά μου #%(pos)s στο %(lang_name)s τις τελευταίες 30 ημέρες στο "
+#~ "%(server_title)s! "
+
+#~ msgid "#%(pos)s contributor in %(lang_name)s in the last 30 days"
+#~ msgstr "#%(pos)s συνεισφέροντες στο %(lang_name)s τις τελευταίες 30 ημέρες"
+
+#~ msgid ""
+#~ "#%(pos)s contributor in <a href=\"%(url)s\">%(lang_name)s</a> in the last "
+#~ "30 days"
+#~ msgstr ""
+#~ "#%(pos)s συνεισφέροντες στο <a href=\"%(url)s\">%(lang_name)s</a> τις "
+#~ "τελευταίες 30 ημέρες"
+
+#~ msgid "Summary"
+#~ msgstr "Περίληψη"
+
+#~ msgid "Please enter your message summary"
+#~ msgstr "Παρακαλούμε, εισάγετε την περίληψη του μηνύματός σας"
+
+#~ msgid "Broken HTML Entities"
+#~ msgstr "Σπασμένες οντότητες HTML"
+
+#~ msgid "Java format"
+#~ msgstr "Μορφή Java"
+
+#~ msgid "Template format"
+#~ msgstr "Μορφή προτύπου"
+
+#~ msgid "Mustache placeholders"
+#~ msgstr "Δεσμευτικά θέσεις μουστάκια"
+
+#~ msgid "Mustache placeholder pairs"
+#~ msgstr "Ζευγάρια δεσμευτικών θέσης μουστάκια"
+
+#~ msgid "Mustache like placeholder pairs"
+#~ msgstr "Μουστάκια σαν ζευγάρια δεσμευτικών θέσης"
+
+#~ msgid "C format placeholders"
+#~ msgstr "Δεσμευτικά θέσης μορφής C"
+
+#~ msgid "Non printable"
+#~ msgstr "Μη εκτυπώσιμος"
+
+#~ msgid "Unbalanced tag braces"
+#~ msgstr "Μη εξισορροπημένα άγκιστρα ετικέτας"
+
+#~ msgid "Changed attributes"
+#~ msgstr "Αλλαγμένα γνωρίσματα"
+
+#~ msgid "Unescaped ampersands"
+#~ msgstr "Σύμβολα \"&\" χωρίς διαφυγή"
+
+#~ msgid "Incorrectly escaped ampersands"
+#~ msgstr "Λαθεμένα σύμβολα \"&\" με διαφυγή"
+
+#~ msgid "Whitespaces"
+#~ msgstr "Κενά διαστήματα"
+
+#~ msgid "Date format"
+#~ msgstr "Μορφή ημερομηνίας"
+
+#~ msgid "Uppercase placeholders"
+#~ msgstr "Κεφαλαία δεσμευτικά θέσης"
+
+#~ msgid "Percent sign placeholders"
+#~ msgstr "Δεσμευτικά θέσης συμβόλου ποσοστού"
+
+#~ msgid "Percent sign closure placeholders"
+#~ msgstr "Δεσμευτικά θέσεις κλεισίματος συμβόλου ποσοστού"
+
+#~ msgid "$ placeholders"
+#~ msgstr "$ δεσμευτικά θέσης"
+
+#~ msgid "$ closure placeholders"
+#~ msgstr "$ δεσμευτικά θέσης κλεισίματος"
+
+#~ msgid "Java-encoded unicode"
+#~ msgstr "unicode κωδικοποιημένο σε Java"
+
+#~ msgid "Objective-C format"
+#~ msgstr "Μορφή Objective-C"
+
+#~ msgid "Android format"
+#~ msgstr "Μορφή Android"
+
+#~ msgid "Tags differ"
+#~ msgstr "Διαφορά ετικετών"
+
+#~ msgid "Curly braces"
+#~ msgstr "Άγκιστρα"
+
+#~ msgid "Potential unwanted placeholders"
+#~ msgstr "Δυνητικά ανεπιθύμητα δεσμευτικά θέσεων"
+
+#~ msgid "Double quotes in tags"
+#~ msgstr "Διπλά εισαγωγικά σε ετικέτες"
+
+#~ msgid "Percent brace placeholders"
+#~ msgstr "Δεσμευτικά θέσης αγκίστρου ποσοστού"
+
+#~ msgid "Failed to process submission."
+#~ msgstr "Αποτυχία διαδικασίας υποβολής."
+
+#~ msgid "Last comment:"
+#~ msgstr "Τελευταίο σχόλιο:"
+
+#~ msgid "Last comment removed"
+#~ msgstr "Το τελευταίο σχόλιο αφαιρέθηκε"
+
+#~ msgid "Previous page"
+#~ msgstr "Προηγούμενη σελίδα"
+
+#~ msgid "Next page"
+#~ msgstr "Επόμενη σελίδα"
+
+#~ msgid "Rate"
+#~ msgstr "Ρυθμός"
+
+#~ msgid "Review Rate"
+#~ msgstr "Ρυθμός αναθεώρησης"
+
+#~ msgid "Hourly Rate"
+#~ msgstr "Ωριαίος ρυθμός"
+
+#~ msgid "Currency"
+#~ msgstr "Νόμισμα"
+
+#~ msgid "Report for %(user)s, "
+#~ msgstr "Αναφορά για %(user)s, "
+
+#~ msgid "Report for %(user)s"
+#~ msgstr "Αναφορά για %(user)s"
+
+#~ msgid "Local server time"
+#~ msgstr "Χρόνος τοπικού διακομιστή"
+
+#~ msgid "Action"
+#~ msgstr "Ενέργεια"
+
+#~ msgid "Source words"
+#~ msgstr "Λέξεις προέλευσης"
+
+#~ msgid "Similarity"
+#~ msgstr "Ομοιότητα"
+
+#~ msgid "Words"
+#~ msgstr "Λέξεις"
+
+#~ msgid "Subtotal"
+#~ msgstr "Μερικό σύνολο"
+
+#~ msgid "MT"
+#~ msgstr "MT"
+
+#~ msgid "Subactions"
+#~ msgstr "Υποενέργειες"
+
+#~ msgid "Raw Translation"
+#~ msgstr "Ανεπεξέργαστη μετάφραση"
+
+#~ msgid "Review"
+#~ msgstr "Επισκόπηση"
+
+#~ msgid "registered tasks"
+#~ msgstr "καταχωρισμένες εργασίες"
+
+#~ msgid "No activity recorded in a given period"
+#~ msgstr "Δεν καταγράφηκε καμιά δραστηριότητα σε μια δεδομένη περίοδο"
+
+#~ msgid "Suggestion (subtotal)"
+#~ msgstr "Πρόταση (μερικό άθροισμα)"
+
+#~ msgid "Translation (subtotal)"
+#~ msgstr "Μετάφραση (μερικό άθροισμα)"
+
+#~ msgid "Review (subtotal)"
+#~ msgstr "Έλεγχος (μερικό άθροισμα)"
+
+#~ msgid "Please select a valid user."
+#~ msgstr "Παρακαλούμε, επιλέξτε έναν έγκυρο χρήστη."
+
+#~ msgid "Add Task"
+#~ msgstr "Προσθήκη εργασίας"
+
+#~ msgid "words"
+#~ msgstr "λέξεις"
+
+#~ msgid "hours"
+#~ msgstr "ώρες"
+
+#~ msgid "Add record"
+#~ msgstr "Προσθήκη εγγραφής"
+
+#~ msgid "Set Rates"
+#~ msgstr "Ορισμός ρυθμών"
+
+#~ msgid "&lt;&lt;&lt;"
+#~ msgstr "&lt;&lt;&lt;"
+
+#~ msgid "&gt;&gt;&gt;"
+#~ msgstr "&gt;&gt;&gt;"
+
+#~ msgid "Rates"
+#~ msgstr "Ρυθμοί"
+
+#~ msgid "Currency:"
+#~ msgstr "Νόμισμα:"
+
+#~ msgid "Translation Rate:"
+#~ msgstr "Ρυθμός μετάφρασης:"
+
+#~ msgid "Review Rate:"
+#~ msgstr "Ρυθμός ελέγχου:"
+
+#~ msgid "Hourly Rate:"
+#~ msgstr "Ωριαίος ρυθμός:"
+
+#~ msgid "Value of `similarity` should be in in the [0..1] range"
+#~ msgstr "Η τιμή `similarity (ομοιότητα)` πρέπει να είναι στην περιοχή [0..1]"
+
+#~ msgid "Value of `mt_similarity` should be in in the [0..1] range"
+#~ msgstr "Η τιμή `mt_similarity` πρέπει να είναι στην περιοχή [0..1]"
+
+#~ msgid "Pending"
+#~ msgstr "Εκκρεμές"
+
+#~ msgid "Accepted"
+#~ msgstr "Αποδεκτό"
+
+#~ msgid "Rejected"
+#~ msgstr "Απορριπτέο"
+
+#~ msgid "Showing"
+#~ msgstr "Εμφάνιση"
+
+#~ msgid "Plurr format"
+#~ msgstr "Μορφή Plurr"
+
+#~ msgid "Plurr placeholders"
+#~ msgstr "Δεσμευτικά θέσης Plurr"
+
+#, fuzzy
+#~ msgid "Unit admin"
+#~ msgstr "Δημιουργήθηκε μονάδα"
+
+#, fuzzy
+#~ msgid "Critical:"
+#~ msgstr "Κρίσιμο"
+
+#, fuzzy
+#~ msgid "Admins"
+#~ msgstr "Διαχειριστής"
+
+#~ msgid "Insert RLM (Right-To-Left Mark) into the editor"
+#~ msgstr "Εισαγωγή RLM (σημάδι από δεξιά προς τα αριστερά) στον επεξεργαστή"
+
+#~ msgid "Insert LRM (Left-To-Right Mark) into the editor"
+#~ msgstr "Εισαγωγή LRM (σημάδι από αριστερά προς τα δεξιά) στον επεξεργαστή"
+
+#~ msgid "Insert RLE (Right-To-Left Embedding) into the editor"
+#~ msgstr ""
+#~ "Εισαγωγή RLE (ενσωμάτωση από δεξιά προς τα αριστερά) στον επεξεργαστή"
+
+#~ msgid "Insert LRE (Left-To-Right Embedding) into the editor"
+#~ msgstr ""
+#~ "Εισαγωγή LRE (ενσωμάτωση από αριστερά προς τα δεξιά) στον επεξεργαστή"
+
+#~ msgid "Insert RLO (Right-To-Left Override) into the editor"
+#~ msgstr ""
+#~ "Εισαγωγή RLO (αντικατάσταση από δεξιά προς τα αριστερά) στον επεξεργαστή"
+
+#~ msgid "Insert LRO (Left-To-Right Override) into the editor"
+#~ msgstr ""
+#~ "Εισαγωγή LRO (αντικατάσταση από αριστερά προς τα δεξιά) στον επεξεργαστή"
+
+#~ msgid "Insert PDF (Pop Directional Format ) into the editor"
+#~ msgstr "Εισαγωγή PDF (Pop Directional Format) στον επεξεργαστή"
+
+#~ msgid "Insert ZWJ (Zero Width Joiner) into the editor"
+#~ msgstr "Εισαγωγή ZWJ (σύνδεση μηδενικού πλάτους) στον επεξεργαστή"
+
+#~ msgid "Insert ZWNJ (Zero Width Non Joiner) into the editor"
+#~ msgstr "Εισαγωγή ZWNJ (μη σύνδεση μηδενικού πλάτους) στον επεξεργαστή"
+
+#~ msgid "Insert this symbol into the editor"
+#~ msgstr "Εισαγωγή αυτού του συμβόλου στον επεξεργαστή"
+
+#, fuzzy
+#~ msgid "Insert space symbol into the editor"
+#~ msgstr "Εισαγωγή αυτού του συμβόλου στον επεξεργαστή"
+
+#~ msgid "Refresh now"
+#~ msgstr "Ανανέωση τώρα"
+
+#~ msgid "Translation Rate"
+#~ msgstr "Βαθμός μετάφρασης"
+
+#~ msgid "Effective from"
+#~ msgstr "Ενεργό από"
+
+#~ msgid "Hourly Work"
+#~ msgstr "Εργασία ανά ώρα"
+
+#~ msgid "Correction"
+#~ msgstr "Διόρθωση"
+
+#~ msgid "Type"
+#~ msgstr "Τύπος"
+
+#~ msgid "Amount"
+#~ msgstr "Ποσότητα"
+
+#~ msgid "Date"
+#~ msgstr "Ημερομηνία"
+
+#~ msgid "User %s not found"
+#~ msgstr "Δε βρέθηκε ο χρήστης %s"
+
+#~ msgid "Invalid request method"
+#~ msgstr "Άκυρη μέθοδος ερωτήματος"
+
+#~ msgid "User missing"
+#~ msgstr "Λείπει ο χρήστης"
+
+#~ msgid "Overwritten submissions"
+#~ msgstr "Οι υποβολές που αντικαταστάθηκαν"
+
+#~ msgid "Reports"
+#~ msgstr "Αναφορές"
+
+#~ msgid "Export View"
+#~ msgstr "Εξαγωγή προβολής"
+
+#~ msgid "All Projects"
+#~ msgstr "Όλα τα έργα"
+
+#~ msgid "All Languages"
+#~ msgstr "Όλες οι γλώσσες"
+
+#~ msgid "No strings."
+#~ msgstr "Χωρίς συμβολοσειρές."
+
+#~ msgid ""
+#~ "We displayed the first unit out of %(total_count)s. Please refine your "
+#~ "search."
+#~ msgid_plural ""
+#~ "We displayed the first %(unit_count)s units out of %(total_count)s. "
+#~ "Please refine your search."
+#~ msgstr[0] ""
+#~ "Εμφανίσαμε την πρώτη μονάδα από %(total_count)s. Παρακαλούμε, βελτιώστε "
+#~ "την αναζήτησή σας."
+#~ msgstr[1] ""
+#~ "Εμφανίσαμε τις πρώτες % (unit_count)s μονάδες από %(total_count)s. "
+#~ "Παρακαλούμε, βελτιώστε την αναζήτησή σας."
+
+#~ msgid ""
+#~ "Below you can add, edit, and delete the permissions for this language."
+#~ msgstr ""
+#~ "Μπορείτε παρακάτω να προσθέσετε, να επεξεργαστείτε και να διαγράψετε τα "
+#~ "δικαιώματα για αυτήν τη γλώσσα."
+
+#~ msgid "Location"
+#~ msgstr "Τοποθεσία"
+
+#~ msgid "Root path where this virtual folder is applied."
+#~ msgstr "Η ριζική διαδρομή όπου εφαρμόζεται αυτός ο εικονικός φάκελος."
+
+#~ msgid "Files"
+#~ msgstr "Αρχεία"
+
+#~ msgid "Active languages"
+#~ msgstr "Ενεργές γλώσσες"
+
+#~ msgid "Translated strings"
+#~ msgstr "Μεταφρασμένες συμβολοσειρές"
+
+#~ msgid "Translated words"
+#~ msgstr "Μεταφρασμένες λέξεις"
+
+#~ msgid "Active users"
+#~ msgstr "Ενεργοί χρήστες"
+
+#~ msgid "File Type"
+#~ msgstr "Τύπος αρχείου"
+
+#~ msgid "Gettext PO"
+#~ msgstr "Gettext PO"
+
+#~ msgid "XLIFF (.xlf)"
+#~ msgstr "XLIFF (.xlf)"
+
+#~ msgid "XLIFF (.xliff)"
+#~ msgstr "XLIFF (.xliff)"
+
+#~ msgid "Qt ts"
+#~ msgstr "Qt ts"
+
+#~ msgid "TMX"
+#~ msgstr "TMX"
+
+#~ msgid "TBX"
+#~ msgstr "TBX"
+
+#~ msgid "Haiku catkeys"
+#~ msgstr "Haiku catkeys"
+
+#~ msgid "Excel CSV"
+#~ msgstr "Excel CSV"
+
+#~ msgid "Mozilla .lang"
+#~ msgstr "Mozilla .lang"
+
+#~ msgid "Need Translation"
+#~ msgstr "Χρειάζεται μετάφραση"
+
+#, fuzzy
+#~ msgid "Needs translation"
+#~ msgstr "Χρειάζεται μετάφραση"
+
+#, fuzzy
+#~ msgid "more..."
+#~ msgstr "Περισσότερα..."
+
+#~ msgid ""
+#~ "Some data on this page is currently being calculated, and the page will "
+#~ "be refreshed automatically in <strong>30 seconds</strong>."
+#~ msgstr ""
+#~ "Μερικά δεδομένα σε αυτή τη σελίδα υπολογίζονται τώρα και η σελίδα θα "
+#~ "ανανεωθεί σε <strong>30 δευτερόλεπτα</strong>."
+
+#~ msgid "Top Contributors This Month"
+#~ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 
 #~ msgid "Can administrate a translation project"
 #~ msgstr "Να μπορεί να διαχειριστεί ένα έργο μετάφρασης"
@@ -2978,32 +3636,8 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 #~ msgid "reverted translation for %(source_string)s"
 #~ msgstr "επαναφορά μετάφρασης για το %(source_string)s"
 
-#~ msgid "added suggestion for %(source_string)s"
-#~ msgstr "προσθήκη πρότασης για το %(source_string)s"
-
 #~ msgid "uploaded a file"
 #~ msgstr "ανεβάστηκε ένα αρχείο"
-
-#~ msgid "muted %(check_name)s for %(source_string)s"
-#~ msgstr "σε σίγαση %(check_name)s για τις %(source_string)s"
-
-#~ msgid "unmmuted %(check_name)s for %(source_string)s"
-#~ msgstr "αναίρεση σίγασης %(check_name)s για τις %(source_string)s"
-
-#~ msgid "translated %(source_string)s"
-#~ msgstr "μεταφρασμένα %(source_string)s"
-
-#~ msgid "edited %(source_string)s"
-#~ msgstr "επεξεργασμένα %(source_string)s"
-
-#~ msgid "pre-translated %(source_string)s"
-#~ msgstr "προμεταφρασμένα %(source_string)s"
-
-#~ msgid "removed translation for %(source_string)s"
-#~ msgstr "μεταφράσεις που αφαιρέθηκαν για %(source_string)s"
-
-#~ msgid "reviewed %(source_string)s"
-#~ msgstr "ελεγμένες %(source_string)s"
 
 #~ msgid "marked as fuzzy %(source_string)s"
 #~ msgstr "σημειωμένες ως ασαφείς %(source_string)s"
@@ -3214,9 +3848,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 #~ msgid "Profile"
 #~ msgstr "Κατατομή"
 
-#~ msgid "Translation Settings"
-#~ msgstr "Ρυθμίσεις μετάφρασης"
-
 #~ msgid "Password Changed"
 #~ msgstr "Τροποποιημένος κωδικός πρόσβασης"
 
@@ -3278,9 +3909,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 
 #~ msgid "Reset My Password"
 #~ msgstr "Επαναφορά του κωδικού πρόσβασής μου"
-
-#~ msgid "Password Reset Failed."
-#~ msgstr "Αποτυχία της επαναφοράς του κωδικού πρόσβασης."
 
 #~ msgid ""
 #~ "The password reset link was invalid, possibly because it has already been "
@@ -3425,9 +4053,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 #~ msgstr ""
 #~ "Η περιγραφή και οι εμφανιζόμενες οδηγίες στην αρχική σελίδα και στην "
 #~ "σελίδα περί. Βεβαιωθείτε ότι χρησιμοποιείτε έγκυρο HTML."
-
-#~ msgid "Reviews"
-#~ msgstr "Αναθεωρήσεις"
 
 #~ msgid "anonymous users"
 #~ msgstr "ανώνυμοι χρήστες"
@@ -3674,11 +4299,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 #~ msgstr[0] "%d λέξη χρειάζεται προσοχή"
 #~ msgstr[1] "%d λέξεις χρειάζονται προσοχή"
 
-#~ msgid "%d word untranslated"
-#~ msgid_plural "%d words untranslated"
-#~ msgstr[0] "%d αμετάφραστη λέξη"
-#~ msgstr[1] "%d αμετάφραστες λέξεις"
-
 #~ msgid "%d word needs review"
 #~ msgid_plural "%d words need review"
 #~ msgstr[0] "%d λέξη χρειάζεται αναθεώρηση"
@@ -3762,9 +4382,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 #~ msgid "Show tags"
 #~ msgstr "Εμφάνιση ετικετών"
 
-#~ msgid "Show filtering"
-#~ msgstr "Εμφάνιση φιλτραρίσματος"
-
 #~ msgid "Filter using one or more tags"
 #~ msgstr "Φιλτράρισμα χρησιμοποιώντας μία ή περισσότερες ετικέτες"
 
@@ -3790,9 +4407,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 #~ msgstr ""
 #~ "ο %(user)s αποδέχτηκε την πρόταση για τη συμβολοσειρά <i><a href=\"%(url)s"
 #~ "\">%(source)s</a></i>"
-
-#~ msgid "%(user)s uploaded a file"
-#~ msgstr "ο %(user)s ανέβασε ένα αρχείο"
 
 #~ msgid ""
 #~ "%(user)s submitted translation for string <i><a href=\"%(url)s\">"
@@ -3869,9 +4483,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 #~ msgid "You do not have rights to add tags."
 #~ msgstr "Δεν έχετε δικαιώματα προσθήκης ετικετών."
 
-#~ msgid "Comment:"
-#~ msgstr "Σχόλιο:"
-
 #~ msgid "String %(id)s"
 #~ msgstr "Συμβολοσειρά %(id)s"
 
@@ -3936,9 +4547,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 #~ "εμφανίσεις των ακόλουθων χαρακτήρων: κενά, διπλές τελείες (:), ενωτικά "
 #~ "(-), υπογραμμίσεις (_), πλαγιοκαθέτους (/) ή τελείες (.)!"
 
-#~ msgid "A goal with this slug already exists."
-#~ msgstr "Ένας στόχος με αυτήν την ερμηνευτική συντόμευση υπάρχει ήδη."
-
 #~ msgid ""
 #~ "Warning: Changing the name also changes the slug, so it won't be possible "
 #~ "to view this goal on this page!"
@@ -3977,9 +4585,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 
 #~ msgid "Download"
 #~ msgstr "Κατέβασμα"
-
-#~ msgid "Download file"
-#~ msgstr "Κατέβασμα αρχείου"
 
 #~ msgid "Upload"
 #~ msgstr "Ανέβασμα"
@@ -4127,9 +4732,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 #~ msgid "You do not have rights to upload files here."
 #~ msgstr "Δεν έχετε δικαιώματα για να ανεβάσετε αρχεία εδώ."
 
-#~ msgid "Goal"
-#~ msgstr "Στόχος"
-
 #~ msgid "Translation project files and folders"
 #~ msgstr "Τα αρχεία και οι φάκελοι του έργου μετάφρασης"
 
@@ -4138,9 +4740,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 
 #~ msgid "%(project)s project information"
 #~ msgstr "%(project)s πληροφορίες έργου"
-
-#~ msgid "%(language)s language information"
-#~ msgstr "%(language)s πληροφορίες γλώσσας"
 
 #~ msgid "Upload File"
 #~ msgstr "Ανέβασμα αρχείου"
@@ -4380,9 +4979,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 #~ msgid "Profiles list"
 #~ msgstr "Κατάλογος κατατομών"
 
-#~ msgid "First name"
-#~ msgstr "Όνομα"
-
 #~ msgid "Last name"
 #~ msgstr "Επώνυμο"
 
@@ -4604,9 +5200,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 #~ msgid "Advanced search"
 #~ msgstr "Σύνθετη αναζήτηση"
 
-#~ msgid "Suggestions Accepted"
-#~ msgstr "Αποδεκτές προτάσεις"
-
 #~ msgid "Suggestions Reviewed"
 #~ msgstr "Αναθεωρημένες προτάσεις"
 
@@ -4665,9 +5258,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 
 #~ msgid "Files and Subfolders"
 #~ msgstr "Αρχεία και υποφάκελοι"
-
-#~ msgid "Pootle Demo"
-#~ msgstr "Επίδειξη Pootle"
 
 #~ msgid ""
 #~ "<div dir=\"ltr\" lang=\"en\">\n"
@@ -4819,9 +5409,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 
 #~ msgid "Untranslated words"
 #~ msgstr "Αμετάφραστες λέξεις"
-
-#~ msgid "Total Words"
-#~ msgstr "Σύνολο λέξεων"
 
 #~ msgid "Imported %(count)d unit from %(store)s"
 #~ msgid_plural "Imported %(count)d units from %(store)s"
@@ -5021,9 +5608,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 #~ msgid "Current Translation:"
 #~ msgstr "Τρέχουσα μετάφραση:"
 
-#~ msgid "Suggestion %d:"
-#~ msgstr "Πρόταση %d:"
-
 #~ msgid "Suggestion by %s:"
 #~ msgstr "Πρόταση από %s:"
 
@@ -5032,12 +5616,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 
 #~ msgid "Related"
 #~ msgstr "Σχετικά"
-
-#~ msgid "Accept"
-#~ msgstr "Αποδοχή"
-
-#~ msgid "Reject"
-#~ msgstr "Απόρριψη"
 
 #~ msgid "My Languages"
 #~ msgstr "Οι γλώσσες μου"
@@ -5056,9 +5634,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 
 #~ msgid "Home Page"
 #~ msgstr "Αρχική Σελίδα"
-
-#~ msgid "Pootle Languages Admin Page"
-#~ msgstr "Σελίδα διαχείρισης γλωσσών του Pootle"
 
 #~ msgid "Main admin page"
 #~ msgstr "Κεντρική σελίδα διαχείρισης"
@@ -5129,9 +5704,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 #~ msgid "Activate New User"
 #~ msgstr "Ενεργοποίηση νέου χρήστη"
 
-#~ msgid "Remove User"
-#~ msgstr "Διαγραφή χρήστη"
-
 #~ msgid "Existing languages"
 #~ msgstr "Υπάρχουσες γλώσσες"
 
@@ -5159,9 +5731,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 
 #~ msgid "Rights"
 #~ msgstr "Δικαιώματα"
-
-#~ msgid "Remove"
-#~ msgstr "Αφαίρεση"
 
 #~ msgid ""
 #~ "<strong>Pootle</strong> is a simple web portal that should allow you to "
@@ -5228,9 +5797,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 #~ msgid "Language Code"
 #~ msgstr "Κωδικός γλώσσας"
 
-#~ msgid "Language Name"
-#~ msgstr "Όνομα γλώσσας"
-
 #~ msgid "%d language, average %d%% translated"
 #~ msgid_plural "%d languages, average %d%% translated"
 #~ msgstr[0] "%d γλώσσες, μέσος όρος %d%% μεταφρασμένες"
@@ -5259,9 +5825,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 
 #~ msgid "Add Goal"
 #~ msgstr "Προσθήκη στόχου"
-
-#~ msgid "Select file to upload"
-#~ msgstr "Επιλέξτε αρχείο για αποστολή"
 
 #~ msgid "Overwrite"
 #~ msgstr "Αντικατάσταση"
@@ -5301,9 +5864,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 
 #~ msgid "Set Goal"
 #~ msgstr "Όρισε σκοπό"
-
-#~ msgid "Select Multiple"
-#~ msgstr "Πολλαπλή επιλογή"
 
 #~ msgid "Assign To"
 #~ msgstr "Ανάθεση σε"
@@ -5458,9 +6018,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 #~ msgid "Language:"
 #~ msgstr "Γλώσσα:"
 
-#~ msgid "Please enter your registration details"
-#~ msgstr "Εισάγετε τα στοιχεία εγγραφής σας"
-
 #~ msgid "Your requested username"
 #~ msgstr "Το όνομα χρήστη που ζητήσατε"
 
@@ -5507,9 +6064,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 
 #~ msgid "User Interface language"
 #~ msgstr "Γλώσσα διεπαφής χρήστη"
-
-#~ msgid "Home page"
-#~ msgstr "Αρχική σελίδα"
 
 #~ msgid "None"
 #~ msgstr "Καμία"
@@ -5624,9 +6178,6 @@ msgstr "Κύριοι συνεισφέροντες αυτόν τον μήνα"
 
 #~ msgid "The number of rows displayed in translate mode must be numeric"
 #~ msgstr "Ο αριθμός γραμμών στην κατάσταση μετάφρασης πρέπει να είναι αριθμός"
-
-#~ msgid "WordForge Translation Project"
-#~ msgstr "Έργο μετάφρασης WordForge"
 
 #~ msgid "Must be a valid email address"
 #~ msgstr "Πρέπει να είναι έγκυρη διεύθυνση email"

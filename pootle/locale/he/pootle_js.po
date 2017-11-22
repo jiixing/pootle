@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pootle 2.7.0\n"
 "Report-Msgid-Bugs-To: https://github.com/translate/pootle/issues/new\n"
-"POT-Creation-Date: 2016-05-24 11:00+0100\n"
-"PO-Revision-Date: 2013-10-28 17:22+0000\n"
+"POT-Creation-Date: 2017-06-13 15:55+0100\n"
+"PO-Revision-Date: 2017-02-08 09:45+0000\n"
 "Last-Translator: Yaron <sh.yaron@gmail.com>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: he\n"
@@ -17,663 +17,717 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: Pootle 2.5.0-beta1\n"
-"X-POOTLE-MTIME: 1382980955.0\n"
+"X-Generator: Pootle 2.5.1-rc1\n"
+"X-POOTLE-MTIME: 1486547117.000000\n"
 
 #: static/js/admin/components/AdminController.js:136
 msgid "Saved successfully."
-msgstr ""
+msgstr "נשמר בהצלחה."
 
 #: static/js/admin/components/AdminController.js:144
 msgid "Deleted successfully."
-msgstr ""
+msgstr "נמחק בהצלחה."
 
 #: static/js/admin/components/ItemDelete.js:53
 msgid "Delete"
-msgstr ""
+msgstr "מחיקה"
 
 #: static/js/admin/components/Language/LanguageAdd.js:28
 #: static/js/admin/components/Language/LanguageEdit.js:33
-#, fuzzy
 msgid "Add Language"
-msgstr "כל השפות"
+msgstr "הוספת שפה"
 
 #: static/js/admin/components/Language/LanguageAdd.js:33
 #: static/js/admin/components/Project/ProjectAdd.js:33
 #: static/js/admin/components/User/UserAdd.js:33
 msgid "Cancel"
-msgstr ""
+msgstr "ביטול"
 
 #: static/js/admin/components/Language/LanguageController.js:59
 #, python-format
 msgid "%(count)s language matches your query."
 msgid_plural "%(count)s languages match your query."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "שפה אחת תואמת את השאילתה שלך."
+msgstr[1] "%(count)s שפות תואמות את השאילתה שלך."
 
 #: static/js/admin/components/Language/LanguageController.js:63
 #, python-format
 msgid "There is %(count)s language."
 msgid_plural ""
 "There are %(count)s languages. Below are the most recently added ones."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "ישנה שפה אחת."
+msgstr[1] "ישנן %(count)s שפות. להלן האחרונות שנוספו."
 
 #: static/js/admin/components/Language/LanguageController.js:79
 msgid "Search Languages"
-msgstr ""
+msgstr "חיפוש שפות"
 
 #: static/js/admin/components/Language/LanguageController.js:80
 msgid "Find language by name, code"
-msgstr ""
+msgstr "חיפוש שפות לפי שם, קוד"
 
 #: static/js/admin/components/Language/LanguageEdit.js:28
 msgid "Edit Language"
-msgstr ""
+msgstr "עריכת שפה"
 
 #: static/js/admin/components/Language/LanguageEdit.js:38
 msgid ""
 "Use the search form to find the language, then click on a language to edit."
-msgstr ""
+msgstr "ניתן להשתמש בחיפוש כדי למצוא את השפה ואז ללחוץ על השפה כדי לערוך."
 
 #: static/js/admin/components/Language/LanguageForm.js:54
 #: static/js/admin/components/Project/ProjectForm.js:56
 msgid "Code"
-msgstr ""
+msgstr "קוד"
 
 #: static/js/admin/components/Language/LanguageForm.js:61
 #: static/js/admin/components/Project/ProjectForm.js:63
 #: static/js/admin/components/User/UserForm.js:91
 #: static/js/user/components/UserProfileForm.js:74
 msgid "Full Name"
-msgstr ""
+msgstr "שם מלא"
 
 #: static/js/admin/components/Language/LanguageForm.js:68
 msgid "Special Characters"
-msgstr ""
+msgstr "תווים מיוחדים"
 
 #: static/js/admin/components/Language/LanguageForm.js:78
 msgid "Number of Plurals"
-msgstr ""
+msgstr "מספר צורות הריבוי"
 
 #: static/js/admin/components/Language/LanguageForm.js:85
 msgid "Plural Equation"
-msgstr ""
+msgstr "משוואת ריבוי"
 
 #: static/js/admin/components/Language/LanguageForm.js:97
-#: static/js/admin/components/Project/ProjectForm.js:143
+#: static/js/admin/components/Project/ProjectForm.js:144
 #: static/js/admin/components/User/UserForm.js:156
 #: static/js/user/components/UserProfileForm.js:132
 msgid "Save"
-msgstr ""
+msgstr "שמירה"
 
 #: static/js/admin/components/Language/LanguageForm.js:101
-#: static/js/admin/components/Project/ProjectForm.js:147
+#: static/js/admin/components/Project/ProjectForm.js:148
 msgid "Overview"
-msgstr ""
+msgstr "סקירה"
 
 #: static/js/admin/components/Language/LanguageForm.js:102
-#: static/js/admin/components/Project/ProjectForm.js:149
-msgid "Permissions"
-msgstr ""
+msgid "Team"
+msgstr "צוות"
 
 #: static/js/admin/components/Project/ProjectAdd.js:28
 #: static/js/admin/components/Project/ProjectEdit.js:33
-#, fuzzy
 msgid "Add Project"
-msgstr "כל המיזמים"
+msgstr "הוספת מיזם"
 
 #: static/js/admin/components/Project/ProjectController.js:59
 #, python-format
 msgid "%(count)s project matches your query."
 msgid_plural "%(count)s projects match your query."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "מיזם אחד עונה לשאילתה שלך."
+msgstr[1] "%(count)s מיזמים עונים לשאילתה שלך."
 
 #: static/js/admin/components/Project/ProjectController.js:63
 #, python-format
 msgid "There is %(count)s project."
 msgid_plural ""
 "There are %(count)s projects. Below are the most recently added ones."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "יש מיזם אחד."
+msgstr[1] "ישנם %(count)s מיזמים. להלן האחרונים שנוספו."
 
 #: static/js/admin/components/Project/ProjectController.js:79
 msgid "Search Projects"
-msgstr ""
+msgstr "חיפוש מיזמים"
 
 #: static/js/admin/components/Project/ProjectController.js:80
 msgid "Find project by name, code"
-msgstr ""
+msgstr "חיפוש מיזמים לפי שם, קוד"
 
 #: static/js/admin/components/Project/ProjectEdit.js:28
 msgid "Edit Project"
-msgstr ""
+msgstr "עריכת מיזם"
 
 #: static/js/admin/components/Project/ProjectEdit.js:38
 msgid ""
 "Use the search form to find the project, then click on a project to edit."
 msgstr ""
+"ניתן להשתמש בשדה החיפוש כדי למצוא מיזם ואז ללחוץ על שם המיזם כדי לערוך אותו."
 
 #: static/js/admin/components/Project/ProjectForm.js:73
 msgid "Quality Checks"
-msgstr ""
+msgstr "בדיקות איכות"
 
-#: static/js/admin/components/Project/ProjectForm.js:83
-msgid "File Type"
-msgstr ""
+#: static/js/admin/components/Project/ProjectForm.js:84
+msgid "File types"
+msgstr "סוגי קבצים"
 
-#: static/js/admin/components/Project/ProjectForm.js:93
+#: static/js/admin/components/Project/ProjectForm.js:94
 msgid "Project Tree Style"
-msgstr ""
+msgstr "סגנון עץ מיזם"
 
-#: static/js/admin/components/Project/ProjectForm.js:103
-#, fuzzy
+#: static/js/admin/components/Project/ProjectForm.js:104
 msgid "Source Language"
-msgstr "כל השפות"
+msgstr "שפת המקור"
 
-#: static/js/admin/components/Project/ProjectForm.js:110
+#: static/js/admin/components/Project/ProjectForm.js:111
 msgid "Ignore Files"
-msgstr ""
+msgstr "התעלמות מקבצים"
 
-#: static/js/admin/components/Project/ProjectForm.js:118
+#: static/js/admin/components/Project/ProjectForm.js:119
 msgid "String Errors Contact"
-msgstr ""
+msgstr "איש קשר לשגיאות במחרוזות"
 
-#: static/js/admin/components/Project/ProjectForm.js:125
+#: static/js/admin/components/Project/ProjectForm.js:126
 msgid "Screenshot Search Prefix"
-msgstr ""
+msgstr "קידומת לחיפוש צילומי מסך"
 
-#: static/js/admin/components/Project/ProjectForm.js:133
+#: static/js/admin/components/Project/ProjectForm.js:134
 msgid "Disabled"
-msgstr ""
+msgstr "מנוטרל"
 
-#: static/js/admin/components/Project/ProjectForm.js:148
+#: static/js/admin/components/Project/ProjectForm.js:149
 msgid "Languages"
-msgstr ""
+msgstr "שפות"
+
+#: static/js/admin/components/Project/ProjectForm.js:150
+msgid "Permissions"
+msgstr "הרשאות"
+
+#: static/js/admin/components/Project/ProjectForm.js:152
+msgid "Filesystems"
+msgstr "מערכות קבצים"
 
 #: static/js/admin/components/Search.js:68
 msgid "Load More"
-msgstr ""
+msgstr "טעינת נוספים"
 
 #: static/js/admin/components/Search.js:93
 msgid "Loading..."
-msgstr ""
+msgstr "בטעינה…"
 
 #: static/js/admin/components/User/UserAdd.js:28
 #: static/js/admin/components/User/UserEdit.js:33
 msgid "Add User"
-msgstr ""
+msgstr "הוספת משתמש"
 
 #: static/js/admin/components/User/UserController.js:59
 #, python-format
 msgid "%(count)s user matches your query."
 msgid_plural "%(count)s users match your query."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "משתמש אחד תואם לשאילתה שלך."
+msgstr[1] "%(count)s משתמשים תואמים לשאילתה שלך."
 
 #: static/js/admin/components/User/UserController.js:63
 #, python-format
 msgid "There is %(count)s user."
 msgid_plural ""
 "There are %(count)s users. Below are the most recently added ones."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "יש משתמש אחד."
+msgstr[1] "ישנם %(count)s משתמשים. להלן אלו שנוספו לאחרונה."
 
 #: static/js/admin/components/User/UserController.js:79
 msgid "Search Users"
-msgstr ""
+msgstr "חיפוש משתמשים"
 
 #: static/js/admin/components/User/UserController.js:80
 msgid "Find user by name, email, properties"
-msgstr ""
+msgstr "חיפוש משתמשים לפי שם, דוא״ל, מאפיינים"
 
 #: static/js/admin/components/User/UserEdit.js:28
 msgid "Edit User"
-msgstr ""
+msgstr "עריכת משתמש"
 
 #: static/js/admin/components/User/UserEdit.js:38
 msgid "Use the search form to find the user, then click on a user to edit."
 msgstr ""
+"ניתן להשתמש בטופס החיפוש כדי למצוא את המשתמש ואז ללחוץ על שם המשתמש כדי "
+"לערוך אותו."
 
 #: static/js/admin/components/User/UserForm.js:47
 msgid ""
 "Note: when deleting a user their contributions to the site, e.g. comments, "
 "suggestions and translations, are attributed to the anonymous user (nobody)."
 msgstr ""
+"לתשומת לבך: לאחר מחיקה של משתמש באתר, התרומות השונות כגון תגובות, הצעות "
+"ותרגומים נזקפים לזכות המשתמש האלמוני (אף אחד)."
 
 #: static/js/admin/components/User/UserForm.js:63
 #: static/js/auth/components/SignInForm.js:95
 #: static/js/auth/components/SignUpForm.js:84
 msgid "Username"
-msgstr ""
+msgstr "שם משתמש"
 
 #: static/js/admin/components/User/UserForm.js:73
 msgid "Active"
-msgstr ""
+msgstr "פעיל"
 
 #: static/js/admin/components/User/UserForm.js:81
-#: static/js/auth/components/SignInForm.js:103
-#: static/js/auth/components/SignUpForm.js:99
-#: static/js/auth/components/SocialVerification.js:100
+#: static/js/auth/components/SignInForm.js:104
+#: static/js/auth/components/SignUpForm.js:101
+#: static/js/auth/components/SocialVerification.js:99
 #: static/js/auth/components/PasswordResetForm.js:117
 msgid "Password"
-msgstr ""
+msgstr "ססמה"
 
 #: static/js/admin/components/User/UserForm.js:82
 msgid "Set a new password"
-msgstr ""
+msgstr "הגדרת ססמה חדשה"
 
 #: static/js/admin/components/User/UserForm.js:98
-#: static/js/auth/components/SignUpForm.js:91
+#: static/js/auth/components/SignUpForm.js:92
 msgid "Email"
-msgstr ""
+msgstr "דוא״ל"
 
 #: static/js/admin/components/User/UserForm.js:108
 msgid "Administrator"
-msgstr ""
+msgstr "מנהל"
 
 #: static/js/admin/components/User/UserForm.js:116
 #: static/js/user/components/UserProfileForm.js:92
 msgid "Twitter"
-msgstr ""
+msgstr "טוויטר"
 
 #: static/js/admin/components/User/UserForm.js:118
 msgid "Twitter username"
-msgstr ""
+msgstr "שם משתמש בטוויטר"
 
 #: static/js/admin/components/User/UserForm.js:125
 #: static/js/user/components/UserProfileForm.js:101
 msgid "LinkedIn"
-msgstr ""
+msgstr "LinkedIn"
 
 #: static/js/admin/components/User/UserForm.js:127
 msgid "LinkedIn profile URL"
-msgstr ""
+msgstr "כתובת לפרופיל LinkedIn"
 
 #: static/js/admin/components/User/UserForm.js:133
 #: static/js/user/components/UserProfileForm.js:109
 msgid "Website"
-msgstr ""
+msgstr "אתר"
 
 #: static/js/admin/components/User/UserForm.js:135
 msgid "Personal website URL"
-msgstr ""
+msgstr "כתובת האתר האישי"
 
 #: static/js/admin/components/User/UserForm.js:142
 #: static/js/user/components/UserProfileForm.js:118
 msgid "Short Bio"
-msgstr ""
+msgstr "קורות חיים מקוצרים"
 
 #: static/js/admin/components/User/UserForm.js:144
 msgid "Personal description"
-msgstr ""
+msgstr "תיאור אישי"
 
 #: static/js/admin/components/User/UserForm.js:160
 msgid "Public Profile"
-msgstr ""
+msgstr "פרופיל ציבורי"
 
 #: static/js/admin/components/User/UserForm.js:161
 msgid "Settings"
-msgstr ""
-
-#: static/js/admin/components/User/UserForm.js:162
-msgid "Statistics"
-msgstr ""
-
-#: static/js/admin/components/User/UserForm.js:163
-msgid "Reports"
-msgstr ""
+msgstr "הגדרות"
 
 #: static/js/admin/general/components/ContentPreview.js:32
 msgid "Preview will be displayed here."
-msgstr ""
+msgstr "התצוגה המקדימה תופיע כאן."
 
-#: static/js/auth/components/AccountActivation.js:32
-#: static/js/auth/components/RequestPasswordResetSent.js:44
+#: static/js/auth/components/AccountActivation.js:33
 #, python-format, javascript-format
-msgid "We have sent an email containing the special link to <span>%s</span>"
+msgid ""
+"We have sent an email containing the special link to <span>%s</span>. Please "
+"check your spam folder if you do not see the email."
 msgstr ""
+"שלחנו הודעה בדוא״ל עם קישור מיוחד אל <span>%s</span>. נא לבדוק את תיקיית "
+"הזבל שלך אם ההודעה עדיין לא הגיעה."
 
-#: static/js/auth/components/AccountActivation.js:37
+#: static/js/auth/components/AccountActivation.js:41
 msgid ""
 "We have sent an email containing the special link to the address used to "
-"register this account."
+"register this account. Please check your spam folder if you do not see the "
+"email."
 msgstr ""
+"שלחנו הודעה בדוא״ל עם קישור מיוחד אל הכתובת בה נעשה שימוש להירשם לחשבון זה. "
+"נא לבדוק את תיקיית הזבל שלך אם ההודעה עדיין לא הגיעה."
 
-#: static/js/auth/components/AccountActivation.js:42
+#: static/js/auth/components/AccountActivation.js:47
 msgid "Your account needs activation."
-msgstr ""
+msgstr "חשבונך דורש הפעלה."
 
-#: static/js/auth/components/AccountActivation.js:44
+#: static/js/auth/components/AccountActivation.js:49
 msgid "Please follow that link to continue the account creation."
-msgstr ""
+msgstr "נא להיכנס לקישור כדי להמשיך ביצירת החשבון."
 
-#: static/js/auth/components/AccountActivation.js:59
+#: static/js/auth/components/AccountActivation.js:64
 #: static/js/auth/components/AccountInactive.js:35
 #: static/js/auth/components/EmailConfirmation.js:34
 msgid "Close"
-msgstr ""
+msgstr "סגירה"
 
 #: static/js/auth/components/AccountInactive.js:29
 msgid "Your account is inactive because an administrator deactivated it."
-msgstr ""
+msgstr "החשבון שלך אינו פעיל כיוון שנוטרל על ידי מנהל."
 
 #: static/js/auth/components/AuthWindow.js:27
 msgid "Contact Us"
-msgstr ""
+msgstr "יצירת קשר"
 
 #: static/js/auth/components/EmailConfirmation.js:28
 msgid "This email confirmation link expired or is invalid."
-msgstr ""
+msgstr "קישור האימות פג או שגוי."
 
 #: static/js/auth/components/PasswordResetForm.js:81
 msgid ""
 "The password reset link was invalid, possibly because it has already been "
 "used. Please request a new password reset."
 msgstr ""
+"הקישור לאיפוס ההסמה הנו שגוי, כנראה שכבר נעשה בו שימוש. נא לבקש איפוס ססמה "
+"שוב."
 
 #: static/js/auth/components/PasswordResetForm.js:89
 msgid "Reset Password"
-msgstr ""
+msgstr "איפוס ססמה"
 
 #: static/js/auth/components/PasswordResetForm.js:101
 msgid "Password changed, signing in..."
-msgstr ""
+msgstr "הססמה הוחלפה, מתבצעת כניסה…"
 
 #: static/js/auth/components/PasswordResetForm.js:125
-#: static/js/auth/components/SignUpForm.js:107
+#: static/js/auth/components/SignUpForm.js:110
 msgid "Repeat Password"
-msgstr ""
+msgstr "נא לחזור על הססמה"
 
 #: static/js/auth/components/PasswordResetForm.js:139
 msgid "Set New Password"
-msgstr ""
+msgstr "הגדרת ססמה חדשה"
 
 #: static/js/auth/components/PasswordResetForm.js:143
 msgid "After changing your password you will sign in automatically."
-msgstr ""
+msgstr "לאחר שינוי הססמה שלך תתבצע כניסה אוטומטית למערכת."
 
 #: static/js/auth/components/RequestPasswordResetProgress.js:24
 #, python-format, javascript-format
 msgid "Sending email to %s..."
-msgstr ""
+msgstr "נשלח דוא״ל אל %s…"
 
 #: static/js/auth/components/RequestPasswordResetSent.js:48
 msgid "Please follow that link to continue the password reset procedure."
-msgstr ""
+msgstr "נא להיכנס לקישור זה כדי להמשיך לתהליך איפוס הססמה."
 
 #: static/js/auth/components/RequestPasswordResetSent.js:51
 msgid ""
 "Didn't receive an email? Check if it was accidentally filtered out as spam, "
 "or try requesting another copy of the email."
 msgstr ""
+"לא קיבלת הודעה בדוא״ל? כדאי לבדוק האם היא סווגה בטעות כדואר או לנסות ולבקש "
+"עותק נוסף של ההודעה."
 
 #: static/js/auth/components/RequestPasswordResetSent.js:67
 msgid "Resend Email"
-msgstr ""
+msgstr "שליחת דוא״ל מחדש"
 
 #: static/js/auth/components/SignInForm.js:83
 #: static/js/auth/components/RequestPasswordResetForm.js:122
 msgid "Sign up as a new user"
-msgstr ""
+msgstr "הרשמה כמשתמש חדש"
 
-#: static/js/auth/components/SignInForm.js:111
-#: static/js/auth/components/SocialVerification.js:108
+#: static/js/auth/components/SignInForm.js:113
+#: static/js/auth/components/SocialVerification.js:107
 msgid "I forgot my password"
-msgstr ""
+msgstr "שכחתי את הססמה שלי"
 
-#: static/js/auth/components/SignInForm.js:122
-#: static/js/auth/components/SocialVerification.js:119
+#: static/js/auth/components/SignInForm.js:124
+#: static/js/auth/components/SocialVerification.js:118
 #: static/js/auth/containers/Auth.js:83
 msgid "Sign In"
-msgstr ""
+msgstr "כניסה"
 
 #: static/js/auth/components/SignInPanel.js:47
-#: static/js/auth/components/SocialVerification.js:73
+#: static/js/auth/components/SocialVerification.js:74
 msgid "Signed in. Redirecting..."
-msgstr ""
+msgstr "נכנסת. מתבצעת הפנייה…"
 
 #: static/js/auth/components/SignInPanel.js:60
 msgid "Social Services"
-msgstr ""
+msgstr "שירותים חברתיים"
 
 #: static/js/auth/components/SignInPanel.js:63
 msgid "Login / Password"
-msgstr ""
+msgstr "כניסה / ססמה"
 
-#: static/js/auth/components/SignUpForm.js:121
+#: static/js/auth/components/SignUpForm.js:125
 #: static/js/auth/containers/Auth.js:96
 msgid "Sign Up"
-msgstr ""
+msgstr "הרשמה"
 
-#: static/js/auth/components/SignUpForm.js:126
+#: static/js/auth/components/SignUpForm.js:130
 msgid "Sign in as an existing user"
-msgstr ""
+msgstr "כניסה כמשתמש קיים"
 
 #: static/js/auth/components/SocialAuthError.js:30
 #, python-format, javascript-format
 msgid "An error occurred while attempting to sign in via %s."
-msgstr ""
+msgstr "אירעה שגיאה בעת הניסיון להיכנס דרך %s."
 
 #: static/js/auth/components/SocialAuthError.js:35
 msgid "An error occurred while attempting to sign in via your social account."
-msgstr ""
+msgstr "אירעה שגיאה בעת הניסיון להיכנס באמצעות החשבון שלך ברשתות חברתיות."
 
 #: static/js/auth/components/SocialAuthError.js:52
 msgid "Try again"
-msgstr ""
+msgstr "לנסות שוב"
 
 #: static/js/auth/components/SocialSignInForm.js:38
 #, python-format, javascript-format
 msgid "Sign In With %s"
-msgstr ""
+msgstr "כניסה באמצעות %s"
 
 #: static/js/auth/components/SocialSignInForm.js:45
 msgid ""
 "Signing in with an external service for the first time will automatically "
 "create an account for you."
-msgstr ""
+msgstr "כניסה עם שירות חיצוני בפעם הראשונה תיצור עבורך חשבון באופן אוטומטי."
 
 #: static/js/auth/containers/Auth.js:83
 msgid "Sign In With..."
-msgstr ""
+msgstr "כניסה באמצעות…"
 
 #: static/js/auth/containers/Auth.js:90
 msgid "Account Inactive"
-msgstr ""
+msgstr "חשבון בלתי פעיל"
 
 #: static/js/auth/containers/Auth.js:102
 msgid "Account Activation"
-msgstr ""
+msgstr "הפעלת חשבון"
 
 #: static/js/auth/containers/Auth.js:108
 msgid "Email Confirmation"
-msgstr ""
+msgstr "אימות דוא״ל"
 
 #: static/js/auth/containers/Auth.js:114 static/js/auth/containers/Auth.js:120
 #: static/js/auth/containers/Auth.js:126
 msgid "Reset Your Password"
-msgstr ""
+msgstr "איפוס הססמה שלך"
 
 #: static/js/auth/containers/Auth.js:132
 msgid "Oops..."
-msgstr ""
+msgstr "אבוי…"
 
 #: static/js/auth/containers/Auth.js:138
 msgid "Social Verification"
-msgstr ""
+msgstr "אימות חברתי"
 
-#: static/js/browser/components/VisibilityToggle.js:51
+#: static/js/browser/components/Stats.js:54
+msgid "More..."
+msgstr "עוד…"
+
+#: static/js/browser/components/Stats.js:67
+msgid "Contributors, 30 Days"
+msgstr "תרומות, 30 יום"
+
+#: static/js/browser/components/TopContributorsTable.js:23
+#, python-format
+msgid "#%(position)s"
+msgstr "מס׳ %(position)s"
+
+#: static/js/browser/components/VisibilityToggle.js:46
 msgid "Show disabled"
-msgstr ""
+msgstr "הצגת מנוטרלים"
 
-#: static/js/browser/components/VisibilityToggle.js:52
+#: static/js/browser/components/VisibilityToggle.js:47
 msgid "Hide disabled"
-msgstr ""
+msgstr "הסתרת מנוטרלים"
 
-#: static/js/editor/app.js:294 static/js/editor/app.js:606
+#: static/js/browser.js:267
+msgid "All Languages"
+msgstr "כל השפות"
+
+#: static/js/browser.js:273
+msgid "All Projects"
+msgstr "כל המיזמים"
+
+#: static/js/common.js:142
+msgid "Updating data"
+msgstr "הנתונים מתעדכנים"
+
+#: static/js/editor/app.js:339 static/js/editor/app.js:658
 msgid ""
 "You have unsaved changes in this string. Navigating away will discard those "
 "changes."
 msgstr ""
+"יש לך שינויים למחרוזת שטרם נשמרו. עזיבת העמוד תגרום להשלכת השינויים האלה."
 
-#: static/js/editor/app.js:325
+#: static/js/editor/app.js:384
 msgid ""
 "Go to the next string (Ctrl+.)<br/><br/>Also:<br/>Next page: Ctrl+Shift+.<br/"
 ">Last page: Ctrl+Shift+End"
 msgstr ""
+"מעבר למחרוזת הבאה (Ctrl+.‎)<br/><br/>כמו כן:<br/>העמוד הבא: Ctrl+Shift+.<br/"
+">העמוד האחרון: Ctrl+Shift+End"
 
-#: static/js/editor/app.js:331
+#: static/js/editor/app.js:390
 msgid ""
-"Go to the previous string (Ctrl+,)<br/><br/>Also:</br>Previous page: Ctrl"
+"Go to the previous string (Ctrl+,)<br/><br/>Also:<br/>Previous page: Ctrl"
 "+Shift+,<br/>First page: Ctrl+Shift+Home"
 msgstr ""
+"מעבר למחרוזת הקודמת (Ctrl+,‎)<br/><br/>כמו כן:<br/>העמוד הקודם: Ctrl+Shift+,"
+"<br/>העמוד הראשון: Ctrl+Shift+Home"
 
-#: static/js/editor/app.js:452
+#. Translators: '%s' is a username
+#: static/js/editor/app.js:515
 #, python-format, javascript-format
 msgid "%s's pending suggestions"
 msgstr "ההצעות הממתינות של %s"
 
-#: static/js/editor/app.js:455
+#. Translators: '%s' is a username
+#: static/js/editor/app.js:518
 #, python-format, javascript-format
 msgid "%s's accepted suggestions"
 msgstr "ההצעות של %s שהתקבלו"
 
-#: static/js/editor/app.js:458
+#. Translators: '%s' is a username
+#: static/js/editor/app.js:521
 #, python-format, javascript-format
 msgid "%s's rejected suggestions"
 msgstr "ההצעות של %s שנדחו"
 
-#: static/js/editor/app.js:461
+#. Translators: '%s' is a username
+#: static/js/editor/app.js:524
 #, python-format, javascript-format
 msgid "%s's submissions"
 msgstr "ההגשות של %s"
 
-#: static/js/editor/app.js:465
+#. Translators: '%s' is a username, meaning "submissions by %s,
+#. that were overwritten"
+#: static/js/editor/app.js:528
 #, python-format, javascript-format
 msgid "%s's overwritten submissions"
 msgstr "ההגשות של %s ששוכתבו"
 
-#: static/js/editor/app.js:1057
+#: static/js/editor/app.js:1069
 msgid "Error while connecting to the server"
 msgstr "אירעה שגיאה במהלך ההתחברות לשרת"
 
-#: static/js/editor/app.js:1061
+#: static/js/editor/app.js:1074
 msgid "Not found"
-msgstr ""
+msgstr "לא נמצא"
 
-#: static/js/editor/app.js:1063
+#: static/js/editor/app.js:1076
 msgid "Server error"
 msgstr "שגיאת שרת"
 
-#: static/js/editor/app.js:1065
+#: static/js/editor/app.js:1078
 msgid "The server seems down. Try again later."
 msgstr "ייתכן כי השרת אינו פעיל. נא לנסות שוב מאוחר יותר."
 
-#: static/js/editor/app.js:1074
+#: static/js/editor/app.js:1087
 msgid "This string no longer exists."
-msgstr ""
+msgstr "המחרוזת אינה קיימת עוד."
 
-#: static/js/editor/app.js:1075
+#: static/js/editor/app.js:1088
 msgid "Go back to browsing"
-msgstr ""
+msgstr "חזרה לעיון"
 
-#: static/js/editor/app.js:1077
+#: static/js/editor/app.js:1090
 msgid "Reload page"
-msgstr ""
+msgstr "רענון העמוד"
 
-#: static/js/editor/app.js:1816 static/js/editor/app.js:598
-msgid "No results."
-msgstr "אין תוצאות."
+#: static/js/editor/app.js:2188
+msgid "some anonymous user"
+msgstr "משתמש אלמוני כלשהו"
 
-#: static/js/editor/app.js:2211 static/js/editor/app.js:2164
+#: static/js/editor/app.js:2190
+msgid "someone"
+msgstr "מישהו"
+
+#: static/js/editor/app.js:2208 static/js/editor/app.js:2262
 msgid "Similar translations"
 msgstr "תרגומים דומים"
 
-#: static/js/editor/components/SuggestionFeedbackForm.js:81
+#: static/js/editor/components/EditorPluralFormHeader.js:26
+#: static/js/editor/components/UnitSource.js:52
+#, python-format
+msgid "Plural form %(index)s"
+msgstr "צורת רבים %(index)s"
+
+#: static/js/editor/components/SuggestionFeedbackForm.js:93
 msgid "Edit the suggestion before accepting, if necessary"
-msgstr ""
-
-#: static/js/editor/components/SuggestionFeedbackForm.js:92
-msgid "Provide optional comment (will be publicly visible)"
-msgstr ""
-
-#: static/js/editor/components/SuggestionFeedbackForm.js:103
-msgid "Accept"
-msgstr ""
+msgstr "ניתן לערוך את ההצעה בטרם האישור, אם יש צורך בכך"
 
 #: static/js/editor/components/SuggestionFeedbackForm.js:107
+msgid "Provide optional comment (will be publicly visible)"
+msgstr "נא לספק הערה כרשות (תופיע לקהל הרחב)"
+
+#: static/js/editor/components/SuggestionFeedbackForm.js:119
+msgid "Accept"
+msgstr "אישור"
+
+#: static/js/editor/components/SuggestionFeedbackForm.js:123
 msgid "Reject"
-msgstr ""
+msgstr "דחייה"
 
-#: static/js/shared/components/FormSelectInput.js:32
-msgid "Select..."
-msgstr ""
+#: static/js/editor/components/UploadTimeSince.js:35
+#, python-format
+msgid "%(timeSince)s via file upload"
+msgstr "%(timeSince)s דרך העלאת קבצים"
 
-#: static/js/shared/components/FormSelectInput.js:33
-msgid "No results found"
-msgstr ""
-
-#: static/js/shared/components/FormSelectInput.js:34
-msgid "Clear value"
-msgstr ""
-
-#: static/js/shared/components/FormSelectInput.js:35
+#: static/js/shared/components/FormSelectInput.js:39
 msgid "Clear all"
-msgstr ""
+msgstr "מחיקת הכול"
 
-#: static/js/shared/components/FormSelectInput.js:36
+#: static/js/shared/components/FormSelectInput.js:40
+msgid "Clear value"
+msgstr "מחיקת ערך"
+
+#: static/js/shared/components/FormSelectInput.js:41
+msgid "No results found"
+msgstr "לא נמצאו תוצאות"
+
+#: static/js/shared/components/FormSelectInput.js:43
+msgid "Select..."
+msgstr "בחירה…"
+
+#: static/js/shared/components/FormSelectInput.js:44
 msgid "Type to search"
-msgstr ""
+msgstr "יש להקליד כדי לחפש"
 
-#: static/js/shared/models/project.js:58
+#: static/js/shared/models/project.js:62
 msgid "disabled"
-msgstr ""
+msgstr "מנוטרל"
 
-#: static/js/stats.js:59
-#, fuzzy
+#: static/js/stats.js:30
 msgid "Congratulations! You have completed this task!"
-msgstr "ברכות, עברת על כל הפריטים"
+msgstr "ברכות! השלמת את המשימה!"
 
-#: static/js/stats.js:405
-#, python-format, javascript-format
-msgid "%s second"
-msgid_plural "%s seconds"
-msgstr[0] ""
-msgstr[1] ""
-
-#: static/js/stats.js:442
+#: static/js/stats.js:127
 msgid "Collapse details"
 msgstr "צמצום הפרטים"
 
-#: static/js/stats.js:442
+#: static/js/stats.js:127
 msgid "Expand details"
 msgstr "הרחבת הפרטים"
 
 #: static/js/user/components/UserProfileEdit.js:95
 msgid "Edit My Public Profile"
-msgstr ""
+msgstr "עריכת הפרופיל הציבורי שלי"
 
 #: static/js/user/components/UserProfileEdit.js:102
 msgid "My Public Profile"
-msgstr ""
+msgstr "הפרופיל הציבורי שלי"
 
 #: static/js/user/components/UserProfileEdit.js:117
 msgid "Discard changes."
-msgstr ""
+msgstr "התעלמות משינויים."
 
 #: static/js/user/components/UserProfileEdit.js:118
 msgid "Yes"
-msgstr ""
+msgstr "כן"
 
 #: static/js/user/components/UserProfileEdit.js:119
 msgid "No"
-msgstr ""
+msgstr "לא"
 
 #: static/js/user/components/UserProfileEdit.js:121
 msgid "There are unsaved changes. Do you want to discard them?"
-msgstr ""
+msgstr "ישנם שינויים שלא נשמרו. להתעלם מהם?"
 
 #: static/js/user/components/UserProfileForm.js:59
 #, python-format
@@ -681,146 +735,99 @@ msgid ""
 "To set or change your avatar for your email address (%(email)s), please go "
 "to gravatar.com."
 msgstr ""
+"כדי לשנות את התמונה עבור כתובת הדוא״ל שלך (%(email)s), נא לגשת אל gravatar."
+"com."
 
 #: static/js/user/components/UserProfileForm.js:75
 msgid "Your Full Name"
-msgstr ""
+msgstr "השם המלא שלך"
 
 #: static/js/user/components/UserProfileForm.js:83
 msgid "Avatar"
-msgstr ""
+msgstr "תמונת משתמש"
 
 #: static/js/user/components/UserProfileForm.js:94
 msgid "Your Twitter username"
-msgstr ""
+msgstr "שם המשתמש שלך בטוויטר"
 
 #: static/js/user/components/UserProfileForm.js:103
 msgid "Your LinkedIn profile URL"
-msgstr ""
+msgstr "כתובת הפרופיל שלך ב־LinkedIn"
 
 #: static/js/user/components/UserProfileForm.js:111
 msgid "Your Personal website/blog URL"
-msgstr ""
+msgstr "כתובת הבלוג/האתר הפרטי שלך"
 
 #: static/js/user/components/UserProfileForm.js:120
 msgid ""
 "Why are you part of our translation project? Describe yourself, inspire "
 "others!"
-msgstr ""
-
-#: static/js/utils.js:165
-#, fuzzy, javascript-format
-msgid "A year ago"
-msgid_plural "%s years ago"
-msgstr[0] "לפני שנה"
-msgstr[1] "לפני %s שנים"
-
-#: static/js/utils.js:168
-#, fuzzy, javascript-format
-msgid "A week ago"
-msgid_plural "%s weeks ago"
-msgstr[0] "לפני שבוע"
-msgstr[1] "לפני %s שבועות"
-
-#: static/js/utils.js:171
-#, fuzzy, javascript-format
-msgid "Yesterday"
-msgid_plural "%s days ago"
-msgstr[0] "אתמול"
-msgstr[1] "לפני %s ימים"
-
-#: static/js/utils.js:174
-#, fuzzy, javascript-format
-msgid "An hour ago"
-msgid_plural "%s hours ago"
-msgstr[0] "לפני שעה"
-msgstr[1] "לפני %s שעות"
-
-#: static/js/utils.js:177
-#, fuzzy, javascript-format
-msgid "A minute ago"
-msgid_plural "%s minutes ago"
-msgstr[0] "לפני דקה"
-msgstr[1] "לפני %s דקות"
-
-#: static/js/utils.js:185
-msgid "A few seconds ago"
-msgstr "לפני מספר שניות"
+msgstr "מדוע לקחת חלק במיזם התרגום? נשמח לשמוע פירוט עליך, לתת השראה לאחרים!"
 
 #: static/js/auth/components/RequestPasswordResetForm.js:96
 msgid "Email Address"
-msgstr ""
+msgstr "כתובת דוא״ל"
 
 #: static/js/auth/components/RequestPasswordResetForm.js:97
 msgid ""
 "Enter your email address, and we will send you a message with the special "
 "link to reset your password."
 msgstr ""
+"נא להזין את כתובת הדוא״ל, אנו נשלח לך הודעה עם הקישור המיוחד לאיפוס הססמה "
+"שלך."
 
 #: static/js/auth/components/RequestPasswordResetForm.js:108
 msgid "No, thanks"
-msgstr ""
+msgstr "לא, תודה"
 
 #: static/js/auth/components/RequestPasswordResetForm.js:116
 msgid "Send Email"
-msgstr ""
+msgstr "שליחת דוא״ל"
+
+#: static/js/auth/components/RequestPasswordResetSent.js:44
+#, python-format
+msgid "We have sent an email containing the special link to <span>%s</span>"
+msgstr "שלחנו הודעת דוא״ל המכילה את הקישור המיוחד לכתובת <span>%s</span>"
 
 #: static/js/auth/components/SignInForm.js:85
 msgid "Creating new user accounts is prohibited."
-msgstr ""
+msgstr "ההרשאה ליצירת חשבונות משתמש חדשים חסומה."
 
 #: static/js/auth/components/SocialVerification.js:81
 #, python-format
 msgid ""
-"We found a user with <span>%s</span> email in our system. Please provide the "
-"password to finish the sign in procedure. This is a one-off procedure, which "
-"will establish a link between your Pootle and %s accounts."
+"We found a user with <span>%(email)s</span> email in our system. Please "
+"provide the password to finish the sign in procedure. This is a one-off "
+"procedure, which will establish a link between your Pootle and %(provider)s "
+"accounts."
 msgstr ""
+"מצאנו משתמש עם כתובת הדוא״ל <span>%(email)s</span> במערכת שלנו. נא לספק את "
+"הססמה כדי לסיים את תהליך הכניסה. מדובר בתהליך חד פעמים, שיפעיל קישור בין "
+"החשבון שלך ב־Pootle לבין החשבונות שלך ב־%(provider)s."
 
-#: static/js/browser.js:229
-msgid "All Languages"
-msgstr "כל השפות"
-
-#: static/js/browser.js:232
-msgid "All Projects"
-msgstr "כל המיזמים"
-
-#: static/js/browser.js:236
-#, fuzzy
-msgid "Entire Project"
-msgstr "כל המיזמים"
-
-#: static/js/editor/app.js:2144
-msgid "some anonymous user"
-msgstr ""
-
-#: static/js/editor/app.js:2146
-msgid "someone"
-msgstr ""
-
-#: static/js/shared/components/UserEvent.js:78
-msgid "uploaded file"
-msgstr ""
+#: static/js/editor/app.js:650
+msgid "No results."
+msgstr "אין תוצאות."
 
 #: templates/admin/xhr_language_user_activity.html:6
 msgid "Project / Language"
-msgstr ""
+msgstr "מיזם / שפה"
 
 #: templates/admin/xhr_language_user_activity.html:7
 msgid "Suggested"
-msgstr ""
+msgstr "הוצע"
 
 #: templates/admin/xhr_language_user_activity.html:8
 msgid "Translated"
-msgstr ""
+msgstr "תורגם"
 
 #: templates/admin/xhr_language_user_activity.html:9
 msgid "Reviewed"
-msgstr ""
+msgstr "נסקר"
 
 #: templates/admin/xhr_language_user_activity.html:10
 msgid "Score Change"
-msgstr ""
+msgstr "שינוי בניקוד"
 
 #: templates/admin/xhr_language_user_activity.html:20
 #: templates/admin/xhr_language_user_activity.html:24
@@ -833,88 +840,16 @@ msgstr ""
 #, python-format
 msgid "%s word"
 msgid_plural "%s words"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "מילה אחת"
+msgstr[1] "%s מילים"
 
 #: templates/admin/xhr_language_user_activity.html:69
 msgid "No activity recorded in a given period"
-msgstr ""
+msgstr "לא נרשמה פעילות בטווח שצוין."
 
 #: templates/admin/xhr_language_user_activity.html:72
 msgid "Please select a valid user."
-msgstr ""
-
-#: templates/admin/xhr_paid_tasks_report.html:3
-msgid "Registered Tasks"
-msgstr ""
-
-#: templates/admin/xhr_paid_tasks_report.html:7
-msgid "Datetime"
-msgstr ""
-
-#: templates/admin/xhr_paid_tasks_report.html:8
-msgid "Comment"
-msgstr ""
-
-#: templates/admin/xhr_paid_tasks_report.html:9
-#: templates/admin/xhr_summary_report.html:7
-msgid "Action"
-msgstr ""
-
-#: templates/admin/xhr_paid_tasks_report.html:10
-#: templates/admin/xhr_summary_report.html:8
-msgid "Amount"
-msgstr ""
-
-#: templates/admin/xhr_paid_tasks_report.html:11
-#: templates/admin/xhr_summary_report.html:9
-msgid "Rate"
-msgstr ""
-
-#: templates/admin/xhr_paid_tasks_report.html:12
-#: templates/admin/xhr_summary_report.html:10
-msgid "Subtotal"
-msgstr ""
-
-#: templates/admin/xhr_paid_tasks_report.html:21
-#: templates/admin/xhr_summary_report.html:28
-msgid "hour"
-msgid_plural "hours"
-msgstr[0] ""
-msgstr[1] ""
-
-#: templates/admin/xhr_paid_tasks_report.html:24
-#: templates/admin/xhr_summary_report.html:18
-#: templates/admin/xhr_summary_report.html:31
-msgid "word"
-msgid_plural "words"
-msgstr[0] ""
-msgstr[1] ""
-
-#: templates/admin/xhr_paid_tasks_report.html:36
-msgid "Remove task"
-msgstr ""
-
-#: templates/admin/xhr_paid_tasks_report.html:41
-msgid "Comment on it"
-msgstr ""
-
-#: templates/admin/xhr_summary_report.html:2
-msgid "Summary"
-msgstr ""
-
-#: templates/admin/xhr_summary_report.html:6
-msgid "Period"
-msgstr ""
-
-#: templates/admin/xhr_summary_report.html:36
-msgid "(registered tasks)"
-msgstr ""
-
-#: templates/admin/xhr_summary_report.html:44
-#, python-format
-msgid "Total (%(currency)s)"
-msgstr ""
+msgstr "נא לבחור במשתמש תקני."
 
 #: templates/editor/units/xhr_edit_ctx.html:4
 msgid "More"
@@ -932,30 +867,182 @@ msgstr "פחות"
 msgid "Show"
 msgstr "הצגה"
 
-#: templates/editor/units/xhr_tm.html:15
+#: templates/editor/units/xhr_tm.html:17
 #, python-format
 msgid ""
-"Translated by %(fullname)s in &ldquo;<span title=\"%(path)s\">%(project)s</"
-"span>&rdquo; project %(time_ago)s"
+"Translated by %(fullname)s in “<span title=\"%(path)s\">%(project)s</span>” "
+"project %(time_ago)s"
 msgstr ""
+"תורגם ע״י %(fullname)s במיזם „<span title=\"%(path)s\">%(project)s</span>“ "
+"לפני %(time_ago)s"
 
-#: templates/editor/units/xhr_tm.html:18
+#: templates/editor/units/xhr_tm.html:20
 #, python-format
 msgid ""
-"Translated by %(fullname)s in &ldquo;<span title=\"%(path)s\">%(project)s</"
-"span>&rdquo; project"
+"Translated by %(fullname)s in “<span title=\"%(path)s\">%(project)s</span>” "
+"project"
 msgstr ""
+"תורגם על ידי %(fullname)s במיזם „<span title=\"%(path)s\">%(project)s</span>“"
 
-#~ msgid "Unknown error"
-#~ msgstr "שגיאה בלתי ידועה"
+#~ msgid "+%(score)s"
+#~ msgstr "+%(score)s"
+
+#~ msgid "Entire Project"
+#~ msgstr "כל המיזם"
+
+#~ msgid "Registered Tasks"
+#~ msgstr "משימות רשומות"
+
+#~ msgid "Datetime"
+#~ msgstr "תאריך ושעה"
+
+#~ msgid "Comment"
+#~ msgstr "הערה"
+
+#~ msgid "Action"
+#~ msgstr "פעולה"
+
+#~ msgid "Amount"
+#~ msgstr "כמות"
+
+#~ msgid "Rate"
+#~ msgstr "דירוג"
+
+#~ msgid "Subtotal"
+#~ msgstr "סיכום ביניים"
+
+#~ msgid "%s hour"
+#~ msgid_plural "%s hours"
+#~ msgstr[0] "שעה אחת"
+#~ msgstr[1] "%s שעות"
+
+#~ msgid "Remove task"
+#~ msgstr "הסרת משימה"
+
+#~ msgid "Comment on it"
+#~ msgstr "להעיר על זה"
+
+#~ msgid "Summary"
+#~ msgstr "תקציר"
+
+#~ msgid "Period"
+#~ msgstr "טווח"
+
+#~ msgid "(registered tasks)"
+#~ msgstr "(משימות שנרשמו)"
+
+#~ msgid "Total (%(currency)s)"
+#~ msgstr "(%(currency)s) בסך הכול"
 
 #, fuzzy
-#~ msgid "accepted suggestion for ${sourceString}"
+#~ msgid "%(user)s removed translation for %(sourceString)s"
+#~ msgstr "ההצעות של %s שנדחו"
+
+#, fuzzy
+#~ msgid "%(user)s accepted suggestion for %(sourceString)s"
 #~ msgstr "ההצעות של %s שהתקבלו"
 
 #, fuzzy
-#~ msgid "rejected suggestion for ${sourceString}"
+#~ msgid "%(user)s muted %(check)s for %(sourceString)s"
+#~ msgstr "ההצעות של %s שהתקבלו"
+
+#, fuzzy
+#~ msgid "%(user)s unmuted %(check)s for %(sourceString)s"
+#~ msgstr "ההצעות של %s שהתקבלו"
+
+#, fuzzy
+#~ msgid "%(user)s added suggestion for %(sourceString)s"
+#~ msgstr "ההצעות של %s שהתקבלו"
+
+#, fuzzy
+#~ msgid "%(user)s rejected suggestion for %(sourceString)s"
 #~ msgstr "ההצעות של %s שנדחו"
+
+#, fuzzy
+#~ msgid "%(user)s translated %(sourceString)s"
+#~ msgstr "ההצעות של %s שנדחו"
+
+#, fuzzy
+#~ msgid "%(user)s edited %(sourceString)s"
+#~ msgstr "ההצעות של %s שהתקבלו"
+
+#, fuzzy
+#~ msgid "%(user)s pre-translated %(sourceString)s"
+#~ msgstr "ההצעות של %s שנדחו"
+
+#, fuzzy
+#~ msgid "%(user)s reviewed %(sourceString)s"
+#~ msgstr "ההצעות של %s שהתקבלו"
+
+#, fuzzy
+#~ msgid "%(user)s marked as needs work %(sourceString)s"
+#~ msgstr "ההצעות של %s שהתקבלו"
+
+#, fuzzy
+#~ msgid "A year ago"
+#~ msgstr "לפני שנה"
+
+#, fuzzy
+#~ msgid "%(count)s year ago"
+#~ msgid_plural "%(count)s years ago"
+#~ msgstr[0] "לפני שנה"
+#~ msgstr[1] "לפני %s שנים"
+
+#, fuzzy
+#~ msgid "A month ago"
+#~ msgstr "לפני דקה"
+
+#, fuzzy
+#~ msgid "%(count)s month ago"
+#~ msgid_plural "%(count)s months ago"
+#~ msgstr[0] "לפני דקה"
+#~ msgstr[1] "לפני דקה"
+
+#, fuzzy
+#~ msgid "A week ago"
+#~ msgstr "לפני שבוע"
+
+#, fuzzy
+#~ msgid "%(count)s week ago"
+#~ msgid_plural "%(count)s weeks ago"
+#~ msgstr[0] "לפני שבוע"
+#~ msgstr[1] "לפני %s שבועות"
+
+#, fuzzy
+#~ msgid "Yesterday"
+#~ msgstr "אתמול"
+
+#, fuzzy
+#~ msgid "%(count)s day ago"
+#~ msgid_plural "%(count)s days ago"
+#~ msgstr[0] "לפני שנה"
+#~ msgstr[1] "לפני %s שנים"
+
+#, fuzzy
+#~ msgid "An hour ago"
+#~ msgstr "לפני שעה"
+
+#, fuzzy
+#~ msgid "%(count)s hour ago"
+#~ msgid_plural "%(count)s hours ago"
+#~ msgstr[0] "לפני שעה"
+#~ msgstr[1] "לפני %s שעות"
+
+#, fuzzy
+#~ msgid "A minute ago"
+#~ msgstr "לפני דקה"
+
+#, fuzzy
+#~ msgid "%(count)s minute ago"
+#~ msgid_plural "%(count)s minutes ago"
+#~ msgstr[0] "לפני דקה"
+#~ msgstr[1] "לפני %s דקות"
+
+#~ msgid "A few seconds ago"
+#~ msgstr "לפני מספר שניות"
+
+#~ msgid "Unknown error"
+#~ msgstr "שגיאה בלתי ידועה"
 
 #~ msgid "Are you sure you want to continue?"
 #~ msgstr "האם אכן להמשיך?"

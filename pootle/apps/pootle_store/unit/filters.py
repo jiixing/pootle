@@ -9,8 +9,7 @@
 from django.db.models import Q
 
 from pootle_statistics.models import SubmissionTypes
-from pootle_store.models import SuggestionStates
-from pootle_store.util import FUZZY, TRANSLATED, UNTRANSLATED
+from pootle_store.constants import FUZZY, TRANSLATED, UNTRANSLATED
 
 
 class FilterNotFound(Exception):
@@ -19,7 +18,7 @@ class FilterNotFound(Exception):
 
 class BaseUnitFilter(object):
 
-    def __init__(self, qs, *args, **kwargs):
+    def __init__(self, qs, *args_, **kwargs_):
         self.qs = qs
 
     def filter(self, unit_filter):
@@ -78,14 +77,14 @@ class UnitContributionFilter(BaseUnitFilter):
 
     def filter_suggestions(self):
         return self.qs.filter(
-            suggestion__state=SuggestionStates.PENDING).distinct()
+            suggestion__state__name="pending").distinct()
 
     def filter_user_suggestions(self):
         if not self.user:
             return self.qs.none()
         return self.qs.filter(
             suggestion__user=self.user,
-            suggestion__state=SuggestionStates.PENDING).distinct()
+            suggestion__state__name="pending").distinct()
 
     def filter_my_suggestions(self):
         return self.filter_user_suggestions()
@@ -95,21 +94,19 @@ class UnitContributionFilter(BaseUnitFilter):
             return self.qs.none()
         return self.qs.filter(
             suggestion__user=self.user,
-            suggestion__state=SuggestionStates.ACCEPTED).distinct()
+            suggestion__state__name="accepted").distinct()
 
     def filter_user_suggestions_rejected(self):
         if not self.user:
             return self.qs.none()
         return self.qs.filter(
             suggestion__user=self.user,
-            suggestion__state=SuggestionStates.REJECTED).distinct()
+            suggestion__state__name="rejected").distinct()
 
     def filter_user_submissions(self):
         if not self.user:
             return self.qs.none()
-        return self.qs.filter(
-            submitted_by=self.user,
-            submission__type__in=SubmissionTypes.EDIT_TYPES).distinct()
+        return self.qs.filter(change__submitted_by=self.user)
 
     def filter_my_submissions(self):
         return self.filter_user_submissions()
@@ -117,10 +114,16 @@ class UnitContributionFilter(BaseUnitFilter):
     def filter_user_submissions_overwritten(self):
         if not self.user:
             return self.qs.none()
-        qs = self.qs.filter(
-            submitted_by=self.user,
-            submission__type__in=SubmissionTypes.EDIT_TYPES)
-        return qs.exclude(submitted_by=self.user).distinct()
+        qs = self.qs.exclude(change__submitted_by=self.user)
+        return (
+            qs.filter(
+                submission__submitter_id=self.user.id,
+                submission__type__in=SubmissionTypes.EDIT_TYPES,
+                submission__suggestion__isnull=True)
+            | qs.filter(
+                submission__suggestion__isnull=False,
+                submission__suggestion__user_id=self.user.id,
+                submission__suggestion__state__name="accepted")).distinct()
 
     def filter_my_submissions_overwritten(self):
         return self.filter_user_submissions_overwritten()
@@ -172,17 +175,21 @@ class UnitTextSearch(object):
             return [text]
         return [t.strip() for t in text.split(" ") if t.strip()]
 
-    def search(self, text, sfields, exact=False):
+    def search(self, text, sfields, exact=False, case=False):
         result = self.qs.none()
         words = self.get_words(text, exact)
 
         for k in self.get_search_fields(sfields):
-            result = result | self.search_field(k, words)
+            result |= self.search_field(k, words, exact=exact, case=case)
         return result
 
-    def search_field(self, k, words):
+    def search_field(self, k, words, exact=False, case=False):
         subresult = self.qs
+        contains = (
+            "contains"
+            if case
+            else "icontains")
         for word in words:
             subresult = subresult.filter(
-                **{("%s__icontains" % k): word})
+                **{("%s__%s" % (k, contains)): word})
         return subresult

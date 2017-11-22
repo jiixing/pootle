@@ -24,7 +24,7 @@ const ProjectForm = React.createClass({
 
   mixins: [ModelFormMixin],
 
-  fields: ['code', 'fullname', 'checkstyle', 'localfiletype', 'treestyle',
+  fields: ['code', 'fullname', 'checkstyle', 'filetypes', 'treestyle',
            'source_language', 'ignoredfiles', 'report_email',
            'screenshot_search_prefix', 'disabled'],
 
@@ -78,13 +78,14 @@ const ProjectForm = React.createClass({
           />
           <FormElement
             type="select"
+            multiple
             clearable={false}
-            options={model.getFieldChoices('localfiletype')}
-            label={gettext('File Type')}
+            options={model.getFieldChoices('filetypes')}
+            label={gettext('File types')}
             handleChange={this.handleChange}
-            name="localfiletype"
-            errors={errors.localfiletype}
-            value={formData.localfiletype}
+            name="filetypes"
+            errors={errors.filetypes}
+            value={formData.filetypes}
           />
           <FormElement
             type="select"
@@ -134,7 +135,7 @@ const ProjectForm = React.createClass({
             handleChange={this.handleChange}
             name="disabled"
             errors={errors.disabled}
-            value={formData.disabled}
+            value={!!formData.disabled}
           />
         </div>
         <div className="buttons">
@@ -147,6 +148,8 @@ const ProjectForm = React.createClass({
             <li><a href={model.getAbsoluteUrl()}>{gettext('Overview')}</a></li>
             <li><a href={model.getLanguagesUrl()}>{gettext('Languages')}</a></li>
             <li><a href={model.getPermissionsUrl()}>{gettext('Permissions')}</a></li>
+         {model.attributes.treestyle === 'pootle_fs' &&
+          <li><a href={model.getFSUrl()}>{gettext('Filesystems')}</a></li>}
           </ul>}
         </div>
       {this.props.onDelete &&

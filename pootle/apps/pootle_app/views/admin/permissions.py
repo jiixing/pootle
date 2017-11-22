@@ -8,8 +8,8 @@
 
 from django import forms
 from django.contrib.auth import get_user_model
-from django.utils.translation import ugettext as _
 
+from pootle.i18n.gettext import ugettext as _
 from pootle_app.models import Directory
 from pootle_app.models.permissions import (PermissionSet,
                                            get_permission_contenttype)
@@ -57,11 +57,11 @@ def admin_permissions(request, current_directory, template, ctx):
     base_queryset = User.objects.filter(is_active=1).exclude(
         id__in=current_directory.permission_sets.values_list('user_id',
                                                              flat=True),)
-    querysets = [(None, base_queryset.filter(
+    choice_groups = [(None, base_queryset.filter(
         username__in=('nobody', 'default')
     ))]
 
-    querysets.append((
+    choice_groups.append((
         _('All Users'),
         base_queryset.exclude(username__in=('nobody',
                                             'default')).order_by('username'),
@@ -81,7 +81,7 @@ def admin_permissions(request, current_directory, template, ctx):
         )
         user = GroupedModelChoiceField(
             label=_('Username'),
-            querysets=querysets,
+            choice_groups=choice_groups,
             queryset=User.objects.all(),
             required=True,
             widget=forms.Select(attrs={

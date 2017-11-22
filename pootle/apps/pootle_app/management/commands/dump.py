@@ -27,12 +27,13 @@ DUMPED = {
     'TranslationProject': ('pootle_path', 'real_path', 'disabled'),
     'Store': ('file', 'translation_project', 'pootle_path', 'name', 'state'),
     'Directory': ('name', 'parent', 'pootle_path'),
-    'Unit': ('source', 'target', 'source_wordcount', 'target_wordcount',
+    'Unit': ('source', 'target', 'target_wordcount',
              'developer_comment', 'translator_comment', 'locations',
              'isobsolete', 'isfuzzy', 'istranslated'),
+    'UnitSource': ('source_wordcount', ),
     'Suggestion': ('target_f', 'user_id'),
     'Language': ('code', 'fullname', 'pootle_path'),
-    'Project': ('code', 'fullname', 'checkstyle', 'localfiletype',
+    'Project': ('code', 'fullname', 'checkstyle',
                 'treestyle', 'source_language', 'ignoredfiles',
                 'screenshot_search_prefix', 'disabled')
 }
@@ -99,7 +100,7 @@ class Command(PootleCommand):
             self._dump_stats(prj, res, stop_level=stop_level)
 
     def _dump_stats(self, item, res, stop_level):
-        key = item.get_cachekey()
+        key = item.pootle_path
         item.initialize_children()
 
         if stop_level != 0 and item.children:
@@ -109,29 +110,29 @@ class Command(PootleCommand):
                 self._dump_stats(child, res,
                                  stop_level=stop_level)
 
-        res[key] = (item.get_stats(include_children=False))
+        res[key] = (item.data_tool.get_stats(include_children=False))
 
-        if res[key]['lastaction']:
-            if 'id' in res[key]['lastaction']:
-                last_action_id = res[key]['lastaction']['id']
+        if res[key]['last_submission']:
+            if 'id' in res[key]['last_submission']:
+                last_submission_id = res[key]['last_submission']['id']
             else:
-                last_action_id = None
+                last_submission_id = None
         else:
-            last_action_id = None
+            last_submission_id = None
 
-        if res[key]['lastupdated']:
-            if 'id' in res[key]['lastupdated']:
-                last_updated_id = res[key]['lastupdated']['id']
+        if res[key]['last_created_unit']:
+            if 'id' in res[key]['last_created_unit']:
+                last_updated_id = res[key]['last_created_unit']['id']
             else:
                 last_updated_id = None
         else:
             last_updated_id = None
 
-        out = u"%s  %s,%s,%s,%s,%s,%s,%s,%s" % \
+        out = u"%s  %s,%s,%s,%s,%s,%s,%s" % \
               (key, res[key]['total'], res[key]['translated'],
                res[key]['fuzzy'], res[key]['suggestions'],
-               res[key]['critical'], res[key]['is_dirty'],
-               last_action_id, last_updated_id)
+               res[key]['critical'],
+               last_submission_id, last_updated_id)
 
         self.stdout.write(out)
 

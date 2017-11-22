@@ -7,18 +7,17 @@
 # AUTHORS file for copyright and authorship information.
 
 from django.core.exceptions import ObjectDoesNotExist
-from django.core.urlresolvers import reverse_lazy
 from django.http import Http404
 from django.shortcuts import redirect, render
-from django.template import RequestContext
 from django.template.loader import get_template
-from django.utils.translation import ugettext_lazy as _
+from django.urls import reverse_lazy
 from django.views.generic import (CreateView, DeleteView, TemplateView,
                                   UpdateView)
 
 from pootle.core.http import JsonResponse, JsonResponseBadRequest
 from pootle.core.markup.filters import apply_markup_filter
-from pootle.core.views import SuperuserRequiredMixin
+from pootle.core.views.mixins import SuperuserRequiredMixin
+from pootle.i18n.gettext import ugettext_lazy as _
 from pootle_misc.util import ajax_required
 
 from .forms import agreement_form_factory
@@ -136,7 +135,7 @@ class PageCreateView(SuperuserRequiredMixin, AdminCtxMixin, PageModelMixin,
             msg = _(u'projects/<project_code> or <language_code> or '
                     u'<language_code>/<project_code>')
             form.fields['virtual_path'].widget.attrs['placeholder'] = msg
-            form.fields['virtual_path'].widget.attrs['size'] = 60
+            form.fields['virtual_path'].widget.attrs['size'] = 100
 
         return form
 
@@ -200,7 +199,7 @@ def display_page(request, virtual_path):
 
 def _get_rendered_agreement(request, form):
     template = get_template('staticpages/agreement.html')
-    return template.render(RequestContext(request, {'form': form}))
+    return template.render(context={'form': form}, request=request)
 
 
 @ajax_required

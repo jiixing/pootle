@@ -10,6 +10,8 @@ import $ from 'jquery';
 import 'jquery-magnific-popup';
 import 'jquery-serializeObject';
 
+import assign from 'object-assign';
+
 import utils from './utils';
 
 
@@ -25,7 +27,7 @@ function onError(xhr, errorFn) {
 function onSubmit(e) {
   e.preventDefault();
   const $form = $(this);
-  const reqData = $form.serializeObject();
+  const reqData = assign(PTL.captcha.postData, $form.serializeObject());
   const successFn = reqData.sfn;
   const errorFn = reqData.efn;
   const url = $form.attr('action');
@@ -46,6 +48,8 @@ function onSubmit(e) {
 
 
 function display(html) {
+  // we need to remove existing handlers which can exist after wrong captcha input
+  $(document).off('submit', '#js-captcha');
   $(document).on('submit', '#js-captcha', onSubmit);
 
   $.magnificPopup.open({
@@ -60,4 +64,5 @@ function display(html) {
 
 export default {
   onError,
+  postData: {},
 };

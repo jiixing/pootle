@@ -25,16 +25,15 @@ from pootle_project.models import Project
 
 
 @pytest.mark.django_db
-def test_add_new_store_fs(settings):
+def test_add_new_store_fs(settings, project0):
     """Add a store_fs for a store that doesnt exist yet
     """
-    project = Project.objects.get(code="project0")
-    pootle_path = "/language0/%s/example.po" % project.code
+    pootle_path = "/language0/%s/example.po" % project0.code
     fs_path = "/some/fs/example.po"
     store_fs = StoreFS.objects.create(
         pootle_path=pootle_path,
         path=fs_path)
-    assert store_fs.project == project
+    assert store_fs.project == project0
     assert store_fs.store is None
     assert store_fs.pootle_path == pootle_path
     assert store_fs.path == fs_path
@@ -44,7 +43,7 @@ def test_add_new_store_fs(settings):
 
 
 @pytest.mark.django_db
-def test_add_store_fs_by_path(english):
+def test_add_store_fs_by_path(po_directory, english):
     """Add a store_fs for pootle_path
     """
     project = ProjectDBFactory(source_language=english)
@@ -72,7 +71,7 @@ def test_add_store_fs_by_path(english):
 
 
 @pytest.mark.django_db
-def test_add_store_fs_by_store(english):
+def test_add_store_fs_by_store(po_directory, english):
     """Add a store_fs using store= rather than pootle_path
     """
     fs_path = "/some/fs/example_store.po"
@@ -99,7 +98,7 @@ def test_add_store_fs_by_store(english):
 
 
 @pytest.mark.django_db
-def test_add_store_bad(english):
+def test_add_store_bad(po_directory, english):
     """Try to create a store_fs by pootle_path for a non existent project
     """
     project0 = Project.objects.get(code="project0")
@@ -135,18 +134,17 @@ def test_add_store_bad(english):
 
 
 @pytest.mark.django_db
-def test_add_store_bad_lang():
+def test_add_store_bad_lang(project0):
     """Try to create a store_fs by pootle_path for a non existent language
     """
-    project = Project.objects.get(code="project0")
     with pytest.raises(ValidationError):
         StoreFS.objects.create(
-            pootle_path="/fr/%s/example.po" % project.code,
+            pootle_path="/fr/%s/example.po" % project0.code,
             path="/some/fs/example.po")
 
 
 @pytest.mark.django_db
-def test_add_store_bad_path(english):
+def test_add_store_bad_path(po_directory, english):
     """Try to create a store_fs where pootle_path and store.pootle_path dont
     match.
     """
@@ -169,7 +167,7 @@ def test_add_store_bad_path(english):
 
 
 @pytest.mark.django_db
-def test_save_store_fs_change_pootle_path_or_store(tp0_store_fs):
+def test_save_store_fs_change_pootle_path_or_store(po_directory, tp0_store_fs):
     """You cant change a pootle_path if a store is associated
     unless you also remove the store association - and vice versa
     """
@@ -198,7 +196,7 @@ def test_save_store_fs_change_pootle_path_or_store(tp0_store_fs):
 
 
 @pytest.mark.django_db
-def test_save_store_fs_bad_lang(tp0_store_fs):
+def test_save_store_fs_bad_lang(po_directory, tp0_store_fs):
     """Try to save a store with a non-existent lang code"""
     tp0_store_fs.store = None
     tp0_store_fs.pootle_path = "/fr/project0/example.po"
@@ -208,7 +206,7 @@ def test_save_store_fs_bad_lang(tp0_store_fs):
 
 
 @pytest.mark.django_db
-def test_save_store_fs_bad_lang_with_store(tp0_store, tp0_store_fs):
+def test_save_store_fs_bad_lang_with_store(po_directory, tp0_store, tp0_store_fs):
     """Try to save a store with a pootle_path that is different from the
     associated Store.
     """
@@ -219,7 +217,7 @@ def test_save_store_fs_bad_lang_with_store(tp0_store, tp0_store_fs):
 
 
 @pytest.mark.django_db
-def test_save_store_fs_bad_project(tp0_store_fs):
+def test_save_store_fs_bad_project(po_directory, tp0_store_fs):
     """Try to create a store_fs by pootle_path for a non existent project
     """
     tp0_store_fs.store = None
@@ -229,7 +227,7 @@ def test_save_store_fs_bad_project(tp0_store_fs):
 
 
 @pytest.mark.django_db
-def test_store_fs_plugin(tp0_store_fs, no_fs_plugins, no_fs_files):
+def test_store_fs_plugin(po_directory, tp0_store_fs, no_fs_plugins, no_fs_files):
     store_fs = tp0_store_fs
 
     class DummyPlugin(object):
@@ -242,24 +240,27 @@ def test_store_fs_plugin(tp0_store_fs, no_fs_plugins, no_fs_files):
         def foo(self):
             return "bar"
 
-    @provider(fs_plugins, weak=False, sender=Project)
-    def provide_plugin(**kwargs):
-        return dict(dummyfs=DummyPlugin)
-
-    @getter(fs_file, weak=False, sender=DummyPlugin)
-    def fs_files_getter(**kwargs):
-        return FSFile
-
     project = store_fs.project
     project.config["pootle_fs.fs_type"] = "dummyfs"
     project.config["pootle_fs.fs_url"] = "/foo/bar"
-    assert store_fs.plugin.project == project
-    assert store_fs.plugin.foo() == "bar"
-    assert isinstance(store_fs.file, FSFile)
+
+    with no_fs_plugins():
+        with no_fs_files():
+
+            @provider(fs_plugins, weak=False, sender=Project)
+            def provide_plugin(**kwargs):
+                return dict(dummyfs=DummyPlugin)
+
+            @getter(fs_file, weak=False, sender=DummyPlugin)
+            def fs_files_getter(**kwargs):
+                return FSFile
+            assert store_fs.plugin.project == project
+            assert store_fs.plugin.foo() == "bar"
+            assert isinstance(store_fs.file, FSFile)
 
 
 @pytest.mark.django_db
-def test_store_fs_plugin_bad(tp0_store_fs):
+def test_store_fs_plugin_bad(po_directory, tp0_store_fs):
     store_fs = tp0_store_fs
     project = store_fs.project
     project.config["pootle_fs.fs_type"] = None

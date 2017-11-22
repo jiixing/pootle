@@ -9,8 +9,8 @@
 from django.conf.urls import url
 
 from .views import (
-    TPBrowseStoreView, TPBrowseView, TPExportStoreView, TPExportView,
-    TPTranslateStoreView, TPTranslateView, admin_permissions)
+    TPBrowseStoreView, TPBrowseView, TPPathsJSON, TPTranslateStoreView,
+    TPTranslateView, admin_permissions)
 
 
 urlpatterns = [
@@ -19,6 +19,11 @@ urlpatterns = [
         r'/admin/permissions/',
         admin_permissions,
         name='pootle-tp-admin-permissions'),
+
+    url(r'^(?P<language_code>[^/]*)/(?P<project_code>[^/]*)'
+        r'/paths/',
+        TPPathsJSON.as_view(),
+        name='pootle-tp-paths'),
 
     # Translation
     url(r'^(?P<language_code>[^/]*)/(?P<project_code>[^/]*)/'
@@ -29,16 +34,6 @@ urlpatterns = [
         r'translate/(?P<dir_path>(.*/)*)(?P<filename>.*\.*)$',
         TPTranslateStoreView.as_view(),
         name='pootle-tp-store-translate'),
-
-    # Export view
-    url(r'^(?P<language_code>[^/]*)/(?P<project_code>[^/]*)/'
-        r'export-view/(?P<dir_path>(.*/)*)?$',
-        TPExportView.as_view(),
-        name='pootle-tp-export'),
-    url(r'^(?P<language_code>[^/]*)/(?P<project_code>[^/]*)/'
-        r'export-view/(?P<dir_path>(.*/)*)(?P<filename>.*\.*)$',
-        TPExportStoreView.as_view(),
-        name='pootle-tp-store-export'),
 
     # Browser
     url(r'^(?P<language_code>[^/]*)/(?P<project_code>[^/]*)/'

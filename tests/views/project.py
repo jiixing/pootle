@@ -6,35 +6,28 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
-from itertools import groupby
-import json
-import locale
-from urllib import unquote
+from collections import OrderedDict
 
 import pytest
 
-from django.contrib.auth import get_user_model
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 
 from pytest_pootle.suite import view_context_test
 
 from pootle_app.models import Directory
 from pootle_app.models.permissions import check_permission
-from pootle.core.browser import (
-    get_table_headings, make_language_item, make_xlanguage_item,
-    make_project_list_item)
-from pootle.core.delegate import search_backend
-from pootle.core.helpers import (
-    SIDEBAR_COOKIE_NAME,
-    get_filter_name, get_sidebar_announcements_context)
+from pootle.core.delegate import scores
+from pootle.core.helpers import get_sidebar_announcements_context
 from pootle.core.url_helpers import get_previous_url, get_path_parts
-from pootle.core.utils.stats import get_translation_states
-from pootle_misc.checks import get_qualitycheck_list, get_qualitycheck_schema
+from pootle.core.utils.stats import (
+    TOP_CONTRIBUTORS_CHUNK_SIZE, get_translation_states)
+from pootle.core.views.display import ChecksDisplay
+from pootle.core.views.browse import StatsDisplay
+from pootle_checks.constants import CATEGORY_IDS, CHECK_NAMES
+from pootle_checks.utils import get_qualitychecks, get_qualitycheck_schema
 from pootle_misc.forms import make_search_form
 from pootle_project.models import Project, ProjectResource, ProjectSet
-from pootle_store.forms import UnitExportForm
-from pootle_store.models import Store, Unit
-from virtualfolder.models import VirtualFolderTreeItem
+from pootle_store.models import Store
 
 
 def _test_translate_view(project, request, response, kwargs, settings):
@@ -50,6 +43,27 @@ def _test_translate_view(project, request, response, kwargs, settings):
     resource_path = (
         "%(dir_path)s%(filename)s" % kwargs)
     pootle_path = "%s%s" % (ctx_path, resource_path)
+    display_priority = False
+
+    checks = get_qualitychecks()
+    schema = {sc["code"]: sc for sc in get_qualitycheck_schema()}
+    check_data = ctx["object"].data_tool.get_checks()
+    _checks = {}
+    for check, checkid in checks.items():
+        if check not in check_data:
+            continue
+        _checkid = schema[checkid]["name"]
+        _checks[_checkid] = _checks.get(
+            _checkid, dict(checks=[], title=schema[checkid]["title"]))
+        _checks[_checkid]["checks"].append(
+            dict(
+                code=check,
+                title=CHECK_NAMES[check],
+                count=check_data[check]))
+    _checks = OrderedDict(
+        (k, _checks[k])
+        for k in CATEGORY_IDS.keys()
+        if _checks.get(k))
     view_context_test(
         ctx,
         **dict(
@@ -62,11 +76,9 @@ def _test_translate_view(project, request, response, kwargs, settings):
             resource_path=resource_path,
             resource_path_parts=get_path_parts(resource_path),
             editor_extends="projects/base.html",
-            check_categories=get_qualitycheck_schema(),
+            checks=_checks,
             previous_url=get_previous_url(request),
-            display_priority=(
-                VirtualFolderTreeItem.objects.filter(
-                    pootle_path__startswith=pootle_path).exists()),
+            display_priority=display_priority,
             cantranslate=check_permission("translate", request),
             cansuggest=check_permission("suggest", request),
             canreview=check_permission("review", request),
@@ -77,10 +89,8 @@ def _test_translate_view(project, request, response, kwargs, settings):
 
 
 def _test_browse_view(project, request, response, kwargs):
-    cookie_data = json.loads(
-        unquote(response.cookies[SIDEBAR_COOKIE_NAME].value))
-    assert cookie_data["foo"] == "bar"
-    assert "announcements_projects_%s" % project.code in cookie_data
+    assert (request.user.is_anonymous
+            or "announcements/projects/%s" % project.code in request.session)
     ctx = response.context
     kwargs["project_code"] = project.code
     resource_path = (
@@ -89,50 +99,46 @@ def _test_browse_view(project, request, response, kwargs):
         "%s/%s"
         % (kwargs["project_code"], resource_path))
     if not (kwargs["dir_path"] or kwargs["filename"]):
-        ob = project
+        obj = project
     elif not kwargs["filename"]:
-        ob = ProjectResource(
+        obj = ProjectResource(
             Directory.objects.live().filter(
                 pootle_path__regex="^/.*/%s$" % project_path),
             pootle_path="/projects/%s" % project_path)
     else:
-        ob = ProjectResource(
+        obj = ProjectResource(
             Store.objects.live().filter(
                 pootle_path__regex="^/.*/%s$" % project_path),
             pootle_path="/projects/%s" % project_path)
 
-    item_func = (
-        make_xlanguage_item
-        if (kwargs["dir_path"]
-            or kwargs["filename"])
-        else make_language_item)
-    items = [
-        item_func(item)
-        for item
-        in ob.get_children_for_user(request.user)
-    ]
-    items.sort(lambda x, y: locale.strcoll(x['title'], y['title']))
-
-    table_fields = ['name', 'progress', 'total', 'need-translation',
-                    'suggestions', 'critical', 'last-updated', 'activity']
-    table = {
-        'id': 'project',
-        'fields': table_fields,
-        'headings': get_table_headings(table_fields),
-        'items': items}
+    stats = obj.data_tool.get_stats(user=request.user)
 
     if request.user.is_superuser or kwargs.get("language_code"):
-        url_action_continue = ob.get_translate_url(state='incomplete')
-        url_action_fixcritical = ob.get_critical_url()
-        url_action_review = ob.get_translate_url(state='suggestions')
-        url_action_view_all = ob.get_translate_url(state='all')
+        url_action_continue = obj.get_translate_url(state='incomplete')
+        url_action_fixcritical = obj.get_critical_url()
+        url_action_review = obj.get_translate_url(state='suggestions')
+        url_action_view_all = obj.get_translate_url(state='all')
     else:
         (url_action_continue,
          url_action_fixcritical,
          url_action_review,
          url_action_view_all) = [None] * 4
+    checks = ChecksDisplay(obj).checks_by_category
+    stats = StatsDisplay(obj, stats=stats).stats
+    del stats["children"]
 
-    User = get_user_model()
+    chunk_size = TOP_CONTRIBUTORS_CHUNK_SIZE
+    score_data = scores.get(Project)(project)
+
+    def scores_to_json(score):
+        score["user"] = score["user"].to_dict()
+        return score
+    top_scorers = score_data.display(
+        limit=chunk_size,
+        formatter=scores_to_json)
+    top_scorer_data = dict(
+        items=list(top_scorers),
+        has_more_items=len(score_data.top_scorers) > chunk_size)
     assertions = dict(
         page="browse",
         project=project,
@@ -144,50 +150,14 @@ def _test_browse_view(project, request, response, kwargs):
         url_action_fixcritical=url_action_fixcritical,
         url_action_review=url_action_review,
         url_action_view_all=url_action_view_all,
-        translation_states=get_translation_states(ob),
-        checks=get_qualitycheck_list(ob),
-        table=table,
-        top_scorers=User.top_scorers(project=project.code, limit=10),
-        stats=ob.get_stats(),
-    )
+        translation_states=get_translation_states(obj),
+        top_scorers=top_scorer_data,
+        checks=checks,
+        stats=stats)
     sidebar = get_sidebar_announcements_context(
         request, (project, ))
     for k in ["has_sidebar", "is_sidebar_open", "announcements"]:
-        assertions[k] = sidebar[0][k]
-    view_context_test(ctx, **assertions)
-
-
-def _test_export_view(project, request, response, kwargs, settings):
-    ctx = response.context
-    kwargs["project_code"] = project.code
-    filter_name, filter_extra = get_filter_name(request.GET)
-    form_data = request.GET.copy()
-    form_data["path"] = request.path.replace("export-view/", "")
-    search_form = UnitExportForm(
-        form_data, user=request.user)
-    assert search_form.is_valid()
-    total, start, end, units_qs = search_backend.get(Unit)(
-        request.user, **search_form.cleaned_data).search()
-    units_qs = units_qs.select_related('store')
-    assertions = {}
-    if total > settings.POOTLE_EXPORT_VIEW_LIMIT:
-        units_qs = units_qs[:settings.POOTLE_EXPORT_VIEW_LIMIT]
-        assertions.update(
-            {'unit_total_count': total,
-             'displayed_unit_count': settings.POOTLE_EXPORT_VIEW_LIMIT})
-    unit_groups = [
-        (path, list(units))
-        for path, units
-        in groupby(
-            units_qs,
-            lambda x: x.store.pootle_path)]
-    assertions.update(
-        dict(project=project,
-             language=None,
-             source_language="en",
-             filter_name=filter_name,
-             filter_extra=filter_extra,
-             unit_groups=unit_groups))
+        assertions[k] = sidebar[k]
     view_context_test(ctx, **assertions)
 
 
@@ -198,8 +168,6 @@ def test_views_project(project_views, settings):
         _test_browse_view(project, request, response, kwargs)
     elif test_type == "translate":
         _test_translate_view(project, request, response, kwargs, settings)
-    if test_type == "export":
-        _test_export_view(project, request, response, kwargs, settings)
 
 
 @pytest.mark.django_db
@@ -216,48 +184,49 @@ def test_view_projects_browse(client, request_users):
     user_projects = (
         Project.objects.for_user(request.user)
                        .filter(code__in=user_projects))
-    ob = ProjectSet(user_projects)
-    items = [
-        make_project_list_item(project)
-        for project in ob.children]
-    items.sort(lambda x, y: locale.strcoll(x['title'], y['title']))
-    table_fields = [
-        'name', 'progress', 'total', 'need-translation',
-        'suggestions', 'critical', 'last-updated', 'activity']
-    table = {
-        'id': 'projects',
-        'fields': table_fields,
-        'headings': get_table_headings(table_fields),
-        'items': items}
+    obj = ProjectSet(user_projects)
+    stats = obj.data_tool.get_stats(user=request.user)
 
     if request.user.is_superuser:
-        url_action_continue = ob.get_translate_url(state='incomplete')
-        url_action_fixcritical = ob.get_critical_url()
-        url_action_review = ob.get_translate_url(state='suggestions')
-        url_action_view_all = ob.get_translate_url(state='all')
+        url_action_continue = obj.get_translate_url(state='incomplete')
+        url_action_fixcritical = obj.get_critical_url()
+        url_action_review = obj.get_translate_url(state='suggestions')
+        url_action_view_all = obj.get_translate_url(state='all')
     else:
         (url_action_continue,
          url_action_fixcritical,
          url_action_review,
          url_action_view_all) = [None] * 4
+    checks = ChecksDisplay(obj).checks_by_category
+    stats = StatsDisplay(obj, stats=stats).stats
+    del stats["children"]
+    chunk_size = TOP_CONTRIBUTORS_CHUNK_SIZE
+    score_data = scores.get(ProjectSet)(obj)
 
-    User = get_user_model()
+    def scores_to_json(score):
+        score["user"] = score["user"].to_dict()
+        return score
+    top_scorers = score_data.display(
+        limit=chunk_size,
+        formatter=scores_to_json)
+    top_scorer_data = dict(
+        items=list(top_scorers),
+        has_more_items=len(score_data.top_scorers) > chunk_size)
     assertions = dict(
         page="browse",
         pootle_path="/projects/",
         resource_path="",
         resource_path_parts=[],
-        object=ob,
-        table=table,
+        object=obj,
         browser_extends="projects/all/base.html",
-        stats=ob.get_stats(),
-        checks=get_qualitycheck_list(ob),
-        top_scorers=User.top_scorers(limit=10),
-        translation_states=get_translation_states(ob),
+        top_scorers=top_scorer_data,
+        translation_states=get_translation_states(obj),
         url_action_continue=url_action_continue,
         url_action_fixcritical=url_action_fixcritical,
         url_action_review=url_action_review,
-        url_action_view_all=url_action_view_all)
+        url_action_view_all=url_action_view_all,
+        checks=checks,
+        stats=stats)
     view_context_test(ctx, **assertions)
 
 
@@ -272,9 +241,32 @@ def test_view_projects_translate(client, settings, request_users):
     if not user.is_superuser:
         assert response.status_code == 403
         return
-
     ctx = response.context
     request = response.wsgi_request
+    user_projects = Project.accessible_by_user(request.user)
+    user_projects = (
+        Project.objects.for_user(request.user)
+                       .filter(code__in=user_projects))
+    obj = ProjectSet(user_projects)
+    checks = get_qualitychecks()
+    schema = {sc["code"]: sc for sc in get_qualitycheck_schema()}
+    check_data = obj.data_tool.get_checks()
+    _checks = {}
+    for check, checkid in checks.items():
+        if check not in check_data:
+            continue
+        _checkid = schema[checkid]["name"]
+        _checks[_checkid] = _checks.get(
+            _checkid, dict(checks=[], title=schema[checkid]["title"]))
+        _checks[_checkid]["checks"].append(
+            dict(
+                code=check,
+                title=CHECK_NAMES[check],
+                count=check_data[check]))
+    _checks = OrderedDict(
+        (k, _checks[k])
+        for k in CATEGORY_IDS.keys()
+        if _checks.get(k))
     assertions = dict(
         page="translate",
         has_admin_access=user.is_superuser,
@@ -285,7 +277,7 @@ def test_view_projects_translate(client, settings, request_users):
         resource_path="",
         resource_path_parts=[],
         editor_extends="projects/all/base.html",
-        check_categories=get_qualitycheck_schema(),
+        checks=_checks,
         previous_url=get_previous_url(request),
         display_priority=False,
         cantranslate=check_permission("translate", request),
@@ -295,34 +287,4 @@ def test_view_projects_translate(client, settings, request_users):
         current_vfolder_pk="",
         POOTLE_MT_BACKENDS=settings.POOTLE_MT_BACKENDS,
         AMAGAMA_URL=settings.AMAGAMA_URL)
-    view_context_test(ctx, **assertions)
-
-
-@pytest.mark.django_db
-def test_view_projects_export(client):
-    response = client.get(reverse("pootle-projects-export"))
-    ctx = response.context
-    request = response.wsgi_request
-    filter_name, filter_extra = get_filter_name(request.GET)
-    form_data = request.GET.copy()
-    form_data["path"] = request.path.replace("export-view/", "")
-    search_form = UnitExportForm(
-        form_data, user=request.user)
-    assert search_form.is_valid()
-    total, start, end, units_qs = search_backend.get(Unit)(
-        request.user, **search_form.cleaned_data).search()
-    units_qs = units_qs.select_related('store')
-    unit_groups = [
-        (path, list(units))
-        for path, units
-        in groupby(
-            units_qs,
-            lambda x: x.store.pootle_path)]
-    assertions = dict(
-        project=None,
-        language=None,
-        source_language="en",
-        filter_name=filter_name,
-        filter_extra=filter_extra,
-        unit_groups=unit_groups)
     view_context_test(ctx, **assertions)

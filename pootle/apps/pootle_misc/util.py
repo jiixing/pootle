@@ -21,7 +21,7 @@ def import_func(path):
     module, attr = path[:i], path[i+1:]
     try:
         mod = import_module(module)
-    except ImportError, e:
+    except ImportError as e:
         raise ImproperlyConfigured('Error importing module %s: "%s"'
                                    % (module, e))
     try:
@@ -32,10 +32,6 @@ def import_func(path):
             % (module, attr))
 
     return func
-
-
-def dictsum(x, y):
-    return dict((n, x.get(n, 0)+y.get(n, 0)) for n in set(x) | set(y))
 
 
 def ajax_required(f):
@@ -95,3 +91,13 @@ def get_date_interval(month):
     end = end.replace(hour=23, minute=59, second=59, microsecond=999999)
 
     return [start, end]
+
+
+def cmp_by_last_activity(x, y):
+    val_x = 0
+    val_y = 0
+    if 'stats' in x and 'last_submission' in x['stats']:
+        val_x = x['stats']['last_submission']['mtime']
+    if 'stats' in y and 'last_submission' in y['stats']:
+        val_y = y['stats']['last_submission']['mtime']
+    return cmp(val_y, val_x)

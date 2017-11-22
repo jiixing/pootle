@@ -9,9 +9,8 @@
 from django.conf.urls import url
 
 from .views import (
-    ProjectBrowseView, ProjectExportView, ProjectsBrowseView,
-    ProjectsExportView, ProjectsTranslateView, ProjectTranslateView,
-    ProjectAdminView, project_admin_permissions)
+    ProjectAdminView, ProjectBrowseView, ProjectPathsJSON, ProjectsBrowseView,
+    ProjectsTranslateView, ProjectTranslateView, project_admin_permissions)
 
 
 urlpatterns = [
@@ -24,9 +23,10 @@ urlpatterns = [
         ProjectsTranslateView.as_view(),
         name='pootle-projects-translate'),
 
-    url(r'^export-view/$',
-        ProjectsExportView.as_view(),
-        name='pootle-projects-export'),
+    url(r'^(?P<project_code>[^/]*)'
+        r'/paths/',
+        ProjectPathsJSON.as_view(),
+        name='pootle-project-paths'),
 
     # Admin
     url(r'^(?P<project_code>[^/]*)/admin/languages/$',
@@ -41,11 +41,6 @@ urlpatterns = [
         r'(?P<dir_path>(.*/)*)(?P<filename>.*\.*)?$',
         ProjectTranslateView.as_view(),
         name='pootle-project-translate'),
-
-    url(r'^(?P<project_code>[^/]*)/export-view/'
-        r'(?P<dir_path>(.*/)*)(?P<filename>.*\.*)?$',
-        ProjectExportView.as_view(),
-        name='pootle-project-export'),
 
     url(r'^(?P<project_code>[^/]*)/'
         r'(?P<dir_path>(.*/)*)(?P<filename>.*\.*)?$',

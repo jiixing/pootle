@@ -6,6 +6,8 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
+import sys
+
 import pytest
 
 
@@ -93,12 +95,15 @@ def test_fs_response_display_item_instance(localfs_pootle_untracked):
 
 
 @pytest.mark.django_db
+@pytest.mark.xfail(
+    sys.platform == 'win32',
+    reason="path mangling broken on windows")
 def test_fs_response_display_item_fs_untracked(localfs_fs_untracked):
     plugin = localfs_fs_untracked
-    response = plugin.fetch()
-    response_item = response["fetched_from_fs"][0]
+    response = plugin.add()
+    response_item = response["added_from_fs"][0]
     item_display = ResponseItemDisplay(None, response_item)
-    assert item_display.action_type == "fetched_from_fs"
+    assert item_display.action_type == "added_from_fs"
     assert item_display.state_item == response_item.fs_state
     assert item_display.file_exists is True
     assert item_display.store_exists is False
@@ -140,7 +145,7 @@ def test_fs_response_display_item_existence(fs_responses, fs_states):
             and (fs_states
                  in ["pootle_untracked", "fs_removed"])))
     fs_added = (
-        fs_responses == "fetched_from_fs"
+        fs_responses == "added_from_fs"
         and fs_states not in ["conflict", "conflict_untracked"])
     pootle_added = (
         fs_responses == "added_from_pootle"
@@ -207,6 +212,9 @@ def test_fs_display_state_item_instance_file(localfs_pootle_untracked):
 
 
 @pytest.mark.django_db
+@pytest.mark.xfail(
+    sys.platform == 'win32',
+    reason="path mangling broken on windows")
 def test_fs_display_state_item_instance_fs_untracked(localfs_fs_untracked):
     plugin = localfs_fs_untracked
     state_item = plugin.state()["fs_untracked"][0]

@@ -6,18 +6,19 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
+from __future__ import print_function
+
 import sys
 import traceback
 
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.core.mail import mail_admins
-from django.core.urlresolvers import reverse
 from django.http import Http404, HttpResponseForbidden, HttpResponseServerError
-from django.template import RequestContext
 from django.template.loader import render_to_string
-from django.utils.encoding import force_unicode
-from django.utils.translation import ugettext as _
+from django.urls import reverse
+from django.utils.deprecation import MiddlewareMixin
+from django.utils.encoding import force_text
 
 try:
     from raven.contrib.django.models import sentry_exception_handler
@@ -27,6 +28,7 @@ except ImportError:
 from pootle.core.exceptions import Http400
 from pootle.core.http import (JsonResponseBadRequest, JsonResponseForbidden,
                               JsonResponseNotFound, JsonResponseServerError)
+from pootle.i18n.gettext import ugettext as _
 
 
 def log_exception(request, exception, tb):
@@ -57,7 +59,7 @@ def log_exception(request, exception, tb):
 def handle_exception(request, exception, template_name):
     # XXX: remove this? exceptions are already displayed in debug mode
     tb = traceback.format_exc()
-    print >> sys.stderr, tb
+    print(tb, file=sys.stderr)
 
     if settings.DEBUG:
         return None
@@ -65,7 +67,7 @@ def handle_exception(request, exception, template_name):
     try:
         log_exception(request, exception, tb)
 
-        msg = force_unicode(exception)
+        msg = force_text(exception)
 
         if request.is_ajax():
             return JsonResponseServerError({'msg': msg})
@@ -83,19 +85,18 @@ def handle_exception(request, exception, template_name):
             ctx['fserror'] = msg
 
         return HttpResponseServerError(
-            render_to_string(template_name, ctx,
-                             RequestContext(request))
+            render_to_string(template_name, context=ctx, request=request)
         )
     except:
         # Let's not confuse things by throwing an exception here
         pass
 
 
-class ErrorPagesMiddleware(object):
+class ErrorPagesMiddleware(MiddlewareMixin):
     """Friendlier error pages."""
 
     def process_exception(self, request, exception):
-        msg = force_unicode(exception)
+        msg = force_text(exception)
         if isinstance(exception, Http404):
             if request.is_ajax():
                 return JsonResponseNotFound({'msg': msg})
@@ -110,7 +111,7 @@ class ErrorPagesMiddleware(object):
                 'permission_error': msg,
             }
 
-            if not request.user.is_authenticated():
+            if not request.user.is_authenticated:
                 msg_args = {
                     'login_link': reverse('account_login'),
                 }
@@ -122,8 +123,8 @@ class ErrorPagesMiddleware(object):
                 ctx["login_message"] = login_msg
 
             return HttpResponseForbidden(
-                render_to_string('errors/403.html', ctx,
-                                 RequestContext(request)))
+                render_to_string('errors/403.html', context=ctx,
+                                 request=request))
         elif (exception.__class__.__name__ in
                 ('OperationalError', 'ProgrammingError', 'DatabaseError')):
             # HACKISH: Since exceptions thrown by different databases do not

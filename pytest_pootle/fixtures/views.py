@@ -7,23 +7,24 @@
 # AUTHORS file for copyright and authorship information.
 
 import functools
-import json
 import urllib
 from collections import OrderedDict
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytest
 from dateutil.relativedelta import relativedelta
-
-from django.core.urlresolvers import reverse
-
-from pytest_pootle.env import TEST_USERS
+from pytest_pootle.fixtures.models.user import TEST_USERS
 from pytest_pootle.utils import create_store, get_test_uids
 
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.urls import reverse
+from django.utils import timezone
 
-DAY_AGO = (datetime.now() - timedelta(days=1))
-MONTH_AGO = (datetime.now() - relativedelta(months=1))
-TWO_MONTHS_AGO = (datetime.now() - relativedelta(months=2))
+
+DAY_AGO = (timezone.now() - timedelta(days=1))
+MONTH_AGO = (timezone.now() - relativedelta(months=1))
+TWO_MONTHS_AGO = (timezone.now() - relativedelta(months=2))
+SEVEN_MONTHS_AGO = (timezone.now() - relativedelta(months=7))
 
 BAD_VIEW_TESTS = OrderedDict(
     (("/foo/bar", dict(code=301, location="/foo/bar/")),
@@ -117,12 +118,13 @@ GET_UNITS_TESTS = OrderedDict(
      ("modified_last_calendar_month",
       {"filter": "translated",
        "month": MONTH_AGO.strftime("%Y-%m")}),
+     ("modified_calendar_month_7_month_ago",
+      {"filter": "translated",
+       "month": SEVEN_MONTHS_AGO.strftime("%Y-%m")}),
      ("modified_last_two_months",
       {"modified_since": TWO_MONTHS_AGO.isoformat()}),
      ("modified_last_day",
       {"modified_since": DAY_AGO.isoformat()}),
-     ("path_vfolder",
-      {"path": "/language0/project0/virtualfolder0/"}),
      ("filter_suggestions",
       {"filter": "suggestions"}),
      ("filter_user_suggestions",
@@ -136,13 +138,13 @@ GET_UNITS_TESTS = OrderedDict(
      ("filter_user_submissions_overwritten",
       {"filter": "user-submissions-overwritten"}),
      ("filter_search_empty",
-      {"search": "FOO",
+      {"search": "SEARCH_NOT_EXIST",
        "sfields": "source"}),
      ("filter_search_untranslated",
       {"search": "untranslated",
        "sfields": "source"}),
      ("filter_search_sfields_multi",
-      {"search": "FOO",
+      {"search": "SEARCH_NOT_EXIST",
        "sfields": "source,target"}),
      ("sort_user_suggestion_newest",
       {"sort": "newest",
@@ -158,15 +160,15 @@ GET_UNITS_TESTS = OrderedDict(
        "checks": ["endpunc"]}),
      ("checks_category_critical",
       {"filter": "checks",
-       "category": "critical"}),
-     ("checks_category_critical",
-      {"filter": "checks",
        "category": "critical"})))
+
+GET_VFOLDER_UNITS_TESTS = OrderedDict(
+    (("path_vfolder",
+      {"path": "/++vfolder/virtualfolder0/language0/project0/translate/"}), ))
 
 LANGUAGE_VIEW_TESTS = OrderedDict(
     (("browse", {}),
-     ("translate", {}),
-     ("export", {})))
+     ("translate", {})))
 
 PROJECT_VIEW_TESTS = OrderedDict(
     (("browse", {}),
@@ -183,15 +185,6 @@ PROJECT_VIEW_TESTS = OrderedDict(
      ("translate_store",
       {"filename": "store0.po"}),
      ("translate_directory_store",
-      {"dir_path": "subdir0/",
-       "filename": "store3.po"}),
-     ("export", {}),
-     ("export_limit", {"export_limit": True}),
-     ("export_directory",
-      {"dir_path": "subdir0/"}),
-     ("export_store",
-      {"filename": "store0.po"}),
-     ("export_directory_store",
       {"dir_path": "subdir0/",
        "filename": "store3.po"})))
 
@@ -212,21 +205,14 @@ TP_VIEW_TESTS = OrderedDict(
      ("translate_directory_store",
       {"dir_path": "subdir0/",
        "filename": "store3.po"}),
-     ("translate_vfolder",
-      {"dir_path": "virtualfolder0/"}),
-     ("translate_vfolder_subdir",
-      {"dir_path": "virtualfolder4/subdir0/"}),
      ("translate_no_vfolders_in_subdir",
-      {"dir_path": "subdir0/subdir1/"}),
-     ("export", {}),
-     ("export_limit", {"export_limit": True}),
-     ("export_directory",
-      {"dir_path": "subdir0/"}),
-     ("export_store",
-      {"filename": "store0.po"}),
-     ("export_directory_store",
-      {"dir_path": "subdir0/",
-       "filename": "store3.po"})))
+      {"dir_path": "subdir0/subdir1/"})))
+
+VFOLDER_VIEW_TESTS = OrderedDict(
+    (("translate_vfolder",
+      {"dir_path": ""}),
+     ("translate_vfolder_subdir",
+      {"dir_path": "subdir0/"})))
 
 DISABLED_PROJECT_URL_PARAMS = OrderedDict(
     (("project", {
@@ -285,14 +271,9 @@ def get_units_views(request, client, request_users):
 
 @pytest.fixture(params=PROJECT_VIEW_TESTS.keys())
 def project_views(request, client, request_users, settings):
-    from pootle.core.helpers import SIDEBAR_COOKIE_NAME
     from pootle_project.models import Project
 
     test_kwargs = PROJECT_VIEW_TESTS[request.param].copy()
-    if test_kwargs.get("export_limit"):
-        settings.POOTLE_EXPORT_VIEW_LIMIT = 10
-        del test_kwargs["export_limit"]
-
     user = request_users["user"]
     client.login(
         username=user.username,
@@ -303,20 +284,13 @@ def project_views(request, client, request_users, settings):
     kwargs = {"project_code": project.code, "dir_path": "", "filename": ""}
     kwargs.update(test_kwargs)
     view_name = "pootle-project-%s" % test_type
-    client.cookies[SIDEBAR_COOKIE_NAME] = json.dumps({"foo": "bar"})
     response = client.get(reverse(view_name, kwargs=kwargs))
     return test_type, project, response.wsgi_request, response, kwargs
 
 
 @pytest.fixture(params=TP_VIEW_TESTS.keys())
-def tp_views(request, client, request_users, vfolders, settings):
-    from pootle.core.helpers import SIDEBAR_COOKIE_NAME
+def tp_views(request, client, request_users, settings):
     from pootle_translationproject.models import TranslationProject
-
-    test_kwargs = TP_VIEW_TESTS[request.param].copy()
-    if test_kwargs.get("export_limit"):
-        settings.POOTLE_EXPORT_VIEW_LIMIT = 10
-        del test_kwargs["export_limit"]
 
     tp_view_test_names = request.param
     user = request_users["user"]
@@ -329,8 +303,8 @@ def tp_views(request, client, request_users, vfolders, settings):
         "language_code": tp.language.code,
         "dir_path": "",
         "filename": ""}
+    test_kwargs = TP_VIEW_TESTS[request.param].copy()
     kwargs.update(test_kwargs)
-    client.cookies[SIDEBAR_COOKIE_NAME] = json.dumps({"foo": "bar"})
     if kwargs.get("filename"):
         tp_view = "%s-store" % tp_view
     else:
@@ -350,7 +324,6 @@ def tp_views(request, client, request_users, vfolders, settings):
 @pytest.fixture(params=LANGUAGE_VIEW_TESTS.keys())
 def language_views(request, client):
 
-    from pootle.core.helpers import SIDEBAR_COOKIE_NAME
     from pootle_language.models import Language
 
     test_type = request.param.split("_")[0]
@@ -358,7 +331,6 @@ def language_views(request, client):
     kwargs = {"language_code": language.code}
     kwargs.update(LANGUAGE_VIEW_TESTS[request.param])
     view_name = "pootle-language-%s" % test_type
-    client.cookies[SIDEBAR_COOKIE_NAME] = json.dumps({"foo": "bar"})
     response = client.get(reverse(view_name, kwargs=kwargs))
     return test_type, language, response.wsgi_request, response, kwargs
 
@@ -377,11 +349,21 @@ def bad_views(request, client):
         test)
 
 
-@pytest.fixture
-def tp_uploads(client, member):
+@pytest.fixture(params=[
+    ("member", "member", {}),
+    # member doesn't have administarate permissions to set member2 as uploader
+    ("member", "member2", {"user_id": ""}),
+    ("admin", "member2", {}),
+])
+def tp_uploads(request, client):
+    from pootle.core.delegate import language_team
+    from pootle_language.models import Language
     from pootle_translationproject.models import TranslationProject
     from pootle_store.models import Store
+    from django.contrib.auth import get_user_model
 
+    submitter_name, uploader_name, errors = request.param
+    uploader = get_user_model().objects.get(username=uploader_name)
     tp = TranslationProject.objects.all()[0]
     store = Store.objects.filter(parent=tp.directory)[0]
     kwargs = {
@@ -389,18 +371,32 @@ def tp_uploads(client, member):
         "language_code": tp.language.code,
         "dir_path": "",
         "filename": store.name}
-    password = TEST_USERS[member.username]['password']
-    client.login(username=member.username, password=password)
+    password = TEST_USERS[submitter_name]['password']
+    language_team.get(Language)(tp.language).add_member(uploader, "submitter")
+    client.login(username=submitter_name, password=password)
+    updated_units = [
+        (unit.source_f, "%s UPDATED" % unit.target_f, False)
+        for unit in store.units
+    ]
+    updated_store = create_store(store.pootle_path, "0", updated_units)
+    uploaded_file = SimpleUploadedFile(
+        store.name,
+        str(updated_store),
+        "text/x-gettext-translation"
+    )
     response = client.post(
         reverse("pootle-tp-store-browse", kwargs=kwargs),
-        {'name': '', 'attachment': create_store([
-            (unit.source_f, "%s UPDATED" % unit.target_f)
-            for unit in store.units])})
+        {
+            'name': '',
+            'file': uploaded_file,
+            'user_id': uploader.id
+        }
+    )
 
-    return tp, response.wsgi_request, response, kwargs
+    return tp, response.wsgi_request, response, kwargs, errors
 
 
-@pytest.fixture(params=("browse", "translate", "export"))
+@pytest.fixture(params=("browse", "translate"))
 def view_types(request):
     """List of possible view types."""
     return request.param
@@ -414,3 +410,55 @@ def dp_view_urls(request, view_types):
     view_name = "%s-%s" % (view_name, view_types)
 
     return reverse(view_name, kwargs=kwargs)
+
+
+@pytest.fixture(params=VFOLDER_VIEW_TESTS.keys())
+def vfolder_views(request, client, request_users, settings, tp0):
+
+    vfolder0 = tp0.stores.filter(
+        vfolders__isnull=False)[0].vfolders.first()
+    test_kwargs = VFOLDER_VIEW_TESTS[request.param].copy()
+    tp_view_test_names = request.param
+    user = request_users["user"]
+    test_type = tp_view_test_names.split("_")[0]
+    tp_view = "pootle-vfolder-tp"
+    kwargs = {
+        "vfolder_name": vfolder0.name,
+        "project_code": tp0.project.code,
+        "language_code": tp0.language.code,
+        "dir_path": "",
+        "filename": ""}
+    kwargs.update(test_kwargs)
+    del kwargs["filename"]
+    view_name = "%s-%s" % (tp_view, test_type)
+    if user.username != "nobody":
+        client.login(
+            username=user.username,
+            password=request_users["password"])
+    response = client.get(reverse(view_name, kwargs=kwargs))
+    kwargs["filename"] = kwargs.get("filename", "")
+    return test_type, tp0, response.wsgi_request, response, kwargs
+
+
+@pytest.fixture(params=GET_VFOLDER_UNITS_TESTS.keys())
+def get_vfolder_units_views(request, client, request_users):
+    from virtualfolder.models import VirtualFolder
+
+    params = GET_VFOLDER_UNITS_TESTS[request.param].copy()
+    params["path"] = params.get("path", "/language0/")
+    vfolder0 = VirtualFolder.objects.first()
+    user = request_users["user"]
+    if user.username != "nobody":
+        client.login(
+            username=user.username,
+            password=request_users["password"])
+    url_params = urllib.urlencode(params, True)
+    response = client.get(
+        "%s?%s"
+        % (reverse("vfolder-pootle-xhr-units",
+                   kwargs=dict(vfolder_name=vfolder0.name)),
+           url_params),
+        HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+
+    params["pootle_path"] = params["path"]
+    return user, vfolder0, params, url_params, response

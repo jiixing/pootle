@@ -7,22 +7,22 @@
 # AUTHORS file for copyright and authorship information.
 
 from django.conf.urls import url
+from django.views.generic import TemplateView
 
-from . import index, robots
-from .index import AboutView
+from .index import AboutView, IndexView
 
 
 urlpatterns = [
-    url(r'^robots.txt$',
-        robots.view,
-        name='pootle-robots'),
+    url(r'^robots\.txt$',
+        TemplateView.as_view(template_name='robots.txt',
+                             content_type='text/plain'),
+        name="pootle-robots"),
 
-    url(r'^/?$',
-        index.view,
+    url(r'^$',
+        IndexView.as_view(),
         name='pootle-home'),
 
     url(r'^about/$',
         AboutView.as_view(),
-        name='pootle-about',
-        prefix='pootle_app.views.index'),
+        name='pootle-about'),
 ]

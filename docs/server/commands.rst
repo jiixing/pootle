@@ -12,12 +12,7 @@ will run:
 
 .. code-block:: console
 
-    $ pootle help
-
-.. note::
-
-  If you run Pootle from a repository checkout you can use the *manage.py* file
-  found in the root of the repository.
+    (env) $ pootle help
 
 
 .. _commands#managing_pootle_projects:
@@ -37,18 +32,18 @@ repeated to indicate multiple languages or projects. If you use both options
 together it will only match the files that match both languages and projects
 selected.
 
-For example, to *refresh_stats* for the tutorial project only, run:
+For example, to *calculate_checks* for the tutorial project only, run:
 
 .. code-block:: console
 
-    $ pootle refresh_stats --project=tutorial
+    (env) $ pootle calculate_checks --project=tutorial
 
-To only refresh a the Zulu and Basque language files within the tutorial
+To only calculate the Zulu and Basque language files within the tutorial
 project, run:
 
 .. code-block:: console
 
-    $ pootle refresh_stats --project=tutorial --language=zu --language=eu
+    (env) $ pootle calculate_checks --project=tutorial --language=zu --language=eu
 
 
 Running commands with --no-rq option
@@ -66,41 +61,42 @@ This can be useful for running pootle commands in bash scripts or automating
 installation/upgrade/migration. It can also be useful for debugging otherwise
 asynchronous jobs.
 
-For example, to run :djadmin:`refresh_stats` in the command process and wait
+For example, to run :djadmin:`calculate_checks` in the command process and wait
 for the process to terminate:
 
 .. code-block:: console
 
-    $ pootle refresh_stats --no-rq
+    (env) $ pootle calculate_checks --no-rq
 
 It is *not* generally safe to run commands in this mode if you have RQ workers
 active at the same time, as there is a risk that they conflict with other jobs
 dispatched to the workers.
+
+.. django-admin-option:: --atomic
+
+.. versionadded:: 2.8
+
+  Default: ``tp``.
+  Available choices: ``tp``, ``all``, ``none``.
+
+  This option allows you to run CLI commands with atomic transactions.
+
+  The default is to commit changes on per-translation-project basis.
+
+  For example to run update_stores against all translation projects in a single
+  transaction.
+
+.. code-block:: console
+
+    (env) $ pootle update_stores --atomic=all
+
+
 
 .. django-admin-option:: --noinput
 
 If there are RQ workers running, the command will ask for confirmation before
 proceeding. This can be overridden using the :option:`--noinput` flag, in
 which case the command will run even if there are.
-
-
-.. django-admin:: refresh_stats
-
-refresh_stats
-^^^^^^^^^^^^^
-
-Refreshes all calculated statistics ensuring that they are up-to-date.
-
-A background process will create a task for every file to make sure calculated
-statistics data is up to date. When the task for a file completes then further
-tasks will be created for the files parents.
-
-.. note:: Files in disabled projects are processed.
-
-This command allows statistics to be updated when using multiple RQ workers.
-
-.. warning:: Please note that the actual translations **must be in Pootle**
-   before running this command. :djadmin:`update_stores` will pull them in.
 
 
 .. django-admin:: retry_failed_jobs
@@ -116,6 +112,29 @@ Background RQ jobs can fail for various reasons.  To push them back into the
 queue you can run this command.
 
 Examine the RQ worker logs for tracebacks before trying to requeue your jobs.
+
+
+.. django-admin:: update_data
+
+update_data
+^^^^^^^^^^^
+
+.. versionadded:: 2.8
+
+This command updates the stats data. The stats data update can be triggered for
+specific languages or projects.
+
+.. django-admin-option:: --store
+
+Use the :option:`--store` option to narrow the stats data calculation to a
+specific store:
+
+.. code-block:: console
+
+    (env) $ pootle update_data --store=/fr/proj/mydir/mystore.po
+
+Note this will also trigger the update of the stats data for items above the
+store, like for example directories above it, its language and its project.
 
 
 .. django-admin:: calculate_checks
@@ -148,30 +167,13 @@ recalculate only the ``date_format`` quality checks, run:
 
 .. code-block:: console
 
-    $ pootle calculate_checks --check=date_format
+    (env) $ pootle calculate_checks --check=date_format
 
 Multiple checks can be specifed in one run as well:
 
 .. code-block:: console
 
-    $ pootle calculate_checks --check=date_format --check=accelerators
-
-
-.. django-admin:: clear_stats
-
-clear_stats
-^^^^^^^^^^^
-
-.. versionadded:: 2.7
-
-Clear stats cache data.
-
-Make use of :djadmin:`clear_stats` in cases where you want to remove all stats
-data. Such a case may be where you want to recalculate stats after a change
-to checks or wordcount calculations.  While it should be fine to run
-:djadmin:`refresh_stats` or :djadmin:`calculate_checks`, by first running
-:djadmin:`clear_stats` you can be sure that the stats are calculated from
-scratch.
+    (env) $ pootle calculate_checks --check=date_format --check=accelerators
 
 
 .. django-admin:: flush_cache
@@ -183,8 +185,7 @@ flush_cache
 
 Flush cache.
 
-.. warning:: You must first **stop the workers** if you flush `stats`
-   or `redis` cache.
+.. warning:: You must first **stop the workers** if you flush `redis` cache.
 
 .. django-admin-option:: --django-cache
 
@@ -194,18 +195,17 @@ Django templates, project permissions etc.
 .. django-admin-option:: --rqdata
 
 Use the :option:`--rqdata` to flush all data contained in ``redis`` cache:
-pending jobs, dirty flags, revision (which will be automatically restored),
-all data from queues.
+pending jobs, revision (which will be automatically restored), all data from
+queues.
 
-.. django-admin-option:: --stats
+.. django-admin-option:: --lru
 
-Use the :option:`--stats` to flush all stats data only (it works faster than
-:djadmin:`clear_stats` but it requires stopping the worker).
+Use the :option:`--lru` to flush all lru cache data contained
+in ``lru`` cache.
 
 .. django-admin-option:: --all
 
-Use the :option:`--all` to flush all caches (``default``, ``redis``, ``stats``)
-data.
+Use the :option:`--all` to flush all caches (``default``, ``redis``, ``lru``) data.
 
 
 .. django-admin:: refresh_scores
@@ -215,7 +215,12 @@ refresh_scores
 
 .. versionadded:: 2.7
 
-Recalculates the scores for all users.
+Recalculates the scores for all users. It is possible to narrow down the
+calculation to specific projects and/or languages.
+
+.. warning:: It is advisable to run this command while Pootle server is offline
+   since the command can fail due to data being changed by users.
+
 
 .. django-admin-option:: --reset
 
@@ -272,11 +277,19 @@ update_stores
 
 .. versionchanged:: 2.7
 
-The opposite of :djadmin:`sync_stores`, this will update the strings in the
-database to reflect what is on disk, as Pootle will not detect changes in the
-file system on its own.
+Load translation files currently on the file system into the database, thereby
+bringing the Pootle database in sync with the files under the
+:setting:`POOTLE_TRANSLATION_DIRECTORY` directory.  Pootle will not detect
+changes in the file system on its own.  This is the opposite of
+:djadmin:`sync_stores`.
 
 .. note:: Disabled projects are skipped.
+
+.. note:: :djadmin:`update_stores` does not manage the updating of translations
+   against templates, it simply loads translation files and translation
+   templates into Pootle.  For a full understanding of the role of templates
+   and updating translations against templates read the :doc:`templates
+   </features/templates>` section.
 
 It also discovers new units, files and translation projects that were
 added on disk:
@@ -321,7 +334,7 @@ directly on the file system.
 list_serializers
 ^^^^^^^^^^^^^^^^
 
-  .. versionadded:: 2.8.0
+.. versionadded:: 2.8.0
 
 List the installed serializers and deserializers on your system.
 
@@ -377,41 +390,97 @@ of contributions they have.
 
 Available options:
 
-.. django-admin-option:: --from-revision
-
-  Tells to only take into account contributions newer than the specified
-  revision.
-
-  Default: ``0``.
-
 .. django-admin-option:: --sort-by
 
-  .. versionadded:: 2.7.3
+  .. versionchanged:: 2.8.0
 
   Specifies the sorting to be used. Valid options are ``contributions`` (sort
-  by decreasing number of contributions) and ``name`` (sort by user name,
+  by decreasing number of contributions) and ``username`` (sort by user name,
   alphabetically).
 
-  Default: ``name``.
+  Default: ``username``.
 
-.. django-admin-option:: --only-emails
+.. django-admin-option:: --mailmerge
 
   .. versionadded:: 2.8.0
 
   Specifies to only output user names and emails. Users with no email are
   skipped.
 
+  :option:`--mailmerge <contributors --mailmerge>` and
+  :option:`--include-anonymous <contributors --include-anonymous>` are mutually
+  exclusive.
+
+.. django-admin-option:: --include-anonymous
+
+  .. versionadded:: 2.8.0
+
+  Specifies to include anonymous contributions.
+
+  :option:`--include-anonymous <contributors --include-anonymous>` and
+  :option:`--mailmerge <contributors --mailmerge>` are mutually exclusive.
+
 .. django-admin-option:: --since
 
   .. versionadded:: 2.8.0
 
-  Only consider contributions since the specified date. Date must be in ISO
-  8601 format (``2016-01-24T23:15:22+0000``) or be a string formatted like
-  ``"2016-01-24 23:15:22 +0000"`` (quotes included).
+  Only consider contributions since the specified date or datetime.
 
-  :option:`--since <contributors --since>` and
-  :option:`--from-revision <contributors --from-revision>` are mutually
-  exclusive.
+  Date or datetime can be in any format accepted by ``python-dateutil``
+  library, for example ISO 8601 format (``2016-01-24T23:15:22+0000`` or
+  ``2016-01-24``) or a string formatted like ``"2016-01-24 23:15:22 +0000"``
+  (quotes included).
+
+.. django-admin-option:: --until
+
+  .. versionadded:: 2.8.0
+
+  Only consider contributions until the specified date or datetime.
+
+  Date or datetime can be in any format accepted by ``python-dateutil``
+  library, for example ISO 8601 format (``2016-01-24T23:15:22+0000`` or
+  ``2016-01-24``) or a string formatted like ``"2016-01-24 23:15:22 +0000"``
+  (quotes included).
+
+
+.. django-admin:: set_filetype
+
+set_filetype
+^^^^^^^^^^^^
+
+.. versionadded:: 2.8
+
+This command sets file formats for projects, and also allows to convert files
+to another format.
+
+.. django-admin-option:: --from-filetype
+
+Convert stores of this file type.
+
+.. django-admin-option:: --matching
+
+Convert stores matching this path glob within the project.
+
+
+For example, to add the `properties` format to a project, run:
+
+.. code-block:: console
+
+    (env) $ pootle set_filetype --project=myproj properties
+
+
+To convert stores of `po` format to `properties`, run:
+
+.. code-block:: console
+
+    (env) $ pootle set_filetype --project=myproj --from-filetype=po properties
+
+
+To convert stores matching a given path glob to `properties` format, run:
+
+.. code-block:: console
+
+    (env) $ pootle set_filetype --project=myproj --matching=mydir/myfile-* properties
 
 
 .. django-admin:: revision
@@ -574,6 +643,17 @@ Gets, sets, lists, appends and clears pootle configuration settings.
   Treat data as JSON when getting, setting, or appending values.
 
 
+.. django-admin:: schema
+
+schema
+^^^^^^
+
+.. versionadded:: 2.8
+
+Dumps a JSON representation for the Pootle database schema, currently only
+MySQL, for debugging and comparison to a reference database schema.
+
+
 .. _commands#translation-memory:
 
 Translation Memory
@@ -630,9 +710,9 @@ no actual data will be loaded or deleted (the TM will be left unchanged):
 
 .. code-block:: console
 
-    $ pootle update_tmserver --dry-run
-    $ pootle update_tmserver --refresh --dry-run
-    $ pootle update_tmserver --rebuild --dry-run
+    (env) $ pootle update_tmserver --dry-run
+    (env) $ pootle update_tmserver --refresh --dry-run
+    (env) $ pootle update_tmserver --rebuild --dry-run
 
 
 This command also allows to read translations from files and build the TM
@@ -719,7 +799,7 @@ This command requires a mandatory filename argument.
 
 .. code-block:: console
 
-    $ pootle add_vfolders virtual_folders.json
+    (env) $ pootle add_vfolders virtual_folders.json
 
 
 .. _commands#import_export:
@@ -750,6 +830,22 @@ Download a file for offline translation.
 A file or a .zip of files is provided as output.  The file headers include a
 revision counter to assist Pootle to detetmine how to handle subsequent uploads
 of the file.
+
+Available options:
+
+.. django-admin-option:: --tmx
+
+  .. versionadded:: 2.8.0
+
+  Export every translation project as one zipped TMX file
+  into :setting:`MEDIA_ROOT` directory.
+
+.. django-admin-option:: --rotate
+
+  .. versionadded:: 2.8.0
+
+  Remove old exported zipped TMX files (except previous one)
+  from :setting:`MEDIA_ROOT` directory after current exported file is saved.
 
 .. django-admin:: import
 
@@ -843,6 +939,12 @@ Available options:
   Port to connect to database on. Defaults to database backend's default port.
   Not used with sqlite.
 
+.. django-admin-option:: --dev
+
+  .. versionadded:: 2.8
+
+  Creates a development configuration instead.
+
 
 .. django-admin:: initdb
 
@@ -912,6 +1014,274 @@ and the process will start a watchdog to track any client-side scripts for
 changes. Use this only when developing Pootle.
 
 
+.. _commands#pootle-fs:
+
+Pootle FS
+---------
+
+
+.. django-admin:: fs
+
+fs
+^^
+
+To interact with Pootle FS we use multiple subcommands:
+
+* Admin:
+
+  * :djadmin:`info` - Display filesystem info
+  * :djadmin:`state` - Show current state
+
+* Action:
+
+  * :djadmin:`fetch` - Add a file from the filesystem to Pootle
+  * :djadmin:`add` - Add a store from Pootle to the filesystem
+  * :djadmin:`merge` - Handle conflicts in stores and files
+  * :djadmin:`rm` - Remove a store and file from both Pootle and the filesystem
+  * :djadmin:`resolve` - Revert a staged action
+  * :djadmin:`unstage` - Revert a staged action
+
+* Execute:
+
+  * :djadmin:`sync` - Execute staged actions
+
+
+.. note:: The **action** staging commands require that you run
+   :djadmin:sync in order to actually perform the staged actions.
+
+
+.. _commands#pootle-fs-common-options:
+
+Common options
+^^^^^^^^^^^^^^
+
+Pootle FS **action** and **execution** subcommands take the :option:`-p` and
+:option:`-P` options which allow you to specify a glob to limit which files or
+stores are affected by the command.
+
+.. django-admin-option:: -p --fs_path
+
+  Only affect files whose filesystem path matches a given glob.
+
+
+  .. code-block:: console
+
+     (env) $ pootle fs add --fs_path MYPROJECT/af/directory/file.po MYPROJECT
+
+
+  .. note:: The path should be relative to the Pootle FS URL setting for the
+     project.
+
+
+.. django-admin-option:: -P --pootle_path
+
+  Only affect files whose Pootle path matches a given glob.
+
+  .. code-block:: console
+
+     (env) $ pootle fs add --pootle_path /af/MYPROJECT/directory/file.po MYPROJECT
+
+
+  .. note:: Keep in mind that Pootle paths always start with `/`.
+
+
+.. _commands#pootle-fs-subcommands:
+
+Pootle FS subcommands
+^^^^^^^^^^^^^^^^^^^^^
+
+
+.. django-admin:: add
+
+fs add
+++++++
+
+.. versionadded:: 2.8.0
+
+
+Stage for adding any new or changed stores from Pootle to the filesystem:
+
+.. code-block:: console
+
+   (env) $ pootle fs add MYPROJECT
+
+
+This command is the functional opposite of the :djadmin:`fetch` command.
+
+.. django-admin-option:: --force
+
+  Conflicting files on the filesystem will be staged to be overwritten by the
+  Pootle store.
+
+  .. code-block:: console
+
+     (env) $ pootle fs add --force MYPROJECT
+
+
+.. django-admin:: fetch
+
+fs fetch
+++++++++
+
+.. versionadded:: 2.8.0
+
+
+Stage for fetching any new or changed files from the filesystem to Pootle:
+
+.. code-block:: console
+
+   (env) $ pootle fs fetch MYPROJECT
+
+
+This command is the functional opposite of the :djadmin:`add` command.
+
+.. django-admin-option:: --force
+
+  Conflicting stores in Pootle to be overwritten with the filesystem file.
+
+  .. code-block:: console
+
+     (env) $ pootle fs fetch --force MYPROJECT
+
+
+.. django-admin:: info
+
+fs info
++++++++
+
+.. versionadded:: 2.8.0
+
+Retrieve the filesystem info for a project.
+
+.. code-block:: console
+
+   (env) $ pootle fs info MYPROJECT
+
+
+.. django-admin:: resolve
+
+fs resolve
+++++++++++
+
+.. versionadded:: 2.8.0
+
+Stage for merging any stores/files that have either been updated both in Pootle
+and filesystem.
+
+When merging, if there are conflicts in any specific translation unit the
+default behavior is to keep the filesystem version and convert the Pootle
+version into a suggestion.  Suggestions can then we reviewed by translators to
+ensure any corrections are correctly incorporated.
+
+When there are no conflicts in unit :djadmin:`resolve` will handle the merge
+without user input:
+
+.. code-block:: console
+
+   (env) $ pootle fs merge MYPROJECT
+
+
+.. django-admin-option:: --pootle-wins
+
+  Alter the default conflict resolution of filesystem winning to instead use
+  the Pootle version as the correct translation and converting the filesystem
+  version into a suggestion.
+
+  .. code-block:: console
+
+    (env) $ pootle fs resolve --pootle-wins MYPROJECT
+
+.. django-admin-option:: --overwrite
+
+  Discard all translations.  Use only those translations from the filesytem,
+  by default, or from Pootle if used together with :option:`--pootle-wins
+  <resolve --pootle-wins>`
+
+  .. code-block:: console
+
+    (env) $ pootle fs resolve --overwrite MYPROJECT
+
+
+.. django-admin:: rm
+
+fs rm
++++++
+
+.. versionadded:: 2.8.0
+
+Remove any matched:
+
+- Store that do not have a corresponding file in filesystem.
+- File that do not have a corresponding store in Pootle.
+
+.. code-block:: console
+
+   (env) $ pootle fs rm MYPROJECT
+
+
+.. django-admin-option:: --force
+
+  Stage for removal conflicting/untracked files and/or stores.
+
+  .. code-block:: console
+
+    (env) $ pootle fs rm --force MYPROJECT
+
+
+.. django-admin:: state
+
+fs state
+++++++++
+
+.. versionadded:: 2.8.0
+
+List the status of stores in Pootle and files on the filesystem.
+
+.. code-block:: console
+
+   (env) $ pootle fs state MYPROJECT
+
+
+.. django-admin-option:: -t --type
+
+  Restrict to specified :ref:`Pootle FS status <pootle_fs_statuses>`.
+
+  .. code-block:: console
+
+     (env) $ pootle fs state -t pootle_staged MYPROJECT
+
+
+.. django-admin:: sync
+
+fs sync
++++++++
+
+.. versionadded:: 2.8.0
+
+Commit any staged changes, effectively synchronizing the filesystem and Pootle.
+This command is run after other Pootle FS commands have been used to stage
+changes.
+
+.. code-block:: console
+
+   (env) $ pootle fs sync MYPROJECT
+
+
+.. django-admin:: unstage
+
+fs unstage
+++++++++++
+
+.. versionadded:: 2.8.0
+
+Unstage any staged Pootle FS actions. This allows you to remove any staged
+actions which you might have added erroneously.
+
+.. code-block:: console
+
+   (env) $ pootle fs unstage MYPROJECT
+
+
 .. _commands#user-management:
 
 Managing users
@@ -932,7 +1302,7 @@ if they are superusers of the site.
 
 .. code-block:: console
 
-    $ pootle find_duplicate_emails
+    (env) $ pootle find_duplicate_emails
 
 
 .. django-admin:: merge_user
@@ -958,7 +1328,7 @@ merged. You can prevent this by using the :option:`--no-delete` option.
 
 .. code-block:: console
 
-    $ pootle merge_user src_username target_username
+    (env) $ pootle merge_user src_username target_username
 
 
 .. django-admin:: purge_user
@@ -980,7 +1350,7 @@ username for a user of your site.
 
 .. code-block:: console
 
-    $ pootle purge_user username [username ...]
+    (env) $ pootle purge_user username [username ...]
 
 
 .. django-admin:: update_user_email
@@ -993,7 +1363,7 @@ update_user_email
 
 .. code-block:: console
 
-    $ pootle update_user_email username email
+    (env) $ pootle update_user_email username email
 
 This command can be used if you wish to update a user's email address. This
 might be useful if you have users with duplicate email addresses.
@@ -1003,7 +1373,7 @@ username for a user of your site, and a mandatory valid ``email`` address.
 
 .. code-block:: console
 
-    $ pootle update_user_email username email
+    (env) $ pootle update_user_email username email
 
 
 .. django-admin:: verify_user
@@ -1027,7 +1397,7 @@ wish to verify all users of your site.
 
 .. code-block:: console
 
-    $ pootle verify_user username [username ...]
+    (env) $ pootle verify_user username [username ...]
 
 Available options:
 
@@ -1056,6 +1426,26 @@ Deprecated commands
 -------------------
 
 The following are commands that have been removed or deprecated:
+
+
+.. django-admin:: refresh_stats
+
+refresh_stats
+^^^^^^^^^^^^^
+
+.. removed:: 2.8
+
+With the new stats infrastructure this is not needed anymore.
+
+
+.. django-admin:: clear_stats
+
+clear_stats
+^^^^^^^^^^^
+
+.. removed:: 2.8
+
+With the new stats infrastructure this is not needed anymore.
 
 
 .. django-admin:: last_change_id
@@ -1127,9 +1517,9 @@ to have executed periodically without user intervention.
 
 For the full details on how to configure cron, read your platform documentation
 (for example ``man crontab``). Here is an example that runs the
-:djadmin:`refresh_stats` command daily at 02:00 AM::
+:djadmin:`calculate_checks` command daily at 02:00 AM::
 
-    00 02 * * * www-data /var/www/sites/pootle/manage.py refresh_stats
+    00 02 * * * www-data source /var/www/sites/pootle/env/bin/activate; pootle calculate_checks
 
 Test your command with the parameters you want from the command line. Insert it
 in the cron table, and ensure that it is executed as the correct user (the same

@@ -6,43 +6,55 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
+import sys
+
 from django.core import checks
 from django.db import OperationalError, ProgrammingError
-from django.utils.translation import ugettext as _
+
+from pootle.constants import DJANGO_MINIMUM_REQUIRED_VERSION
+from pootle.i18n.gettext import ugettext as _
 
 
 # Minimum Translate Toolkit version required for Pootle to run.
-TTK_MINIMUM_REQUIRED_VERSION = (1, 13, 0)
-
-# Minimum Django version required for Pootle to run.
-DJANGO_MINIMUM_REQUIRED_VERSION = (1, 8, 13)
+TTK_MINIMUM_REQUIRED_VERSION = (2, 2, 5)
 
 # Minimum lxml version required for Pootle to run.
-LXML_MINIMUM_REQUIRED_VERSION = (2, 2, 2, 0)
+LXML_MINIMUM_REQUIRED_VERSION = (3, 5, 0, 0)
 
 # Minimum Redis server version required.
 # Initially set to some minimums based on:
-# 1. Ubuntu 14.04LTS (Trusty) version 2.8.4
+# 1. Ubuntu 16.04LTS (Xenial) version 3.0.6
+#    Ubuntu 14.04LTS (Trusty) version 2.8.4
 #    Ubuntu 12.04LTS (Precise) version 2.2.12
 #    Ubuntu 10.04LTS was too old for RQ
 #    See http://packages.ubuntu.com/search?keywords=redis-server
 # 2. RQ requires Redis >= 2.7.0, and
 #    See https://github.com/nvie/rq/blob/master/README.md
-# 3. Aligining with current Redis stable as best we can
-#    At time of writing, actual Redis stable is 3.0 series with 2.8 cosidered
-#    old stable.
-# 4. Wanting to insist on at least the latest stable that devs are using
+# 3. django-redis 4.x.y supports Redis >=2.8.x
+#    See http://niwinz.github.io/django-redis/latest/
+# 4. Aligning with current Redis stable as best we can
+#    At the time of writing, actual Redis stable is 3.0 series with 2.8
+#    cosidered old stable.
+# 5. Wanting to insist on at least the latest stable that devs are using
 #    The 2.8.* versions of Redis
 REDIS_MINIMUM_REQUIRED_VERSION = (2, 8, 4)
 
 
-# XXX List of manage.py commands not to run the rqworker check on.
-# Maybe tagging can improve this?
+# List of pootle commands that need a running rqworker.
+# FIXME Maybe tagging can improve this?
 RQWORKER_WHITELIST = [
-    "start", "initdb", "revision", "sync_stores", "refresh_stats",
-    "update_stores", "calculate_checks", "retry_failed_jobs", "check",
-    "runserver",
+    "revision", "retry_failed_jobs", "check", "runserver",
 ]
+
+EXPECTED_POOTLE_SCORES = [
+    'suggestion_add',
+    'suggestion_accept',
+    'suggestion_reject',
+    'comment_updated',
+    'target_updated',
+    'state_translated',
+    'state_fuzzy',
+    'state_unfuzzy']
 
 
 def _version_to_string(version, significance=None):
@@ -77,13 +89,13 @@ def check_duplicate_emails(app_configs=None, **kwargs):
 
 @checks.register()
 def check_library_versions(app_configs=None, **kwargs):
-    from django import VERSION as django_version
-    from lxml.etree import LXML_VERSION as lxml_version
+    from django import VERSION as DJANGO_VERSION
+    from lxml.etree import LXML_VERSION
     from translate.__version__ import ver as ttk_version
 
     errors = []
 
-    if django_version < DJANGO_MINIMUM_REQUIRED_VERSION:
+    if DJANGO_VERSION < DJANGO_MINIMUM_REQUIRED_VERSION:
         errors.append(checks.Critical(
             _("Your version of Django is too old."),
             hint=_("Try pip install --upgrade 'Django==%s'",
@@ -91,7 +103,7 @@ def check_library_versions(app_configs=None, **kwargs):
             id="pootle.C002",
         ))
 
-    if lxml_version < LXML_MINIMUM_REQUIRED_VERSION:
+    if LXML_VERSION < LXML_MINIMUM_REQUIRED_VERSION:
         errors.append(checks.Warning(
             _("Your version of lxml is too old."),
             hint=_("Try pip install --upgrade lxml"),
@@ -139,12 +151,14 @@ def check_redis(app_configs=None, **kwargs):
             ))
 
         if len(queue.connection.smembers(Worker.redis_workers_keys)) == 0:
-            # We need to check we're not running manage.py rqworker right now..
-            import sys
+            # If we're not running 'pootle rqworker' report for whitelisted
+            # commands
             if len(sys.argv) > 1 and sys.argv[1] in RQWORKER_WHITELIST:
                 errors.append(checks.Warning(
-                    _("No RQ Worker running."),
-                    hint=_("Run new workers with manage.py rqworker"),
+                    # Translators: a worker processes background tasks
+                    _("No worker running."),
+                    # Translators: a worker processes background tasks
+                    hint=_("Run new workers with 'pootle rqworker'"),
                     id="pootle.W001",
                 ))
 
@@ -175,7 +189,7 @@ def check_settings(app_configs=None, **kwargs):
                 id="pootle.C004",
             ))
 
-    redis_cache_aliases = ("default", "redis", "stats")
+    redis_cache_aliases = ("default", "redis", "lru")
     redis_locations = set()
     for alias in redis_cache_aliases:
         if alias in settings.CACHES:
@@ -184,7 +198,7 @@ def check_settings(app_configs=None, **kwargs):
     if len(redis_locations) < len(redis_cache_aliases):
         errors.append(checks.Critical(
             _("Distinct django_redis.cache.RedisCache configurations "
-              "are required for `default`, `redis` and `stats`."),
+              "are required for `default`, `redis` and `lru`."),
             hint=_("Double-check your CACHES settings"),
             id="pootle.C017",
         ))
@@ -199,7 +213,7 @@ def check_settings(app_configs=None, **kwargs):
         # We don't bother warning about sqlite in DEBUG mode.
         errors.append(checks.Warning(
             _("The sqlite database backend is unsupported"),
-            hint=_("Set your default database engine to postgresql_psycopg2 "
+            hint=_("Set your default database engine to postgresql "
                    "or mysql"),
             id="pootle.W006",
         ))
@@ -248,44 +262,6 @@ def check_settings(app_configs=None, **kwargs):
                    "Don't forget to review your mail server settings."),
             id="pootle.W010",
         ))
-
-    try:
-        markup_filter, markup_kwargs = settings.POOTLE_MARKUP_FILTER
-    except AttributeError:
-        errors.append(checks.Warning(
-            _("POOTLE_MARKUP_FILTER is missing."),
-            hint=_("Set POOTLE_MARKUP_FILTER."),
-            id="pootle.W012",
-        ))
-    except (IndexError, TypeError, ValueError):
-        errors.append(checks.Warning(
-            _("Invalid value in POOTLE_MARKUP_FILTER."),
-            hint=_("Set a valid value for POOTLE_MARKUP_FILTER."),
-            id="pootle.W013",
-        ))
-    else:
-        if markup_filter is not None:
-            try:
-                if markup_filter == 'textile':
-                    import textile  # noqa
-                elif markup_filter == 'markdown':
-                    import markdown  # noqa
-                elif markup_filter == 'restructuredtext':
-                    import docutils  # noqa
-                else:
-                    errors.append(checks.Warning(
-                        _("Invalid markup in POOTLE_MARKUP_FILTER."),
-                        hint=_("Set a valid markup for POOTLE_MARKUP_FILTER."),
-                        id="pootle.W014",
-                    ))
-            except ImportError:
-                errors.append(checks.Warning(
-                    _("POOTLE_MARKUP_FILTER is set to '%s' markup, but the "
-                      "package that provides can't be found.", markup_filter),
-                    hint=_("Install the package or change "
-                           "POOTLE_MARKUP_FILTER."),
-                    id="pootle.W015",
-                ))
 
     if settings.POOTLE_TM_SERVER:
         tm_indexes = []
@@ -345,32 +321,93 @@ def check_settings(app_configs=None, **kwargs):
                     id="pootle.W019",
                 ))
 
-    for coefficient_name in ['EDIT', 'REVIEW', 'SUGGEST', 'ANALYZE']:
-        if coefficient_name not in settings.POOTLE_SCORE_COEFFICIENTS:
+    for coefficient_name in EXPECTED_POOTLE_SCORES:
+        if coefficient_name not in settings.POOTLE_SCORES:
             errors.append(checks.Critical(
-                _("POOTLE_SCORE_COEFFICIENTS has no %s.", coefficient_name),
-                hint=_("Set %s in POOTLE_SCORE_COEFFICIENTS.", coefficient_name),
+                _("POOTLE_SCORES has no %s.", coefficient_name),
+                hint=_("Set %s in POOTLE_SCORES.",
+                       coefficient_name),
                 id="pootle.C014",
             ))
         else:
-            coef = settings.POOTLE_SCORE_COEFFICIENTS[coefficient_name]
-            if not isinstance(coef, float):
+            coef = settings.POOTLE_SCORES[coefficient_name]
+            if not isinstance(coef, (float, int)):
                 errors.append(checks.Critical(
-                    _("Invalid value for %s in POOTLE_SCORE_COEFFICIENTS.",
-                        coefficient_name),
-                    hint=_("Set a valid value for %s "
-                           "in POOTLE_SCORE_COEFFICIENTS.", coefficient_name),
-                    id="pootle.C015",
-                ))
+                    _("Invalid value for %s in POOTLE_SCORES.",
+                      coefficient_name),
+                    hint=_(
+                        "Set a valid value for %s "
+                        "in POOTLE_SCORES.", coefficient_name),
+                    id="pootle.C015"))
+    return errors
 
+
+@checks.register()
+def check_settings_markup(app_configs=None, **kwargs):
+    from django.conf import settings
+
+    errors = []
+
+    try:
+        markup_filter = settings.POOTLE_MARKUP_FILTER[0]
+    except AttributeError:
+        errors.append(checks.Warning(
+            _("POOTLE_MARKUP_FILTER is missing."),
+            hint=_("Set POOTLE_MARKUP_FILTER."),
+            id="pootle.W012",
+        ))
+    except (IndexError, TypeError, ValueError):
+        errors.append(checks.Warning(
+            _("Invalid value in POOTLE_MARKUP_FILTER."),
+            hint=_("Set a valid value for POOTLE_MARKUP_FILTER."),
+            id="pootle.W013",
+        ))
+    else:
+        if markup_filter is not None:
+            try:
+                if markup_filter == 'textile':
+                    import textile  # noqa
+                elif markup_filter == 'markdown':
+                    import markdown  # noqa
+                elif markup_filter == 'restructuredtext':
+                    import docutils  # noqa
+                elif markup_filter == 'html':
+                    pass
+                else:
+                    errors.append(checks.Warning(
+                        _("Invalid markup in POOTLE_MARKUP_FILTER."),
+                        hint=_("Set a valid markup for POOTLE_MARKUP_FILTER."),
+                        id="pootle.W014",
+                    ))
+            except ImportError:
+                errors.append(checks.Warning(
+                    _("POOTLE_MARKUP_FILTER is set to '%s' markup, but the "
+                      "package that provides can't be found.", markup_filter),
+                    hint=_("Install the package or change "
+                           "POOTLE_MARKUP_FILTER."),
+                    id="pootle.W015",
+                ))
+        if markup_filter is None:
+            errors.append(checks.Warning(
+                _("POOTLE_MARKUP_FILTER set to 'None' is deprecated."),
+                hint=_("Set your markup to 'html' explicitly."),
+                id="pootle.W025",
+            ))
+        if markup_filter in ('html', 'textile', 'restructuredtext'):
+            errors.append(checks.Warning(
+                _("POOTLE_MARKUP_FILTER is using '%s' markup, which is "
+                  "deprecated and will be removed in future.",
+                  markup_filter),
+                hint=_("Convert your staticpages to Markdown and set your "
+                       "markup to 'markdown'."),
+                id="pootle.W026",
+            ))
     return errors
 
 
 @checks.register('data')
 def check_users(app_configs=None, **kwargs):
     from django.contrib.auth import get_user_model
-    from django.db import ProgrammingError
-    from django.db.utils import OperationalError
 
     errors = []
 
@@ -392,16 +429,15 @@ def check_users(app_configs=None, **kwargs):
 
 
 @checks.register()
-def check_db_transaction_on_commit(app_configs=None, **kwargs):
-    from django.db import connection
+def check_db_transaction_hooks(app_configs=None, **kwargs):
+    from django.conf import settings
+
     errors = []
-    try:
-        connection.on_commit
-    except AttributeError:
+    if settings.DATABASES['default']['ENGINE'].startswith("transaction_hooks"):
         errors.append(checks.Critical(
-            _("Database connection does not implement on_commit."),
-            hint=_("Set the DATABASES['default']['ENGINE'] to use a backend "
-                   "from transaction_hooks.backends."),
+            _("Database connection uses transaction_hooks."),
+            hint=_("Set the DATABASES['default']['ENGINE'] to use a Django "
+                   "backend from django.db.backends."),
             id="pootle.C006",
         ))
     return errors
@@ -432,11 +468,16 @@ def check_email_server_is_alive(app_configs=None, **kwargs):
 
 @checks.register('data')
 def check_revision(app_configs=None, **kwargs):
+    from redis.exceptions import ConnectionError
+
     from pootle.core.models import Revision
     from pootle_store.models import Unit
 
     errors = []
-    revision = Revision.get()
+    try:
+        revision = Revision.get()
+    except (ConnectionError):
+        return errors
     try:
         max_revision = Unit.max_revision()
     except (OperationalError, ProgrammingError):
@@ -448,4 +489,115 @@ def check_revision(app_configs=None, **kwargs):
             id="pootle.C016",
         ))
 
+    return errors
+
+
+@checks.register()
+def check_canonical_url(app_configs=None, **kwargs):
+    from django.conf import settings
+    from django.contrib.sites.models import Site
+
+    errors = []
+    no_canonical_error = checks.Critical(
+        _("No canonical URL provided and default site set to example.com."),
+        hint=_(
+            "Set the `POOTLE_CANONICAL_URL` in settings or update the "
+            "default site if you are using django.contrib.sites."),
+        id="pootle.C018")
+    localhost_canonical_warning = checks.Warning(
+        _("Canonical URL is set to http://localhost."),
+        hint=_(
+            "Set the `POOTLE_CANONICAL_URL` to an appropriate value for your "
+            "site or leave it empty if you are using `django.contrib.sites`."),
+        id="pootle.W020")
+    try:
+        contrib_site = Site.objects.get_current()
+    except (ProgrammingError, OperationalError):
+        if "django.contrib.sites" in settings.INSTALLED_APPS:
+            return []
+        contrib_site = None
+    uses_sites = (
+        not settings.POOTLE_CANONICAL_URL
+        and contrib_site)
+    if uses_sites:
+        site = Site.objects.get_current()
+        if site.domain == "example.com":
+            errors.append(no_canonical_error)
+    elif not settings.POOTLE_CANONICAL_URL:
+        errors.append(no_canonical_error)
+    elif settings.POOTLE_CANONICAL_URL == "http://localhost":
+        errors.append(localhost_canonical_warning)
+    return errors
+
+
+@checks.register()
+def check_pootle_fs_working_dir(app_configs=None, **kwargs):
+    import os
+
+    from django.conf import settings
+
+    missing_setting_error = checks.Critical(
+        _("POOTLE_FS_WORKING_PATH setting is not set."),
+        id="pootle.C019",
+    )
+    missing_directory_error = checks.Critical(
+        _("Path ('%s') pointed to by POOTLE_FS_WORKING_PATH doesn't exist."
+          % settings.POOTLE_FS_WORKING_PATH),
+        hint=_("Create the directory pointed to by `POOTLE_FS_WORKING_PATH`, "
+               "or change the setting."),
+        id="pootle.C020",
+    )
+    not_writable_directory_error = checks.Critical(
+        _("Path ('%s') pointed to by POOTLE_FS_WORKING_PATH is not writable by "
+          "Pootle."
+          % settings.POOTLE_FS_WORKING_PATH),
+        hint=_("Add the write permission to the `POOTLE_FS_WORKING_PATH` "
+               "or change the setting."),
+        id="pootle.C021",
+    )
+    errors = []
+    if not settings.POOTLE_FS_WORKING_PATH:
+        errors.append(missing_setting_error)
+    elif not os.path.exists(settings.POOTLE_FS_WORKING_PATH):
+        errors.append(missing_directory_error)
+    elif not os.access(settings.POOTLE_FS_WORKING_PATH, os.W_OK):
+        errors.append(not_writable_directory_error)
+    return errors
+
+
+@checks.register()
+def check_mysql_timezones(app_configs=None, **kwargs):
+    from django.db import connection
+
+    missing_mysql_timezone_tables = checks.Critical(
+        _("MySQL requires time zone settings."),
+        hint=("Load the time zone tables "
+              "http://dev.mysql.com/doc/refman/5.7/en/mysql-tzinfo-to-sql.html"),
+        id="pootle.C022",
+    )
+    errors = []
+    with connection.cursor() as cursor:
+        if hasattr(cursor.db, "mysql_version"):
+            cursor.execute("SELECT CONVERT_TZ(NOW(), 'UTC', 'UTC');")
+            converted_now = cursor.fetchone()[0]
+            if converted_now is None:
+                errors.append(missing_mysql_timezone_tables)
+    return errors
+
+
+@checks.register()
+def check_unsupported_python(app_configs=None, **kwargs):
+    errors = []
+    if sys.version_info >= (3, 0):
+        errors.append(checks.Critical(
+            _("Pootle does not yet support Python 3."),
+            hint=_("Use a Python 2.7 virtualenv."),
+            id="pootle.C023",
+        ))
+    if sys.version_info < (2, 7):
+        errors.append(checks.Critical(
+            _("Pootle no longer supports Python versions older than 2.7"),
+            hint=_("Use a Python 2.7 virtualenv."),
+            id="pootle.C024",
+        ))
     return errors

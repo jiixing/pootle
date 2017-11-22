@@ -9,32 +9,9 @@
 import os
 
 from django.conf import settings
-from django.utils.translation import ugettext_lazy as _
 
-
-# Unit States
-#: Unit is no longer part of the store
-OBSOLETE = -100
-#: Empty unit
-UNTRANSLATED = 0
-#: Marked as fuzzy, typically means translation needs more work
-FUZZY = 50
-#: Unit is fully translated
-TRANSLATED = 200
-
-# Map for retrieving natural names for unit states
-STATES_MAP = {
-    OBSOLETE: _("Obsolete"),
-    UNTRANSLATED: _("Untranslated"),
-    FUZZY: _("Needs work"),
-    TRANSLATED: _("Translated"),
-}
-
-STATES_NAMES = {
-    OBSOLETE: "obsolete",
-    UNTRANSLATED: "untranslated",
-    FUZZY: "fuzzy",
-    TRANSLATED: "translated"}
+from .constants import STATES_NAMES, TRANSLATED
+from .unit.altsrc import AltSrcUnits
 
 
 def add_trailing_slash(path):
@@ -64,21 +41,22 @@ def absolute_real_path(p):
 def find_altsrcs(unit, alt_src_langs, store=None, project=None):
     from pootle_store.models import Unit
 
+    if not alt_src_langs:
+        return []
+
     store = store or unit.store
     project = project or store.translation_project.project
 
-    altsrcs = Unit.objects.filter(
+    altsrcs_qs = Unit.objects.filter(
         unitid_hash=unit.unitid_hash,
         store__translation_project__project=project,
         store__translation_project__language__in=alt_src_langs,
-        state=TRANSLATED).select_related(
-            'store', 'store__translation_project',
-            'store__translation_project__language')
+        state=TRANSLATED)
 
     if project.get_treestyle() == 'nongnu':
-        altsrcs = filter(lambda x: x.store.path == store.path, altsrcs)
+        altsrcs_qs = altsrcs_qs.filter(store__tp_path=store.tp_path)
 
-    return altsrcs
+    return AltSrcUnits(altsrcs_qs).units
 
 
 def get_change_str(changes):

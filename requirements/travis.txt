@@ -4,13 +4,16 @@
 -r _docs.txt
 -r _lint.txt
 
-tox>=2.3
+tox==2.8.2
 
 # Databases
-MySQL-python>=1.2.1p2
-psycopg2>=2.4.5
+-r _db_mysql.txt
+-r _db_postgresql.txt
+
+# Elasticsearch TM
+-r _es_5.txt
 
 # Test coverage
-codecov
-coverage
-coveralls
+codecov==2.0.9
+coverage==4.4.1
+coveralls==1.2.0

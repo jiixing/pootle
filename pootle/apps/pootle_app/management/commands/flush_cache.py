@@ -7,6 +7,7 @@
 # AUTHORS file for copyright and authorship information.
 
 import os
+import sys
 
 # This must be run before importing Django.
 os.environ['DJANGO_SETTINGS_MODULE'] = 'pootle.settings'
@@ -16,6 +17,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django_redis import get_redis_connection
 
 from pootle.core.models import Revision
+from pootle.core.utils.redis_rq import rq_workers_are_running
 from pootle_store.models import Unit
 
 
@@ -36,15 +38,14 @@ class Command(BaseCommand):
             dest='flush_rqdata',
             default=False,
             help=("Flush revision counter and all RQ data (queues, pending or "
-                  "failed jobs, refresh_stats optimisation data). "
-                  "Revision counter is restores automatically. "),
+                  "failed jobs). Revision counter is restores automatically."),
         )
         parser.add_argument(
-            '--stats',
+            '--lru',
             action='store_true',
-            dest='flush_stats',
+            dest='flush_lru',
             default=False,
-            help='Flush stats cache data.',
+            help="Flush lru cache.",
         )
         parser.add_argument(
             '--all',
@@ -55,19 +56,22 @@ class Command(BaseCommand):
         )
 
     def handle(self, **options):
-        if (not options['flush_stats'] and not options['flush_rqdata'] and
-            not options['flush_django_cache'] and not options['flush_all']):
+        if (not options['flush_rqdata'] and
+            not options['flush_lru'] and
+            not options['flush_django_cache'] and
+            not options['flush_all']):
             raise CommandError("No options were provided. Use one of "
-                               "--django-cache, --rqdata, --stats or --all.")
+                               "--django-cache, --rqdata, --lru "
+                               "or --all.")
+
+        if options['flush_rqdata'] or options['flush_all']:
+            if rq_workers_are_running():
+                self.stdout.write("Nothing has been flushed. "
+                                  "Stop RQ workers before running this "
+                                  "command with --rqdata or --all option.")
+                sys.exit()
 
         self.stdout.write('Flushing cache...')
-
-        if options['flush_stats'] or options['flush_all']:
-            # Delete all stats cache data.
-            r_con = get_redis_connection('stats')
-            r_con.flushdb()
-            self.stdout.write('All stats data removed.')
-
         if options['flush_rqdata'] or options['flush_all']:
             # Flush all rq data, dirty counter and restore Pootle revision
             # value.
@@ -81,3 +85,8 @@ class Command(BaseCommand):
             r_con = get_redis_connection('default')
             r_con.flushdb()
             self.stdout.write('All default Django cache data removed.')
+
+        if options['flush_lru'] or options['flush_all']:
+            r_con = get_redis_connection('lru')
+            r_con.flushdb()
+            self.stdout.write('All lru cache data removed.')

@@ -28,8 +28,9 @@ Named Caches
 ------------
 Pootle is configured with a these named caches:
 
-- ``'default'`` -- all non specified cache data and all cache data.
-- ``'stats'`` --  all cached data related to overview stats.
+- ``'default'`` -- all non specified cache data and all Django cache data.
+- ``'redis'`` --  all RQ data related and revision counter.
+- ``'lru'`` --  all lru cache data.
 
 In large installations you may want to setup separate caches to improve cache
 performance.  You can then setup caching parameters for each cache separately.
@@ -44,11 +45,10 @@ Django supports :ref:`multiple cache backends <django:setting-up-the-cache>`
 (methods of storing cache data).  However, Redis is the only cache backend
 supported by Pootle.  We use some custom features of Redis so cannot support
 other backends. You can customise the Redis cache settings by overriding the
-value of :setting:`CACHES` in your configuration file, an example exists in
-file:`90-local.conf.sample`.
+value of :setting:`CACHES` in your configuration file.
 
 
-.. _Django's caching system: https://docs.djangoproject.com/en/dev/topics/cache/
+.. _Django's caching system: https://docs.djangoproject.com/en/1.10/topics/cache/
 .. |Django's caching system| replace:: *Django's caching system*
 
 .. we use | | here and above for italics like :ref: in normal links

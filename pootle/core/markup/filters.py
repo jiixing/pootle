@@ -48,7 +48,7 @@ def rewrite_internal_link(link):
 
 def get_markup_filter_name():
     """Returns the current markup filter's name."""
-    name, args = get_markup_filter()
+    name = get_markup_filter()[0]
     return 'html' if name is None else name
 
 
@@ -59,7 +59,8 @@ def get_markup_filter_display_name():
         'textile': u'Textile',
         'markdown': u'Markdown',
         'restructuredtext': u'reStructuredText',
-    }.get(name, u'HTML')
+        'html': u'HTML',
+    }.get(name)
 
 
 def get_markup_filter():
@@ -77,6 +78,8 @@ def get_markup_filter():
             import markdown  # noqa
         elif markup_filter == 'restructuredtext':
             import docutils  # noqa
+        elif markup_filter == 'html':
+            pass
         else:
             return (None, '')
     except Exception:
@@ -102,10 +105,10 @@ def apply_markup_filter(text):
           dictionary; some arguments may still be inferred as needed,
           however.
 
-    So, for example, to use Markdown with safe mode turned on (safe
-    mode removes raw HTML), put this in your settings file::
+    So, for example, to use Markdown with bleach cleaning turned on (cleaning
+    removes non-whitelisted HTML), put this in your settings file::
 
-        POOTLE_MARKUP_FILTER = ('markdown', { 'safe_mode': 'escape' })
+        POOTLE_MARKUP_FILTER = ('markdown', {})
 
     Currently supports Textile, Markdown and reStructuredText, using
     names identical to the template filters found in
@@ -131,8 +134,41 @@ def apply_markup_filter(text):
             html = textile.textile(text, **markup_kwargs)
 
         elif markup_filter_name == 'markdown':
+            import bleach
             import markdown
-            html = markdown.markdown(text, **markup_kwargs)
+
+            # See ALLOWED_TAGS, ALLOWED_ATTRIBUTES and ALLOWED_STYLES
+            # https://github.com/mozilla/bleach/blob/master/bleach/sanitizer.py
+            tags = bleach.ALLOWED_TAGS + [
+                u'h1', u'h2', u'h3', u'h4', u'h5',
+                u'p', u'pre',
+                u'img',
+                u'hr',
+                u'span',
+            ]
+            attrs = bleach.ALLOWED_ATTRIBUTES.copy()
+            attrs.update({
+                'img': ['alt', 'src'],
+            })
+            styles = bleach.ALLOWED_STYLES
+
+            tags_provided = ('clean' in markup_kwargs
+                             and 'extra_tags' in markup_kwargs['clean'])
+            if tags_provided:
+                tags += markup_kwargs['clean']['extra_tags']
+
+            attrs_provided = ('clean' in markup_kwargs
+                              and 'extra_attrs' in markup_kwargs['clean'])
+            if attrs_provided:
+                attrs.update(markup_kwargs['clean']['extra_attrs'])
+
+            styles_provided = ('clean' in markup_kwargs
+                               and 'extra_styles' in markup_kwargs['clean'])
+            if styles_provided:
+                styles += markup_kwargs['clean']['extra_styles']
+
+            html = bleach.clean(markdown.markdown(text, **markup_kwargs),
+                                tags=tags, attributes=attrs, styles=styles)
 
         elif markup_filter_name == 'restructuredtext':
             from docutils import core

@@ -23,3 +23,8 @@ def to_js(value):
     consumption.
     """
     return mark_safe('JSON.parse("%s")' % escapejs(jsonify(value)))
+
+
+@register.inclusion_tag('includes/formtable.html')
+def formtable(formtable):
+    return dict(formtable=formtable)

@@ -6,79 +6,84 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
-from hashlib import md5
+from collections import OrderedDict
 from itertools import groupby
 
-from django.contrib.auth import get_user_model
-from django.core.urlresolvers import reverse
-from django.db.models import Q
+from django.urls import reverse
 from django.utils.functional import cached_property
 from django.utils.html import format_html
-from django.utils.safestring import mark_safe
-from django.utils.translation import ugettext as _
 
+from accounts.proxy import DisplayUser
+from pootle.core.delegate import event_formatters, grouped_events
+from pootle.core.proxy import BaseProxy
+from pootle.i18n.gettext import ugettext_lazy as _
+from pootle_checks.constants import CHECK_NAMES
 from pootle_comment import get_model as get_comment_model
-from pootle_misc.checks import check_names
+from pootle_log.utils import GroupedEvents, UnitLog
 from pootle_statistics.models import (
     Submission, SubmissionFields, SubmissionTypes)
-
+from pootle_store.constants import STATES_MAP
 from pootle_store.fields import to_python
 from pootle_store.models import Suggestion
-from pootle_store.util import STATES_MAP
 
 
-class DisplayUser(object):
+ACTION_ORDER = {
+    'unit_created': 0,
+    'suggestion_created': 5,
+    'suggestion_rejected': 5,
+    'source_updated': 10,
+    'state_changed': 10,
+    'target_updated': 20,
+    'suggestion_accepted': 25,
+    'comment_updated': 30,
+    'check_muted': 40,
+    'check_unmuted': 40,
+}
 
-    def __init__(self, username, full_name, email=None):
-        self.username = username
-        self.full_name = full_name
-        self.email = email
 
+class UnitTimelineLog(UnitLog):
     @property
-    def author_link(self):
-        return format_html(
-            u'<a href="{}">{}</a>',
-            self.get_absolute_url(),
-            self.display_name)
-
-    @property
-    def display_name(self):
-        return (
-            self.full_name.strip()
-            if self.full_name.strip()
-            else self.username)
-
-    def get_absolute_url(self):
-        return reverse(
-            'pootle-user-profile',
-            args=[self.username])
-
-    def gravatar_url(self, size=80):
-        email_hash = md5(self.email).hexdigest()
-        return (
-            'https://secure.gravatar.com/avatar/%s?s=%d&d=mm'
-            % (email_hash, size))
+    def suggestion_qs(self):
+        return Suggestion.objects
 
 
 class SuggestionEvent(object):
+    def __init__(self, suggestion, **kwargs):
+        self.suggestion = suggestion
 
-    def __init__(self, submission_type, username, full_name, comment):
-        self.submission_type = submission_type
-        self.username = username
-        self.full_name = full_name
-        self.comment = comment
+    @property
+    def comment(self):
+        comments = get_comment_model().objects.for_model(Suggestion)
+        comments = comments.filter(
+            object_pk=self.suggestion.id).values_list("comment", flat=True)
+        if comments:
+            return comments[0]
 
     @cached_property
     def user(self):
-        return DisplayUser(self.username, self.full_name)
+        return DisplayUser(self.suggestion.user.username,
+                           self.suggestion.user.full_name)
+
+
+class SuggestionAddedEvent(SuggestionEvent):
 
     @property
-    def description(self):
+    def context(self):
+        return dict(
+            value=self.suggestion.target,
+            description=_(u"Added suggestion"))
+
+
+class SuggestionAcceptedEvent(SuggestionEvent):
+
+    def __init__(self, suggestion, **kwargs):
+        super(SuggestionAcceptedEvent, self).__init__(suggestion)
+
+    @property
+    def context(self):
         params = {
-            'author': self.user.author_link
-        }
+            'author': self.user.author_link}
         sugg_accepted_desc = _(u'Accepted suggestion from %(author)s', params)
-        sugg_rejected_desc = _(u'Rejected suggestion from %(author)s', params)
 
         if self.comment:
             params.update({
@@ -88,244 +93,279 @@ class SuggestionEvent(object):
             sugg_accepted_desc = _(
                 u'Accepted suggestion from %(author)s '
                 u'with comment: %(comment)s',
-                params
-            )
+                params)
+
+        target = self.suggestion.target
+        submission = self.suggestion.submission_set.filter(
+            field=SubmissionFields.TARGET).first()
+        if submission:
+            target = submission.new_value
+        return dict(
+            value=target,
+            translation=True,
+            description=format_html(sugg_accepted_desc))
+
+
+class SuggestionRejectedEvent(SuggestionEvent):
+
+    @property
+    def context(self):
+        params = {
+            'author': self.user.author_link}
+        sugg_rejected_desc = _(u'Rejected suggestion from %(author)s', params)
+
+        if self.comment:
+            params.update({
+                'comment': format_html(u'<span class="comment">{}</span>',
+                                       self.comment),
+            })
             sugg_rejected_desc = _(
                 u'Rejected suggestion from %(author)s '
                 u'with comment: %(comment)s',
-                params
-            )
+                params)
 
-        description_dict = {
-            SubmissionTypes.SUGG_ADD: _(u'Added suggestion'),
-            SubmissionTypes.SUGG_ACCEPT: sugg_accepted_desc,
-            SubmissionTypes.SUGG_REJECT: sugg_rejected_desc,
-        }
-
-        return description_dict.get(self.submission_type, None)
+        return dict(
+            value=self.suggestion.target,
+            description=format_html(sugg_rejected_desc))
 
 
-class ProxySubmission(object):
-
-    def __init__(self, values):
-        self.values = values
-
-    @property
-    def old_value(self):
-        return self.values['old_value']
-
-    @property
-    def new_value(self):
-        return self.values['new_value']
-
-    @property
-    def field(self):
-        return self.values['field']
-
-    @property
-    def field_name(self):
-        return SubmissionFields.NAMES_MAP.get(self.field, None)
-
-    @property
-    def type(self):
-        return self.values['type']
-
-    @property
-    def qc_name(self):
-        return self.values['quality_check__name']
-
-    @property
-    def suggestion(self):
-        return self.values['suggestion_id']
-
-    @property
-    def suggestion_full_name(self):
-        return self.values['suggestion__user__full_name']
-
-    @property
-    def suggestion_username(self):
-        return self.values['suggestion__user__username']
-
-    @property
-    def suggestion_target(self):
-        return self.values['suggestion__target_f']
-
-    @property
-    def suggestion_comment(self):
-        return self.values['comment']
-
-
-class TimelineEntry(object):
-
-    def __init__(self, submission):
+class SubmissionEvent(object):
+    def __init__(self, submission, **kwargs):
         self.submission = submission
 
+
+class TargetUpdatedEvent(SubmissionEvent):
     @property
-    def entry_dict(self):
-        return {
-            'field': self.submission.field,
-            'field_name': self.submission.field_name,
-            'type': self.submission.type}
+    def context(self):
+        suggestion_accepted = (self.submission.suggestion_id
+                               and self.submission.suggestion.is_accepted)
+        if suggestion_accepted:
+            return None
 
-    def base_entry(self):
-        entry = self.entry_dict
-        entry['new_value'] = to_python(self.submission.new_value)
-        return entry
+        return dict(
+            value=self.submission.new_value,
+            translation=True)
 
-    def qc_entry(self):
-        entry = self.entry_dict
-        check_name = self.submission.qc_name
-        check_url = (
-            u''.join(
-                [reverse('pootle-checks-descriptions'),
-                 '#', check_name]))
-        entry.update(
-            {'check_name': check_name,
-             'check_display_name': check_names[check_name],
-             'checks_url': check_url})
-        return entry
 
-    def state_change_entry(self):
-        entry = self.entry_dict
-        entry['old_value'] = STATES_MAP[int(to_python(self.submission.old_value))]
-        entry['new_value'] = STATES_MAP[int(to_python(self.submission.new_value))]
-        return entry
-
-    def suggestion_entry(self):
-        entry = self.entry_dict
-
-        suggestion_description = mark_safe(
-            SuggestionEvent(
-                self.submission.type,
-                self.submission.suggestion_username,
-                self.submission.suggestion_full_name,
-                self.submission.suggestion_comment,
-            ).description
-        )
-        entry.update(
-            {'suggestion_text': self.submission.suggestion_target,
-             'suggestion_description': suggestion_description})
-        return entry
+class UnitCreatedEvent(object):
+    def __init__(self, unit_source, **kwargs):
+        self.unit_source = unit_source
+        self.target_event = kwargs.get("target_event")
 
     @property
-    def entry(self):
-        if self.submission.field == SubmissionFields.STATE:
-            return self.state_change_entry()
-        elif self.submission.suggestion:
-            return self.suggestion_entry()
-        elif self.submission.qc_name:
-            return self.qc_entry()
-        return self.base_entry()
+    def context(self):
+        ctx = dict(description=_(u"Unit created"))
+        if self.target_event is not None:
+            if self.target_event.value.old_value != '':
+                ctx['value'] = self.target_event.value.old_value
+                ctx['translation'] = True
+        else:
+            if self.unit_source.unit.istranslated():
+                ctx['value'] = self.unit_source.unit.target
+                ctx['translation'] = True
+
+        return ctx
+
+
+class UnitStateChangedEvent(SubmissionEvent):
+
+    @property
+    def context(self):
+        return dict(
+            value=format_html(
+                u"{} <span class='timeline-arrow'></span> {}",
+                STATES_MAP[int(to_python(self.submission.old_value))],
+                STATES_MAP[int(to_python(self.submission.new_value))]),
+            state=True)
+
+
+class CommentUpdatedEvent(SubmissionEvent):
+    @property
+    def context(self):
+        if self.submission.new_value:
+            return dict(
+                value=self.submission.new_value,
+                sidetitle=_(u"Comment:"),
+                comment=True)
+
+        return dict(description=_(u"Removed comment"))
+
+
+class CheckEvent(SubmissionEvent):
+    @cached_property
+    def check_name(self):
+        return self.submission.quality_check.name
+
+    @cached_property
+    def check_url(self):
+        return u''.join(
+            [reverse('pootle-checks-descriptions'),
+             '#', self.check_name])
+
+    @property
+    def check_link(self):
+        return format_html(u"<a href='{}'>{}</a>", self.check_url,
+                           CHECK_NAMES[self.check_name])
+
+
+class CheckMutedEvent(CheckEvent):
+    @property
+    def context(self):
+        return dict(
+            description=format_html(_(
+                u"Muted %(check_name)s check",
+                {'check_name': self.check_link})))
+
+
+class CheckUnmutedEvent(CheckEvent):
+    @property
+    def context(self):
+        return dict(
+            description=format_html(_(
+                u"Unmuted %(check_name)s check",
+                {'check_name': self.check_link})))
 
 
 class Timeline(object):
 
-    entry_class = TimelineEntry
-    fields = [
-        "type", "old_value", "new_value", "submitter_id", "creation_time",
-        "field", "quality_check_id",
-        "submitter__username", "submitter__email", "submitter__full_name",
-        "suggestion_id", "suggestion__target_f", "suggestion__user__full_name",
-        "suggestion__user__username", "quality_check__name"]
+    def __init__(self, obj):
+        self.object = obj
+        self.log = UnitTimelineLog(self.object)
+        self.events_adapter = grouped_events.get(self.log.__class__)(self.log)
 
-    def __init__(self, object):
-        self.object = object
+    def grouped_events(self, **kwargs):
+        groups = []
+        target_event = None
+        for __, group in self.events_adapter.grouped_events(**kwargs):
+            event_group = EventGroup(group, target_event)
+            if event_group.target_event:
+                target_event = event_group.target_event
+            if event_group.events:
+                groups.append(event_group.context)
 
-    @property
-    def grouped_entries(self):
-        grouped_entries = self.get_grouped_entries()
-        grouped_entries = self.add_creation_entry(grouped_entries)
-        grouped_entries.reverse()
-        return grouped_entries
+        return groups
 
-    @property
-    def submissions(self):
-        submission_filter = (
-            Q(field__in=[SubmissionFields.TARGET, SubmissionFields.STATE,
-                         SubmissionFields.COMMENT, SubmissionFields.NONE])
-            | Q(type__in=SubmissionTypes.SUGGESTION_TYPES))
-        return (
-            Submission.objects.filter(unit=self.object)
-                              .filter(submission_filter)
-                              .exclude(field=SubmissionFields.COMMENT,
-                                       creation_time=self.object.commented_on)
-                              .order_by("id"))
+
+class ComparableUnitTimelineLogEvent(BaseProxy):
+    _special_names = (x for x in BaseProxy._special_names
+                      if x not in ["__lt__", "__gt__"])
+
+    def __cmp__(self, other):
+        # valuable revisions are authoritative
+        if self.revision is not None and other.revision is not None:
+            if self.revision > other.revision:
+                return 1
+            elif self.revision < other.revision:
+                return -1
+
+        # timestamps have the next priority
+        if self.timestamp and other.timestamp:
+            if self.timestamp > other.timestamp:
+                return 1
+            elif self.timestamp < other.timestamp:
+                return -1
+        elif self.timestamp:
+            return 1
+        elif other.timestamp:
+            return -1
+
+        # conditions below are applied for events with equal timestamps
+        # or without any
+        action_order = ACTION_ORDER[self.action] - ACTION_ORDER[other.action]
+        if action_order > 0:
+            return 1
+        elif action_order < 0:
+            return -1
+        if self.action == other.action:
+            if self.value.pk > other.value.pk:
+                return 1
+            elif self.value.pk < other.value.pk:
+                return -1
+
+        return 0
+
+
+class UnitTimelineGroupedEvents(GroupedEvents):
+    def grouped_events(self, start=None, end=None, users=None):
+        def _group_id(event):
+            user_id = event.user.id
+            if event.action == 'suggestion_accepted':
+                user_id = event.value.user_id
+            return '%s\001%s' % (event.timestamp, user_id)
+
+        return groupby(
+            self.sorted_events(
+                start=start,
+                end=end,
+                users=users,
+                reverse=True),
+            key=_group_id)
+
+
+class EventGroup(object):
+    def __init__(self, log_events, related_target_event=None):
+        self.log_events = OrderedDict()
+        self.related_target_event = related_target_event
+        self.log_event_class = None
+        for event in log_events:
+            if self.log_event_class is None:
+                self.log_event_class = event.__class__
+            self.log_events[event.action] = event
 
     @cached_property
-    def submissions_values(self):
-        return list(self.submissions.values(*self.fields))
+    def event_formatters(self):
+        return event_formatters.gather(self.log_event_class)
 
     @property
-    def suggestion_ids(self):
-        return list(set([
-            x["suggestion_id"]
-            for x in self.submissions_values
-            if x["suggestion_id"]
-        ]))
+    def target_event(self):
+        return self.log_events.get('target_updated')
 
-    @cached_property
-    def comment_dict(self):
-        Comment = get_comment_model()
-        return dict([
-            # we need convert `object_pk` because it is TextField
-            (int(x[0]), x[1])
-            for x in Comment.objects.for_model(Suggestion)
-                                    .filter(object_pk__in=self.suggestion_ids)
-                                    .values_list("object_pk", "comment")
-        ])
+    @property
+    def context_event(self):
+        event = self.log_events.get('suggestion_accepted')
+        if event is not None:
+            return event
+        event = self.log_events.get('target_updated')
+        if event is not None:
+            return event
+        if len(self.log_events) > 0:
+            return self.log_events.values()[0]
 
-    def add_creation_entry(self, grouped_entries):
-        User = get_user_model()
-        has_creation_entry = (
-            len(grouped_entries) > 0
-            and grouped_entries[0]['datetime'] == self.object.creation_time)
-        if has_creation_entry:
-            grouped_entries[0]['created'] = True
-        else:
-            created = {
-                'created': True,
-                'submitter': User.objects.get_system_user()}
-            created['datetime'] = self.object.creation_time
-            grouped_entries[:0] = [created]
-        return grouped_entries
+        return None
 
-    def get_grouped_entries(self):
-        grouped_entries = []
-        grouped_timeline = groupby(
-            self.submissions_values,
-            key=lambda item: "\001".join([
-                str(x) for x in
-                [
-                    item['submitter_id'],
-                    item['creation_time'],
-                    item['suggestion_id'],
-                ]
-            ])
-        )
+    @property
+    def events(self):
+        events = []
+        for event_action in self.log_events:
+            event_formatter_class = self.event_formatters.get(event_action)
+            if event_formatter_class is not None:
+                ctx = event_formatter_class(
+                    self.log_events[event_action].value,
+                    target_event=self.related_target_event).context
+                if ctx is not None:
+                    events.append(ctx)
+        return events
 
-        # Target field timeline entry should go first
-        def target_field_should_be_first(x):
-            return 0 if x["field"] == SubmissionFields.TARGET else 1
+    @property
+    def user(self):
+        if 'suggestion_accepted' in self.log_events:
+            return self.log_events['suggestion_accepted'].user
+        return self.context_event.user
 
-        # Group by submitter id and creation_time because
-        # different submissions can have same creation time
-        for key, values in grouped_timeline:
-            entry_group = {'entries': []}
-            values = sorted(values, key=target_field_should_be_first)
-            for item in values:
-                if "submitter" not in entry_group:
-                    entry_group['submitter'] = DisplayUser(
-                        item["submitter__username"],
-                        item["submitter__full_name"],
-                        item["submitter__email"])
-                if "datetime" not in entry_group:
-                    entry_group['datetime'] = item['creation_time']
-                via_upload = item["type"] == SubmissionTypes.UPLOAD
-                entry_group["via_upload"] = via_upload
-                entry_group['entries'].append(self.get_entry(item))
-            grouped_entries.append(entry_group)
-        return grouped_entries
+    @property
+    def context(self):
+        return {
+            'events': self.events,
+            'via_upload': self.via_upload,
+            'datetime': self.context_event.timestamp,
+            'user': DisplayUser(
+                self.user.username,
+                self.user.full_name,
+                self.user.email),
+        }
 
-    def get_entry(self, item):
-        item["comment"] = self.comment_dict.get(item["suggestion_id"])
-        return self.entry_class(ProxySubmission(item)).entry
+    @property
+    def via_upload(self):
+        if isinstance(self.context_event.value, Submission):
+            return self.context_event.value == SubmissionTypes.UPLOAD
+        return False

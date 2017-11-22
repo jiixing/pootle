@@ -8,10 +8,11 @@
 
 import fetch from 'utils/fetch';
 
+window.PTL = window.PTL || {};
 
 const UnitAPI = {
 
-  apiRoot: '/xhr/units/',
+  apiRoot: PTL.unitApiRoot,
 
   fetchUnits(body) {
     return fetch({
@@ -92,9 +93,9 @@ const UnitAPI = {
 
   /* Quality checks */
 
-  toggleCheck(uId, checkId, { mute = false }) {
+  toggleCheck(uId, checkId, body = {}) {
     return fetch({
-      body: { mute },
+      body,
       method: 'POST',
       url: `${this.apiRoot}${uId}/checks/${checkId}/toggle/`,
     });

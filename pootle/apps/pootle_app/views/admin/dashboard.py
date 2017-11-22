@@ -6,37 +6,25 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
-import json
-import locale
-import os
-
 from redis.exceptions import ConnectionError
 
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.http import HttpResponse
 from django.shortcuts import render
-from django.utils.translation import ugettext as _, ungettext
 
 from django_rq.queues import get_failed_queue, get_queue
 from django_rq.workers import Worker
 
 from pootle.core.decorators import admin_required
-from pootle.core.utils.aggregate import sum_column
+from pootle.i18n import formatter
+from pootle.i18n.gettext import ugettext as _, ungettext
 from pootle_statistics.models import Submission
-from pootle_store.models import Suggestion, Unit
-from pootle_store.util import TRANSLATED
+from pootle_store.models import Suggestion
 
 
-def _format_numbers(dict):
-    for k in dict.keys():
-        formatted_number = locale.format("%d", dict[k], grouping=True)
-        # Under Windows, formatted number must be converted to Unicode
-        if os.name == 'nt':
-            formatted_number = formatted_number.decode(
-                locale.getpreferredencoding()
-            )
-        dict[k] = formatted_number
+def _format_numbers(numbers):
+    for k in numbers.keys():
+        numbers[k] = formatter.number(numbers[k])
 
 
 def server_stats():
@@ -53,47 +41,6 @@ def server_stats():
         cache.set("server_stats", result, 86400)
     _format_numbers(result)
     return result
-
-
-@admin_required
-def server_stats_more(request):
-    result = cache.get("server_stats_more")
-    if result is None:
-        User = get_user_model()
-
-        result = {}
-        unit_query = Unit.objects.filter(state__gte=TRANSLATED).exclude(
-            store__translation_project__project__code__in=(
-                'pootle', 'tutorial', 'terminology')
-        ).exclude(
-            store__translation_project__language__code='templates').order_by()
-        result['store_count'] = unit_query.values('store').distinct().count()
-        result['project_count'] = unit_query.values(
-            'store__translation_project__project').distinct().count()
-        result['language_count'] = unit_query.values(
-            'store__translation_project__language').distinct().count()
-        sums = sum_column(unit_query, ('source_wordcount',), count=True)
-        result['string_count'] = sums['count']
-        result['word_count'] = sums['source_wordcount'] or 0
-        result['user_active_count'] = (
-            User.objects.exclude(submission=None) |
-            User.objects.exclude(suggestions=None)
-        ).order_by().count()
-        cache.set("server_stats_more", result, 86400)
-    _format_numbers(result)
-    stat_strings = {
-        'store_count': _('Files'),
-        'project_count': _('Active projects'),
-        'language_count': _('Active languages'),
-        'string_count': _('Translated strings'),
-        'word_count': _('Translated words'),
-        'user_active_count': _('Active users')
-    }
-    response = []
-    for k in result.keys():
-        response.append((stat_strings[k], result[k]))
-    response = json.dumps(response)
-    return HttpResponse(response, content_type="application/json")
 
 
 def rq_stats():
@@ -127,7 +74,7 @@ def rq_stats():
 def checks():
     from django.core.checks.registry import registry
 
-    return registry.run_checks()
+    return [e for e in registry.run_checks() if not e.is_silenced()]
 
 
 @admin_required

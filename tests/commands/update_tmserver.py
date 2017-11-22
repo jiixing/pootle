@@ -7,6 +7,7 @@
 # AUTHORS file for copyright and authorship information.
 
 import os
+import sys
 
 import pytest
 
@@ -16,7 +17,7 @@ from django.core.management.base import CommandError
 
 @pytest.mark.cmd
 @pytest.mark.django_db
-def test_update_tmserver_nosetting(capfd, afrikaans_tutorial):
+def test_update_tmserver_nosetting(capfd, po_directory, tp0):
     """We need configured TM for anything to work"""
     with pytest.raises(CommandError) as e:
         call_command('update_tmserver')
@@ -25,7 +26,7 @@ def test_update_tmserver_nosetting(capfd, afrikaans_tutorial):
 
 @pytest.mark.cmd
 @pytest.mark.django_db
-def __test_update_tmserver_noargs(capfd, afrikaans_tutorial, settings):
+def __test_update_tmserver_noargs(capfd, tp0, settings):
     """Load TM from the database"""
 
     from pootle_store.models import Unit
@@ -86,6 +87,8 @@ def test_update_tmserver_files_no_displayname(capfd, settings, tmpdir):
 
 @pytest.mark.cmd
 @pytest.mark.django_db
+@pytest.mark.skipif(sys.platform == 'win32',
+                    reason="No Elasticsearch in Windows testing")
 def test_update_tmserver_files(capfd, settings, tmpdir):
     """Load TM from files"""
     settings.POOTLE_TM_SERVER = {

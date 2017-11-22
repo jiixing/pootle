@@ -9,9 +9,10 @@
 import re
 
 from django.conf import settings
-from django.core.urlresolvers import resolve
 from django.http import Http404
 from django.shortcuts import render
+from django.urls import resolve
+from django.utils.deprecation import MiddlewareMixin
 
 from pootle.core.forms import MathCaptchaForm
 
@@ -25,10 +26,11 @@ CAPTCHA_EXEMPT_URLPATTERNS = (
     'account_reset_password_from_key',
     'pootle-social-verify',
     'pootle-contact',
-)
+    'pootle-tp-paths',
+    'pootle-project-paths')
 
 
-class CaptchaMiddleware(object):
+class CaptchaMiddleware(MiddlewareMixin):
     """Middleware to display a captcha question to verify POST submissions
     are made by humans.
     """
@@ -46,7 +48,7 @@ class CaptchaMiddleware(object):
         except Http404:
             pass
 
-        if request.user.is_authenticated():
+        if request.user.is_authenticated:
             if ('target_f_0' not in request.POST or
                 'translator_comment' not in request.POST):
                 return

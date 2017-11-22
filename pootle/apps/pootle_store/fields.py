@@ -8,31 +8,19 @@
 
 """Fields required for handling translation files"""
 
-import logging
 import os
 
 from translate.misc.multistring import multistring
 
 from django.db import models
 from django.db.models.fields.files import FieldFile, FileField
+from django.utils.functional import cached_property
+
+from pootle.core.utils.multistring import (parse_multistring,
+                                           unparse_multistring)
 
 
 # # # # # # # # # String # # # # # # # # # # # # # # #
-
-SEPARATOR = "__%$%__%$%__%$%__"
-PLURAL_PLACEHOLDER = "__%POOTLE%_$NUMEROUS$__"
-
-
-def list_empty(strings):
-    """check if list is exclusively made of empty strings.
-
-    useful for detecting empty multistrings and storing them as a
-    simple empty string in db.
-    """
-    for string in strings:
-        if len(string) > 0:
-            return False
-    return True
 
 
 def to_db(value):
@@ -41,21 +29,8 @@ def to_db(value):
     """
     if value is None:
         return None
-    elif isinstance(value, multistring):
-        if list_empty(value.strings):
-            return ''
-        else:
-            strings = list(value.strings)
-            if len(strings) == 1 and getattr(value, "plural", False):
-                strings.append(PLURAL_PLACEHOLDER)
-            return SEPARATOR.join(strings)
-    elif isinstance(value, list):
-        if list_empty(value):
-            return ''
-        else:
-            return SEPARATOR.join(value)
-    else:
-        return value
+
+    return unparse_multistring(value)
 
 
 def to_python(value):
@@ -65,26 +40,38 @@ def to_python(value):
     elif isinstance(value, multistring):
         return value
     elif isinstance(value, basestring):
-        strings = value.split(SEPARATOR)
-        if strings[-1] == PLURAL_PLACEHOLDER:
-            strings = strings[:-1]
-            plural = True
-        else:
-            plural = len(strings) > 1
-        ms = multistring(strings, encoding="UTF-8")
-        ms.plural = plural
-        return ms
+        return parse_multistring(value)
     elif isinstance(value, dict):
-        return multistring([val for key, val in sorted(value.items())],
+        return multistring([val for __, val in sorted(value.items())],
                            encoding="UTF-8")
     else:
         return multistring(value, encoding="UTF-8")
 
 
+class CastOnAssignDescriptor(object):
+    """
+    A property descriptor which ensures that `field.to_python()` is called on
+    _every_ assignment to the field.  This used to be provided by the
+    `django.db.models.subclassing.Creator` class, which in turn was used by the
+    deprecated-in-Django-1.10 `SubfieldBase` class, hence the reimplementation
+    here.
+    """
+
+    def __init__(self, field):
+        self.field = field
+
+    def __get__(self, obj, type=None):
+        if obj is None:
+            return self
+        return obj.__dict__[self.field.name]
+
+    def __set__(self, obj, value):
+        obj.__dict__[self.field.name] = self.field.to_python(value)
+
+
 class MultiStringField(models.Field):
     description = \
         "a field imitating translate.misc.multistring used for plurals"
-    __metaclass__ = models.SubfieldBase
 
     def __init__(self, *args, **kwargs):
         super(MultiStringField, self).__init__(*args, **kwargs)
@@ -93,6 +80,9 @@ class MultiStringField(models.Field):
         return "TextField"
 
     def to_python(self, value):
+        return to_python(value)
+
+    def from_db_value(self, value, expression, connection, context):
         return to_python(value)
 
     def get_prep_value(self, value):
@@ -105,32 +95,18 @@ class MultiStringField(models.Field):
         return super(MultiStringField, self).get_prep_lookup(lookup_type,
                                                              value)
 
+    def contribute_to_class(self, cls, name):
+        super(MultiStringField, self).contribute_to_class(cls, name)
+        setattr(cls, name, CastOnAssignDescriptor(self))
+
 
 # # # # # # # # # File # # # # # # # # # # # # # # # #
-
-
-class StoreTuple(object):
-    """Encapsulates toolkit stores in the in memory cache, needed
-    since LRUCachingDict is based on a weakref.WeakValueDictionary
-    which cannot reference normal tuples
-    """
-
-    def __init__(self, store, mod_info, realpath):
-        self.store = store
-        self.mod_info = mod_info
-        self.realpath = realpath
 
 
 class TranslationStoreFieldFile(FieldFile):
     """FieldFile is the file-like object of a FileField, that is found in a
     TranslationStoreField.
     """
-
-    from translate.misc.lru import LRUCachingDict
-    from django.conf import settings
-
-    _store_cache = LRUCachingDict(settings.PARSE_POOL_SIZE,
-                                  settings.PARSE_POOL_CULL_FREQUENCY)
 
     def getpomtime(self):
         file_stat = os.stat(self.realpath)
@@ -140,81 +116,29 @@ class TranslationStoreFieldFile(FieldFile):
     def filename(self):
         return os.path.basename(self.name)
 
-    def _get_realpath(self):
-        """Return realpath resolving symlinks if necessary."""
-        if not hasattr(self, "_realpath"):
-            # Django's db.models.fields.files.FieldFile raises ValueError if
-            # if the file field has no name - and tests "if self" to check
-            if self:
-                self._realpath = os.path.realpath(self.path)
-            else:
-                self._realpath = ''
-        return self._realpath
-
-    @property
+    @cached_property
     def realpath(self):
         """Get real path from cache before attempting to check for symlinks."""
-        if not hasattr(self, "_store_tuple"):
-            return self._get_realpath()
+        if self:
+            return os.path.realpath(self.path)
         else:
-            return self._store_tuple.realpath
+            return ''
 
-    @property
+    @cached_property
     def store(self):
         """Get translation store from dictionary cache, populate if store not
         already cached.
         """
-        self._update_store_cache()
-        return self._store_tuple.store
+        from translate.storage import factory
 
-    def _update_store_cache(self):
-        """Add translation store to dictionary cache, replace old cached
-        version if needed.
-        """
-        if self.exists():
-            mod_info = self.getpomtime()
-        else:
-            mod_info = 0
-        if (not hasattr(self, "_store_tuple") or
-            self._store_tuple.mod_info != mod_info):
-            try:
-                self._store_tuple = self._store_cache[self.path]
-                if self._store_tuple.mod_info != mod_info:
-                    # if file is modified act as if it doesn't exist in cache
-                    raise KeyError
-            except KeyError:
-                logging.debug(u"Cache miss for %s", self.path)
-                from translate.storage import factory
-                from pootle_store.filetypes import factory_classes
-
-                store_obj = factory.getobject(self.path,
-                                              ignore=self.field.ignore,
-                                              classes=factory_classes)
-                self._store_tuple = StoreTuple(store_obj, mod_info,
-                                               self.realpath)
-                self._store_cache[self.path] = self._store_tuple
-
-    def _touch_store_cache(self):
-        """Update stored mod_info without reparsing file."""
-        if hasattr(self, "_store_tuple"):
-            mod_info = self.getpomtime()
-            if self._store_tuple.mod_info != mod_info:
-                self._store_tuple.mod_info = mod_info
-        else:
-            # FIXME: do we really need that?
-            self._update_store_cache()
-
-    def _delete_store_cache(self):
-        """Remove translation store from cache."""
-        try:
-            del self._store_cache[self.path]
-        except KeyError:
-            pass
-
-        try:
-            del self._store_tuple
-        except AttributeError:
-            pass
+        fileclass = self.instance.syncer.file_class
+        classes = {
+            str(self.instance.filetype.extension): fileclass,
+            str(self.instance.filetype.template_extension): fileclass}
+        return factory.getobject(
+            self.path,
+            ignore=self.field.ignore,
+            classes=classes)
 
     def exists(self):
         return os.path.exists(self.realpath)
@@ -229,16 +153,19 @@ class TranslationStoreFieldFile(FieldFile):
         os.close(tmpfile)
         self.store.savefile(tmpfilename)
         shutil.move(tmpfilename, self.realpath)
-        self._touch_store_cache()
+        if "store" in self.__dict__:
+            del self.__dict__["store"]
 
     def save(self, name, content, save=True):
         # FIXME: implement save to tmp file then move instead of directly
         # saving
         super(TranslationStoreFieldFile, self).save(name, content, save)
-        self._delete_store_cache()
+        if "store" in self.__dict__:
+            del self.__dict__["store"]
 
     def delete(self, save=True):
-        self._delete_store_cache()
+        if "store" in self.__dict__:
+            del self.__dict__["store"]
         if save:
             super(TranslationStoreFieldFile, self).delete(save)
 

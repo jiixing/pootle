@@ -6,13 +6,16 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
+import os
 from fnmatch import fnmatch
 
 from django.db.models import F, Max
 from django.utils.functional import cached_property
 
+from pootle.core.decorators import persistent_property
 from pootle_store.models import Store
 
+from .apps import PootleFSConfig
 from .models import StoreFS
 from .utils import StoreFSPathFilter, StorePathFilter
 
@@ -29,9 +32,18 @@ class FSProjectResources(object):
                self.project))
 
     @property
+    def excluded_languages(self):
+        return self.project.config.get("pootle.fs.excluded_languages")
+
+    @property
     def stores(self):
-        return Store.objects.filter(
+        excluded = self.excluded_languages
+        stores = Store.objects.filter(
             translation_project__project=self.project)
+        if excluded:
+            stores = stores.exclude(
+                translation_project__language__code__in=excluded)
+        return stores
 
     @property
     def tracked(self):
@@ -61,6 +73,9 @@ class FSProjectStateResources(object):
     If present all resources are filtered accordingly.
     """
 
+    ns = "pootle.fs.resources"
+    sw_version = PootleFSConfig.version
+
     def __init__(self, context, pootle_path=None, fs_path=None):
         self.context = context
         self.pootle_path = pootle_path
@@ -76,14 +91,16 @@ class FSProjectStateResources(object):
             qs.exclude(staged_for_removal=True)
               .exclude(staged_for_merge=True))
 
-    @cached_property
+    @persistent_property
     def found_file_matches(self):
         return sorted(self.context.find_translations(
             fs_path=self.fs_path, pootle_path=self.pootle_path))
 
-    @cached_property
-    def found_file_paths(self):
+    def _found_file_paths(self):
         return [x[1] for x in self.found_file_matches]
+    found_file_paths = persistent_property(
+        _found_file_paths,
+        key_attr="fs_revision")
 
     @cached_property
     def resources(self):
@@ -131,15 +148,23 @@ class FSProjectStateResources(object):
             for store, fs_path
             in self.trackable_stores}
 
+    @persistent_property
+    def missing_file_paths(self):
+        return [
+            path for path in self.tracked_paths.keys()
+            if path not in self.found_file_paths]
+
     @cached_property
     def tracked(self):
         """StoreFS queryset of tracked resources"""
         return self.storefs_filter.filtered(self.resources.tracked)
 
-    @cached_property
-    def tracked_paths(self):
+    def _tracked_paths(self):
         """Dictionary of fs_path, path for tracked StoreFS"""
         return dict(self.tracked.values_list("path", "pootle_path"))
+    tracked_paths = persistent_property(
+        _tracked_paths,
+        key_attr="sync_revision")
 
     @cached_property
     def unsynced(self):
@@ -161,9 +186,58 @@ class FSProjectStateResources(object):
                        .annotate(max_revision=Max("store__unit__revision"))
                        .exclude(last_sync_revision=F("max_revision")))
 
+    @cached_property
+    def pootle_revisions(self):
+        return dict(
+            self.synced.exclude(store_id__isnull=True)
+                       .exclude(store__obsolete=True)
+                       .values_list("store_id", "store__data__max_unit_revision"))
+
+    @cached_property
+    def file_hashes(self):
+        hashes = {}
+
+        def _get_file_hash(path):
+            file_path = os.path.join(
+                self.context.project.local_fs_path,
+                path.strip("/"))
+            if os.path.exists(file_path):
+                return str(os.stat(file_path).st_mtime)
+        for pootle_path, path in self.found_file_matches:
+            hashes[pootle_path] = _get_file_hash(path)
+        return hashes
+
+    @cached_property
+    def fs_changed(self):
+        """StoreFS queryset of tracked resources where the Store has changed
+        since it was last synced.
+        """
+        hashes = self.file_hashes
+        tracked_files = []
+        for store_fs in self.synced.iterator():
+            if store_fs.last_sync_hash == hashes.get(store_fs.pootle_path):
+                continue
+            tracked_files.append(store_fs.pk)
+        return tracked_files
+
     def reload(self):
         """Uncache cached_properties"""
-        for k, v in self.__dict__.items():
-            if k in ["context", "pootle_path", "fs_path"]:
+        cache_reload = [
+            "context", "pootle_path", "fs_path",
+            "cache_key", "sync_revision", "fs_revision"]
+        for k, v_ in self.__dict__.items():
+            if k in cache_reload:
                 continue
             del self.__dict__[k]
+
+    @cached_property
+    def fs_revision(self):
+        return self.context.fs_revision
+
+    @cached_property
+    def sync_revision(self):
+        return self.context.sync_revision
+
+    @cached_property
+    def cache_key(self):
+        return self.context.cache_key

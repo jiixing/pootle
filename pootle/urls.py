@@ -9,22 +9,20 @@
 from django.conf import settings
 from django.conf.urls import include, url
 from django.views.generic import TemplateView
-from django.views.i18n import javascript_catalog
+
+from pootle.core.delegate import url_patterns
 
 
-urlpatterns = [
-    # JavaScript i18n
-    url(r'^jsi18n/$',
-        javascript_catalog,
-        {'packages': ('pootle', ), }, ),
+urlpatterns = []
 
+# Allow url handlers to be overriden by plugins
+for delegate_urls in url_patterns.gather().values():
+    urlpatterns += delegate_urls
+
+urlpatterns += [
     # Allauth
     url(r'^accounts/', include('accounts.urls')),
     url(r'^accounts/', include('allauth.urls')),
-
-    # Reports
-    url(r'^admin/reports/', include('reports.urls')),
-    url(r'', include('reports.profile_urls')),
 ]
 
 # XXX should be autodiscovered
@@ -44,9 +42,11 @@ urlpatterns += [
     url(r'^help/quality-checks/',
         TemplateView.as_view(template_name="help/quality_checks.html"),
         name='pootle-checks-descriptions'),
+    url(r'', include('pootle_fs.urls')),
     url(r'', include('pootle_app.urls')),
     url(r'^projects/', include('pootle_project.urls')),
     url(r'', include('pootle_terminology.urls')),
+    url(r'', include('pootle_statistics.urls')),
     url(r'', include('pootle_store.urls')),
     url(r'', include('pootle_language.urls')),
     url(r'', include('pootle_translationproject.urls')),

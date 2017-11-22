@@ -20,6 +20,12 @@ PACKAGE="Pootle"
 VERSION=$(python -m pootle.core.utils.version main)
 MSGID_BUGS_TO="https://github.com/translate/pootle/issues/new"
 
+REQUIRED_GETTEXT_VERSION=0.19.7
+if [[ $(xgettext --version | head -1 | sed 's/^[^0-9]*//') < "$REQUIRED_GETTEXT_VERSION" ]]; then
+    echo "Gettext >=$REQUIRED_GETTEXT_VERSION required"
+    exit 1
+fi
+
 cd $SRC_DIR
 
 # Common folders to ignore when extracting
@@ -32,24 +38,26 @@ ignore="\
 	--ignore log \
 	--ignore dbs \
 	--ignore tools \
+	--ignore custom \
 	"
 
-django-admin.py makemessages -v $VERBOSITY $ignore --ignore static/js -e py,txt,html,conf -l templates
+django-admin.py makemessages -v $VERBOSITY $ignore --ignore static/js --extension py,txt,html --locale templates
+
+# settings.conf extraction
+
+find settings -name "*.conf" | xargs xgettext --join-existing --output=$DJANGO_POT --language=Python --from-code=utf-8
 
 # JavaScript extraction
 
 # makemessages is rubbish at this so use xgettext directly
 # Until xgettext properly supports JavaScript extraction we use Python, but
 # first we extract using JavaScript just to get the ones that do actually work.
-find static/js -name "*.js" |  egrep -v "(node_modules|\.bundle\.js)" | xargs xgettext --keyword=t --output=$DJANGO_JS_POT --language=JavaScript --from-code=utf-8
+find static/js -name "*.js" |  egrep -v "(node_modules|\.bundle\.js)" | xargs xgettext --keyword=tct --keyword=t --keyword=nt:1,2 --output=$DJANGO_JS_POT --language=JavaScript --from-code=utf-8 --add-comments=Translators
 sed -i"" -e "s/charset=CHARSET/charset=UTF-8/" $DJANGO_JS_POT
-find static/js -name "*.js" |  egrep -v "(node_modules|\.bundle\.js)" | xargs xgettext --join-existing --output=$DJANGO_JS_POT --language=Python --from-code=utf-8
-
-# For .jsx we use Python so that variables are at least marked.
-xgettext --join-existing --output=$DJANGO_JS_POT --language=Python --from-code=utf-8 $(find static/js -name "*.jsx")
+find static/js -name "*.js" |  egrep -v "(node_modules|\.bundle\.js)" | xargs xgettext --join-existing --output=$DJANGO_JS_POT --language=Python --from-code=utf-8 --add-comments=Translators --keyword=tct --keyword=t --keyword=nt:1,2
 
 # Extract localisable content from HTML pages used by JS
-xgettext --join-existing --output=$DJANGO_JS_POT --language=Python --from-code=utf-8 $(find templates -name "*.html")
+xgettext --join-existing --output=$DJANGO_JS_POT --language=Python --from-code=utf-8 --add-comments=Translators $(find templates -name "*.html")
 
 # Copyright header replacement
 cat <<EOF >$POOTLE_POT

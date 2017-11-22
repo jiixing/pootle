@@ -10,50 +10,55 @@ from translate.lang import data as langdata
 
 from django.conf import settings
 from django.utils import translation
+from django.utils.functional import lazy
 from django.utils.translation import _trans
 
 
-def _format_translation(message, vars=None):
+def _format_translation(message, variables=None):
     """Overrides the gettext function, handling variable errors more
     gracefully.
 
     This is needed to avoid tracebacks on translation errors with live
     translation.
     """
-    if vars is not None:
+    if variables is not None:
         try:
-            return message % vars
+            return message % variables
         except:
             pass
 
     return message
 
 
-def ugettext(message, vars=None):
-    return _format_translation(_trans.ugettext(message), vars)
+def ugettext(message, variables=None):
+    return _format_translation(_trans.ugettext(message), variables)
 
 
-def gettext(message, vars=None):
-    return _format_translation(_trans.gettext(message), vars)
+def gettext(message, variables=None):
+    return _format_translation(_trans.gettext(message), variables)
 
 
-def ungettext(singular, plural, number, vars=None):
+def ungettext(singular, plural, number, variables=None):
     return _format_translation(_trans.ungettext(singular, plural, number),
-                               vars)
+                               variables)
 
 
-def ngettext(singular, plural, number, vars=None):
-    return _format_translation(_trans.ngettext(singular, plural, number), vars)
+def ngettext(singular, plural, number, variables=None):
+    return _format_translation(_trans.ngettext(singular, plural, number), variables)
+
+
+gettext_lazy = lazy(gettext, str)
+ugettext_lazy = lazy(ugettext, unicode)
+ngettext_lazy = lazy(ngettext, str)
+ungettext_lazy = lazy(ungettext, unicode)
 
 
 def tr_lang(language_name):
     """Translates language names."""
-    language_code = translation.get_language()
-    if language_code is None:
-        language_code = settings.LANGUAGE_CODE
-    language_code = translation.to_locale(language_code)
-
-    return langdata.tr_lang(language_code)(language_name)
+    return langdata.tr_lang(
+        translation.to_locale(
+            translation.get_language()
+            or settings.LANGUAGE_CODE))(language_name)
 
 
 def language_dir(language_code):

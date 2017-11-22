@@ -7,9 +7,10 @@
 # AUTHORS file for copyright and authorship information.
 
 from django import forms
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.utils.safestring import mark_safe
-from django.utils.translation import ugettext_lazy as _
+
+from pootle.i18n.gettext import ugettext_lazy as _
 
 from .models import Agreement
 
@@ -36,9 +37,9 @@ def agreement_form_factory(pages, user):
         def save(self, **kwargs):
             """Saves user agreements."""
             for page in self._pages:
-                agreement, created = Agreement.objects.get_or_create(
+                agreement = Agreement.objects.get_or_create(
                     user=self._user, document=page,
-                )
+                )[0]
                 agreement.save()
 
         def legal_fields(self):

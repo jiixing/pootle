@@ -48,9 +48,9 @@ from pootle_fs.utils import FSPlugin
 from pootle_project.models import Project
 
 from .fs_commands.add import AddCommand
-from .fs_commands.info import ProjectInfoCommand
 from .fs_commands.fetch import FetchCommand
-from .fs_commands.merge import MergeCommand
+from .fs_commands.info import ProjectInfoCommand
+from .fs_commands.resolve import ResolveCommand
 from .fs_commands.rm import RmCommand
 from .fs_commands.state import StateCommand
 from .fs_commands.sync import SyncCommand
@@ -64,10 +64,10 @@ class Command(CommandWithSubcommands):
     help = "Pootle FS."
     subcommands = {
         "add": AddCommand,
-        "info": ProjectInfoCommand,
         "fetch": FetchCommand,
-        "merge": MergeCommand,
+        "info": ProjectInfoCommand,
         "rm": RmCommand,
+        "resolve": ResolveCommand,
         "state": StateCommand,
         "sync": SyncCommand,
         "unstage": UnstageCommand}

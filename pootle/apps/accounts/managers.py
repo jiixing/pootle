@@ -7,8 +7,12 @@
 # AUTHORS file for copyright and authorship information.
 
 from django.contrib.auth.models import BaseUserManager
+from django.db.models import Q
 from django.utils import timezone
 from django.utils.lru_cache import lru_cache
+
+from pootle_app.models.permissions import check_user_permission
+from pootle_translationproject.models import TranslationProject
 
 from . import utils
 
@@ -75,5 +79,30 @@ class UserManager(BaseUserManager):
     def hide_meta(self):
         return self.get_queryset().exclude(username__in=self.META_USERS)
 
-    def meta_users(self):
-        return self.get_queryset().filter(username__in=self.META_USERS)
+    def get_users_with_permission(self, permission_code, project, language,
+                                  tp=None):
+        default = self.get_default_user()
+
+        tp = (
+            tp
+            or TranslationProject.objects.get(
+                project=project,
+                language=language))
+
+        directory = tp.directory
+
+        if check_user_permission(default, permission_code, directory):
+            return self.hide_meta().filter(is_active=True)
+
+        user_filter = Q(
+            permissionset__positive_permissions__codename=permission_code
+        )
+
+        user_filter &= (
+            Q(permissionset__directory__pootle_path=directory.pootle_path)
+            | Q(permissionset__directory__pootle_path=language.pootle_path)
+            | Q(permissionset__directory__pootle_path=project.pootle_path)
+        )
+        user_filter |= Q(is_superuser=True)
+
+        return self.get_queryset().filter(user_filter).distinct()

@@ -6,6 +6,7 @@
  * AUTHORS file for copyright and authorship information.
  */
 
+
 /*
  * TRANSLATE PAGE
  */
@@ -137,12 +138,14 @@ html[dir="rtl"] #toolbar > div:last-child
 
 /* for the translation content, use regular sans-serif to ensure the maximum
 Unicode ranges is supported, and that they all look the same */
+textarea.translation,
+.timeline-entry,
 .translation-text,
-#tm-results .suggestion-original,
-#tm-results .suggestion-translation,
+.suggestion-original,
+.suggestion-translation,
 #id_search
 {
-    font-family: sans-serif;
+    font-family: 'Raw', sans-serif;
 }
 
 #editor
@@ -231,7 +234,7 @@ tr.edit-row.with-ctx
 
 tr.edit-ctx
 {
-    font-size: 82%
+    font-size: 82%;
 }
 
 tr.edit-ctx td
@@ -244,16 +247,16 @@ tr.edit-ctx td
 
 tr.edit-ctx a
 {
-     text-decoration: none;
+    text-decoration: none;
 
-     opacity: 0.5;
+    opacity: 0.5;
 }
 
 tr.edit-ctx a:hover
 {
-     text-decoration: none;
+    text-decoration: none;
 
-     opacity: 1;
+    opacity: 1;
 }
 
 tr.edit-ctx.before .edit-ctx-wrapper
@@ -316,7 +319,8 @@ div.sources
 
 div.sources .translation-text
 {
-    padding: 0.1em 0;
+    padding: 0.1em 0.4em;
+    margin-top: 0.2em;
 }
 
 .translation-text-headers
@@ -328,15 +332,6 @@ div.sources .translation-text
     padding-top: 0.5em;
 }
 
-.translation-space
-{
-    padding: 0 4px;
-    margin: 0 0.2em;
-    background-image: url('../images/squiggle.png');
-    background-repeat: repeat-x;
-    background-position: text-bottom;
-    vertical-align: middle;
-}
 
 /* TRANSLATION UNIT LAYOUT */
 
@@ -353,11 +348,10 @@ div.translate-container
     clear: both;
 }
 
-/* in translation editor, make hanging spaces more prominent */
-div.translate-container .translation-space
+
+div.translate-container.error
 {
-    background-color: yellow;
-    border: 1px solid red;
+    background-color: blue;
 }
 
 div.translate-container.error
@@ -382,12 +376,28 @@ div.unit-path li
     margin-right: 0.3em;
 }
 
-div.unit-path li:after
+html[dir="rtl"] div.unit-path li
+{
+    margin-right: auto;
+    margin-left: 0.3em;
+}
+
+div.unit-path li::after
 {
     content: '→';
 }
 
-div.unit-path li:last-child:after
+html[dir="rtl"] div.unit-path li::after
+{
+    content: '←';
+}
+
+div.unit-path li:last-child::after
+{
+    content: '';
+}
+
+html[dir="rtl"] div.unit-path li:last-child::after
 {
     content: '';
 }
@@ -399,10 +409,16 @@ div.unit-path li span.content-wrapper
     color: #fff;
 }
 
+html[dir="rtl"] div.unit-path li span.content-wrapper
+{
+    margin-right: auto;
+    margin-left: 0.5em;
+}
+
 div.unit-path li a
 {
     color: #cff;
-    opacity: .8;
+    opacity: 0.8;
 }
 
 div.translate-left,
@@ -447,13 +463,18 @@ div.language-name
     border-bottom: 1px solid #f1f7f8;
     border-radius: 5px 5px 0 0;
 
-    padding: 1px 5px 0px;
+    padding: 1px 5px 0;
     display: inline-block;
     position: absolute;
     bottom: -1px;
 }
 
-.translate-focus div.translate-original,
+div.translate-container.error div.language-name
+{
+    border-bottom: 1px solid #fdd;
+}
+
+.translate-focus div.translate-original
 {
     color: #130f30;
 }
@@ -464,21 +485,39 @@ div.source-language.alternative
     margin-bottom: 2em;
 }
 
-table td.translate-original,
-table td.translate-translation
+table .view-row td
 {
-    padding: 0.5em 5px;
+    padding: 0;
     width: 50%;
+    vertical-align: top;
 }
 
-table td.translate-original
+table .translate-view.translate-original,
+table .translate-view.translate-translation
+{
+    padding: 5px;
+}
+
+table .translate-view.translate-original
 {
     padding-left: 25px;
 }
 
-table td.translate-translation
+table .translate-view.translate-translation
 {
     padding-right: 25px;
+}
+
+html[dir="rtl"] table .translate-view.translate-original
+{
+    padding-left: auto;
+    padding-right: 25px;
+}
+
+html[dir="rtl"] table .translate-view.translate-translation
+{
+    padding-right: auto;
+    padding-left: 25px;
 }
 
 /* COMMENTS */
@@ -587,15 +626,14 @@ td.translate-focus
 td.translate-full div.translate-original
 {
     width: 100%;
-    margin: 0.5em 0;
+    margin: 0.7em 0;
 }
 
 td.translate-full textarea.translation
 {
     width: 100%;
-    margin: 0 auto 0.5em;
-    padding: 0;
-    min-height: 2.7em; 
+    margin: 0;
+    min-height: 2.7em;
 }
 
 
@@ -738,12 +776,12 @@ html[dir="rtl"] .extras-bar a
 .extras-bar a.selected
 {
     background: rgba(0, 0, 0, 0.05);
-    box-shadow: 0px 1px 5px rgba(0, 0, 0, 0.3) inset;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3) inset;
 }
 
 .extras-bar a i
 {
-    margin: 0 0.3em 0;
+    margin: 0 0.3em;
 }
 
 .extra-item-block
@@ -790,10 +828,22 @@ html[dir="rtl"] .suggestion-action
     margin: 0 0.3em 0 0;
 }
 
-#tm-results .suggestion-original,
-#tm-results .suggestion-translation
+.suggestion-wrapper
+{
+    display: flex;
+}
+
+.suggestion-wrapper > div
+{
+    flex: 1;
+}
+
+.translation-text,
+.suggestion-original,
+.suggestion-translation
 {
     word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 .suggestion-translation
@@ -859,13 +909,25 @@ html[dir="rtl"] .suggestion-action
 
 .extra-item-block .suggestion-feedback .field-wrapper
 {
-    margin: 5px 5px 0px 0px;
+    margin: 5px 5px 0 0;
+}
+
+.extra-item-block .suggestion-feedback .field-wrapper.suggestion-editor
+{
+    margin-right: 0;
+}
+
+.suggestion-feedback label
+{
+    margin-bottom: 3px;
 }
 
 .extra-item-block .suggestion-feedback .field-wrapper label,
 .extra-item-block .suggestion-feedback .field-wrapper textarea
 {
     display: block;
+    width: 100%;
+    max-width: 100%;
 }
 
 .extra-item-block .suggestion-feedback .field-wrapper textarea
@@ -877,13 +939,13 @@ html[dir="rtl"] .suggestion-action
 .extra-item-block .suggestion-feedback .buttons button
 {
     float: right;
-    margin: 15px 0px 5px 15px;
+    margin: 15px 0 5px 15px;
 }
 
 html[dir="rtl"] .extra-item-block .suggestion-feedback .buttons button
 {
     float: left;
-    margin: 15px 15px 5px 0px;
+    margin: 15px 15px 5px 0;
 }
 
 .extra-item-block .suggestion-feedback .buttons button i
@@ -893,7 +955,7 @@ html[dir="rtl"] .extra-item-block .suggestion-feedback .buttons button
 
 .extra-item-block .suggestion-feedback form
 {
-    margin: 20px 20px 10px 20px;
+    margin: 20px 20px 10px;
 }
 
 .translate-full
@@ -939,11 +1001,6 @@ html[dir="rtl"] .extra-item-block .suggestion-feedback .buttons button
     margin-bottom: 0.2em;
 }
 
-.timeline-entry .sidetitle .comment
-{
-    color: #444;
-}
-
 .extra-item
 {
     line-height: 140%;
@@ -977,6 +1034,116 @@ html[dir="rtl"] .extra-item-block .suggestion-feedback .buttons button
     color: #130f30;
     padding-right: 1em;
     float: left;
+}
+
+html[dir="rtl"] .suggestion-original
+{
+    padding-right: 0;
+    padding-left: 1em;
+    float: right;
+}
+
+.suggestion-feedback .comment
+{
+    background-color: #fff;
+    overflow: hidden;
+    border: 1px solid #d9d9d9;
+    border-radius: 3px;
+}
+
+.editor-area-wrapper
+{
+    background-color: #fff;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.075) inset;
+    overflow: hidden;
+    border-right: 1px solid #d9d9d9;
+    border-left: 1px solid #d9d9d9;
+    border-top: 1px solid #d9d9d9;
+}
+
+.editor-area-wrapper:last-child
+{
+    border-bottom: 1px solid #d9d9d9;
+    border-bottom-left-radius: 3px;
+    border-bottom-right-radius: 3px;
+    margin: 0 auto 0.1em;
+}
+
+.editor-area-wrapper:first-child
+{
+    border-top: 1px solid #d9d9d9;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+}
+
+.plural-form-label
+{
+    color: #c896c8;
+    font-size: 85%;
+}
+
+.sources .plural-form-label
+{
+    margin: 0.5em 0 0 0.3em;
+}
+
+#suggestions .plural-form-label,
+tr.view-row .plural-form-label,
+tr.ctx-row .plural-form-label
+{
+    margin-right: 5px;
+    vertical-align: top;
+}
+
+#suggestions .plural-form-label,
+#suggestions .suggestion-translation,
+tr.view-row .plural-form-label,
+tr.view-row .view-unit-value,
+tr.ctx-row .plural-form-label,
+tr.ctx-row .view-unit-value
+{
+    display: inline-block;
+}
+
+html[dir="rtl"] tr.view-row .plural-form-label
+{
+    margin-left: 5px;
+}
+
+.editor-area-wrapper .subheader
+{
+    background: #fafafa;
+    color: #c896c8;
+    font-size: 85%;
+    padding: 0.2em;
+}
+
+.editor-area-wrapper.is-disabled,
+.editor-area-wrapper.is-disabled textarea
+{
+    box-shadow: none;
+    outline: none;
+    background-color: #eee;
+    color: #999;
+}
+
+.editor-area-wrapper.is-focused
+{
+    box-shadow: 0 0 2px #d9d9d9;
+    outline: -webkit-focus-ring-color auto 5px;
+}
+
+.editor-area-wrapper textarea
+{
+    box-sizing: border-box;
+    border: 0;
+    margin: 0;
+    padding: 0.3em;
+}
+
+.editor-area-wrapper textarea:focus
+{
+    outline: none;
 }
 
 #target-item-gravatar a
@@ -1021,7 +1188,7 @@ html[dir="rtl"] #target-item-gravatar
 
 .timeline-extra
 {
-    position:absolute;
+    position: absolute;
     top: 0;
     left: 100%;
     font-size: 0.9em;
@@ -1034,15 +1201,20 @@ html[dir="rtl"] .timeline-extra
     right: 100%;
 }
 
-.timeline-field-3,
-.timeline-field-0
+.timeline-entry .description
 {
     font-size: 85%;
+    color: #999;
 }
 
-.timeline-field-3 .sidetitle
+.timeline-entry .description .comment
 {
-    font-size: 100%;
+    color: #444;
+}
+
+.timeline-entry .state-change
+{
+    font-size: 85%;
 }
 
 .timeline-field-body
@@ -1050,14 +1222,26 @@ html[dir="rtl"] .timeline-extra
     unicode-bidi: embed;
 }
 
-.timeline-arrow:before
+.timeline-arrow::before
 {
     content: "→";
 }
 
-html[dir="rtl"] .timeline-arrow:before
+html[dir="rtl"] .timeline-arrow::before
 {
     content: "←";
+}
+
+.timeline-entry .sidetitle
+{
+    float: left;
+    margin-right: 5px;
+}
+
+html[dir="rtl"] .timeline-entry .sidetitle
+{
+    float: right;
+    margin-left: 5px;
 }
 
 #editor-comment.hide
@@ -1070,7 +1254,7 @@ html[dir="rtl"] .timeline-arrow:before
     font-size: 115%;
     display: inline-block;
     white-space: nowrap;
-    width:100%;
+    width: 100%;
     margin-top: 1em;
 }
 
@@ -1140,6 +1324,13 @@ div.check a
     width: 46%;
 }
 
+html[dir="rtl"] #translate-checks-block
+{
+    left: auto;
+    right: 100%;
+    margin: 14px 20px 0 10px;
+}
+
 #translate-checks-block .sidetitle
 {
     color: rgba(0, 0, 0, 0.75);
@@ -1148,12 +1339,24 @@ div.check a
     margin: 0.1em 1em 0 0;
 }
 
+html[dir="rtl"] #translate-checks-block .sidetitle
+{
+    float: right;
+    margin: 0.1em 0 0 1em;
+}
+
 li.check
 {
     display: inline-block;
     margin: -0.15em 1em 0.5em -0.5em;
     padding: 0.1em 0.5em;
     border-radius: 4px;
+}
+
+html[dir="rtl"] li.check
+{
+    margin: -0.15em -0.5em 0.5em 1em;
+    padding: 0.1em 0.5em;
 }
 
 .check-warning
@@ -1276,14 +1479,14 @@ table.suggest-mode .translate-fuzzy-block
 {
     position: absolute;
     left: 120px;
-    top: 0px;
+    top: 0;
     padding: 5px 0;
     line-height: 150%;
 }
 
 .translate-full[dir="rtl"] .switch-suggest-mode
 {
-    left: 0px;
+    left: auto;
     right: 120px;
 }
 
@@ -1306,6 +1509,7 @@ table.suggest-mode .switch-suggest-mode .submit
 {
     position: absolute;
     top: -12px;
+
     /* LTR */
     right: 0;
 }
@@ -1330,7 +1534,8 @@ div.translation-text-headers[dir="rtl"] div.translate-toolbar a
 
 .translate-toolbar a,
 .js-editor-copy-comment,
-.js-editor-copytext
+.js-editor-copytext,
+.js-editor-copy-tm-text
 {
     cursor: pointer;
 }
@@ -1396,7 +1601,7 @@ a.editor-specialchar:hover
 {
     color: #999;
     border: 1px dotted #d9d9d9;
-    background-color: #F1F7F8; /* same as edit-row bg */
+    background-color: #f1f7f8; /* same as edit-row bg */
 }
 
 .tm-server .diff-delete,
@@ -1463,9 +1668,9 @@ div.translate-translation.raw textarea.translation
 {
     direction: ltr;
     unicode-bidi: bidi-override;
-    font-family: monospace;
-    font-size: 140%;
-    line-height: 110%;
+    font-family: "Raw", Consolas, "Ubuntu Mono", "Lucida Console", monospace;
+    font-feature-settings: "isol" off, "init" off, "medi" off, "fina" off;
+    line-height: 115%;
 }
 
 /* Special handling for languages with big fonts */
@@ -1478,7 +1683,7 @@ td.translate-full div.translate-translation:lang(zh)
     margin-bottom: 35px;
 }
 
-tr.view-row td.fuzzy-unit .translation-text
+tr.view-row .fuzzy-unit .translation-text
 {
     color: #888;
     font-style: italic;
@@ -1498,14 +1703,8 @@ table.suggest-mode tr.edit-row.fuzzy-unit textarea.translation
 
 textarea.translation
 {
-    resize: vertical;
+    resize: none;
     font-size: 115%;
-}
-
-textarea.translation:disabled
-{
-    background: none;
-    border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 /* TERMINOLOGY MANAGEMENT */
@@ -1534,4 +1733,17 @@ td.translate-delete-terminology input
 .right
 {
     float: right;
+}
+
+
+.js-auto-matched-translation textarea
+{
+    color: #aaa;
+}
+
+.auto-match-msg
+{
+    font-weight: bold;
+    margin-bottom: 0.5em;
+    font-style: italic;
 }

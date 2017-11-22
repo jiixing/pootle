@@ -3,10 +3,10 @@
 Translation Memory
 ==================
 
-Pootle provides suggested translations to the current string.  Translator can
-use these suggestions as their translation or to aid their translation.
+Pootle provides matching translations to the current string.  Translator can
+use these matches as their translation or to aid their translation.
 
-Suggestions are based on previous translations of similar strings.  These
+Matches are based on previous translations of similar strings.  These
 Translation Memory (TM) matches mean that you can speed up your translation and
 ensure consistency across your work.
 
@@ -16,13 +16,13 @@ ensure consistency across your work.
 Using Translation Memory
 ------------------------
 
-Translation Memory suggestions are automatically retrieved when you enter a new
+Translation Memory matches are automatically retrieved when you enter a new
 translation unit. These are displayed below the editing widget.  You can insert
-a TM suggestion by clicking on the suggestion row.
+a TM match by clicking on a match row.
 
-The differences between the current string and the suggested string are
-highlighted, this allows you to see how the two differ and helps you make
-changes to the suggestion to make it work as the current translation.
+The differences between the current string and the match are highlighted, this
+allows you to see how the two differ and helps you make changes to the match to
+adapt it for use with the current string.
 
 
 .. _translation_memory#configuring_translation_memory:
@@ -50,6 +50,8 @@ translations of an extensive collection of Opensource software.
 If you want to setup and connect to your own TM server then the
 :setting:`AMAGAMA_URL` will allow you to point to a private TM server.
 
+To disable Amagama set :setting:`AMAGAMA_URL` to ``''``.
+
 
 .. _translation_memory#elasticsearch_based_tms:
 
@@ -67,6 +69,17 @@ installed and running.
   OpenJDK, however `elasticsearch recommends using Oracle JDK
   <https://www.elastic.co/guide/en/elasticsearch/reference/1.6/setup-service.html#_installing_the_oracle_jdk>`_.
 
+Install the required Python libraries:
+
+.. highlight:: console
+.. parsed-literal::
+
+    (env) $ pip install |--process-dependency-links --pre| Pootle[es5]
+
+.. note:: Elasticsearch TM should work with any version of Elasticsearch, our
+   tests run against Elasticsearch 5.x.  For support for Elasticsearch 1.x and
+   Elasticsearch 2.x, simply replace es5 with es1 and es2 respectively in the
+   above command.
 
 Pootle supports two types of Elasticsearch-based TMs:
 
@@ -86,8 +99,8 @@ uncommenting the example.
 Please see the :setting:`POOTLE_TM_SERVER-WEIGHT` for a full example of the
 configuration necessary to set up local/external TM.
 
-You may want to disable Amagama by setting :setting:`AMAGAMA_URL` to ``''`` if
-you are using Elasticsearch-based TMs, though both can operate together.
+Both Amagama and Elasticsearch based TMs can operate together.  Though you may
+want to disable Amagama.
 
 
 .. _translation_memory#local_translation_memory:
@@ -97,7 +110,7 @@ Elasticsearch-based local TM
 
 .. versionadded:: 2.7
 
-To use it, the ``local`` TM must be enabled on :setting:`POOTLE_TM_SERVER` and
+To use it, the ``local`` TM must be enabled in :setting:`POOTLE_TM_SERVER` and
 will need to be populated using the :djadmin:`update_tmserver` command:
 
 .. code-block:: console
@@ -115,7 +128,7 @@ Elasticsearch-based external TMs
 
 .. versionadded:: 2.7.3
 
-In order to use them they must be enabled on :setting:`POOTLE_TM_SERVER` and
+In order to use them they must be enabled in :setting:`POOTLE_TM_SERVER` and
 you will need to populate them using the :djadmin:`update_tmserver` command
 specifying the TM to use with :option:`--tm <update_tmserver --tm>` and the
 display name with :option:`--display-name <update_tmserver --display-name>`:

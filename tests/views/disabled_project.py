@@ -8,7 +8,7 @@
 
 import pytest
 
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 
 
 @pytest.mark.django_db
@@ -39,7 +39,7 @@ def test_disabled_project_in_lang_browse_view(client, request_users):
     response = client.get(reverse("pootle-language-browse",
                                   kwargs={"language_code": "language0"}))
 
-    disabled_project_exists = "language0-disabled_project0" in [
-        item["code"] for item in response.context["table"]["items"]]
+    disabled_project_exists = "language0-disabled_project0" in response.content
 
+    assert response.status_code == 200
     assert (user.is_superuser is disabled_project_exists)

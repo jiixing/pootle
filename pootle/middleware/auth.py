@@ -17,22 +17,23 @@ https://code.djangoproject.com/ticket/20313
 """
 
 from django.contrib import auth
+from django.utils.deprecation import MiddlewareMixin
 from django.utils.functional import SimpleLazyObject
 
 
 def get_user(request):
     if not hasattr(request, '_cached_user'):
         user = auth.get_user(request)
-        request._cached_user = (user if user.is_authenticated() else
+        request._cached_user = (user if user.is_authenticated else
                                 auth.get_user_model().objects.get_nobody_user())
     return request._cached_user
 
 
-class AuthenticationMiddleware(object):
+class AuthenticationMiddleware(MiddlewareMixin):
     def process_request(self, request):
         assert hasattr(request, 'session'), (
             "The Django authentication middleware requires session middleware "
-            "to be installed. Edit your MIDDLEWARE_CLASSES setting to insert "
+            "to be installed. Edit your MIDDLEWARE setting to insert "
             "'django.contrib.sessions.middleware.SessionMiddleware' before "
             "'django.contrib.auth.middleware.AuthenticationMiddleware'."
         )

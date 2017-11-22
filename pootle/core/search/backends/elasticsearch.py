@@ -16,7 +16,7 @@ from django.utils.html import strip_tags
 try:
     from elasticsearch import Elasticsearch
     from elasticsearch.exceptions import ElasticsearchException
-except:
+except ImportError:
     Elasticsearch = None
 
 from ..base import SearchBackend

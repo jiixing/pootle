@@ -6,9 +6,9 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
-import shutil
-
 import pytest
+
+from pootle.core.delegate import tp_tool
 
 
 def pytest_generate_tests(metafunc):
@@ -25,16 +25,6 @@ def _require_tp(language, project):
     return create_translation_project(language, project)
 
 
-def _require_tp_with_obsolete_dir(language, project):
-    """Helper to get/create a translation project in obsolete state."""
-    from pootle_translationproject.models import create_translation_project
-
-    tp = create_translation_project(language, project)
-    tp.directory.makeobsolete()
-
-    return tp
-
-
 @pytest.fixture
 def afrikaans_tutorial(afrikaans, tutorial):
     """Require Afrikaans Tutorial."""
@@ -42,9 +32,10 @@ def afrikaans_tutorial(afrikaans, tutorial):
 
 
 @pytest.fixture
-def arabic_tutorial_obsolete(arabic, tutorial):
+def en_tutorial_obsolete(english_tutorial):
     """Require Arabic Tutorial in obsolete state."""
-    return _require_tp_with_obsolete_dir(arabic, tutorial)
+    english_tutorial.directory.makeobsolete()
+    return english_tutorial
 
 
 @pytest.fixture
@@ -54,33 +45,9 @@ def english_tutorial(english, tutorial):
 
 
 @pytest.fixture
-def french_tutorial(french, tutorial):
-    """Require French Tutorial."""
-    return _require_tp(french, tutorial)
-
-
-@pytest.fixture
-def spanish_tutorial(spanish, tutorial):
-    """Require Spanish Tutorial."""
-    return _require_tp(spanish, tutorial)
-
-
-@pytest.fixture
 def italian_tutorial(italian, tutorial):
     """Require Italian Tutorial."""
     return _require_tp(italian, tutorial)
-
-
-@pytest.fixture
-def russian_tutorial(russian, tutorial):
-    """Require Russian Tutorial."""
-    return _require_tp(russian, tutorial)
-
-
-@pytest.fixture
-def afrikaans_vfolder_test(afrikaans, vfolder_project):
-    """Require Afrikaans Virtual Folder Test."""
-    return _require_tp(afrikaans, vfolder_project)
 
 
 @pytest.fixture
@@ -91,26 +58,37 @@ def tp_checker_tests(request, english, checkers):
     project = ProjectDBFactory(
         checkstyle=checker_name,
         source_language=english)
-
-    def _remove_project_directory():
-        shutil.rmtree(project.get_real_path())
-    request.addfinalizer(_remove_project_directory)
-
     return (checker_name, project)
 
 
 @pytest.fixture
-def templates_project0(request, templates):
+def templates_project0(request, templates, project0):
     """Require the templates/project0/ translation project."""
-    from pootle_project.models import Project
-    from pytest_pootle.factories import TranslationProjectFactory
+    tps = project0.translationproject_set.select_related(
+        "data",
+        "directory")
+    template_tp = tps.get(language=templates)
+    template_tp.language = templates
+    return template_tp
 
-    project0 = Project.objects.get(code="project0")
-    tp = TranslationProjectFactory(language=templates, project=project0)
 
-    def _cleanup():
-        shutil.rmtree(tp.abs_real_path)
+@pytest.fixture
+def tp0(language0, project0):
+    """Require English Project0."""
+    tps = project0.translationproject_set.select_related(
+        "data",
+        "directory")
+    tp0 = tps.get(language=language0)
+    tp0.language = language0
+    return tp0
 
-    request.addfinalizer(_cleanup)
 
-    return tp
+@pytest.fixture
+def no_tp_tool_(request):
+    start_receivers = tp_tool.receivers
+    tp_tool.receivers = []
+
+    def _reset_tp_tool():
+        tp_tool.receivers = start_receivers
+
+    request.addfinalizer(_reset_tp_tool)

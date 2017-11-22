@@ -7,8 +7,9 @@
  */
 
 import _ from 'underscore';
-
 import React from 'react';
+
+import assign from 'object-assign';
 
 import FormElement from 'components/FormElement';
 
@@ -17,11 +18,16 @@ const SuggestionFeedBackForm = React.createClass({
 
   propTypes: {
     suggId: React.PropTypes.number.isRequired,
-    initialSuggestionText: React.PropTypes.string.isRequired,
-    localeDir: React.PropTypes.string.isRequired,
+    initialSuggestionValues: React.PropTypes.array.isRequired,
     onAcceptSuggestion: React.PropTypes.func.isRequired,
     onRejectSuggestion: React.PropTypes.func.isRequired,
     onChange: React.PropTypes.func.isRequired,
+    editorComponent: React.PropTypes.func.isRequired,
+    isDisabled: React.PropTypes.bool.isRequired,
+    sourceValues: React.PropTypes.array.isRequired,
+    currentLocaleCode: React.PropTypes.string.isRequired,
+    currentLocaleDir: React.PropTypes.string.isRequired,
+    targetNplurals: React.PropTypes.number,
   },
 
   /* Lifecycle */
@@ -29,7 +35,7 @@ const SuggestionFeedBackForm = React.createClass({
   getInitialState() {
     this.initialData = {
       comment: '',
-      translation: this.props.initialSuggestionText,
+      translations: this.props.initialSuggestionValues,
     };
 
     return {
@@ -41,7 +47,7 @@ const SuggestionFeedBackForm = React.createClass({
 
   handleAccept(e) {
     const suggestionChanged = (
-      this.state.formData.translation !== this.props.initialSuggestionText
+      this.state.formData.translations !== this.props.initialSuggestionValues
     );
     e.preventDefault();
     this.props.onAcceptSuggestion(
@@ -58,11 +64,17 @@ const SuggestionFeedBackForm = React.createClass({
     this.props.onRejectSuggestion(this.props.suggId, { requestData: this.state.formData });
   },
 
-  handleChange(name, value) {
-    const newData = _.extend({}, this.state.formData);
-    newData[name] = value;
-    const isDirty = !_.isEqual(newData, this.initialData);
-    this.setState({ isDirty, formData: newData });
+  handleChange(values) {
+    const isDirty = !_.isEqual(values, this.initialData);
+    const formData = assign(this.state.formData, { translations: values });
+    this.setState({ isDirty, formData });
+    this.props.onChange(isDirty);
+  },
+
+  handleCommentChange(name, comment) {
+    const isDirty = comment !== '';
+    const formData = assign(this.state.formData, { comment });
+    this.setState({ isDirty, formData });
     this.props.onChange(isDirty);
   },
 
@@ -76,25 +88,28 @@ const SuggestionFeedBackForm = React.createClass({
         id="suggestion-feedback-form"
       >
         <div className="fields">
-          <FormElement
-            id="suggestion-editor"
-            type="textarea"
-            label={gettext('Edit the suggestion before accepting, if necessary')}
-            placeholder=""
-            name="translation"
-            handleChange={this.handleChange}
-            value={formData.translation}
-            data-action="overwrite"
-            dir={this.props.localeDir}
-            autoFocus
-          />
+          <div className="field-wrapper suggestion-editor">
+            <label htmlFor="suggestion-editor">
+              {gettext('Edit the suggestion before accepting, if necessary')}
+            </label>
+            <this.props.editorComponent
+              currentLocaleCode={this.props.currentLocaleCode}
+              currentLocaleDir={this.props.currentLocaleDir}
+              initialValues={formData.translations}
+              onChange={this.handleChange}
+              sourceValues={this.props.sourceValues}
+              targetNplurals={this.props.targetNplurals}
+              isDisabled={this.props.isDisabled}
+            />
+          </div>
           <FormElement
             type="textarea"
             label={gettext('Provide optional comment (will be publicly visible)')}
             placeholder=""
             name="comment"
-            handleChange={this.handleChange}
+            handleChange={this.handleCommentChange}
             value={formData.comment}
+            className="comment"
           />
         </div>
         <p className="buttons">

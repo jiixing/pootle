@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -7,7 +6,6 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
-import io
 import logging
 import os
 
@@ -17,11 +15,15 @@ from django.contrib.auth import get_user_model
 from django.utils.functional import cached_property
 
 from pootle.core.models import Revision
+from pootle.core.proxy import AttributeProxy
 from pootle_statistics.models import SubmissionTypes
-from pootle_store.models import FILE_WINS, POOTLE_WINS, Store
+from pootle_store.constants import POOTLE_WINS, SOURCE_WINS
+from pootle_store.models import Store
 
 
 logger = logging.getLogger(__name__)
+
+User = get_user_model()
 
 
 class FSFile(object):
@@ -70,12 +72,9 @@ class FSFile(object):
 
     @property
     def fs_changed(self):
-        latest_hash = self.latest_hash
         return (
-            latest_hash is not None
-            and (
-                latest_hash
-                != self.store_fs.last_sync_hash))
+            self.latest_hash
+            != self.store_fs.last_sync_hash)
 
     @property
     def latest_hash(self):
@@ -83,21 +82,24 @@ class FSFile(object):
             return str(os.stat(self.file_path).st_mtime)
 
     @property
+    def latest_author(self):
+        return None, None
+
+    @property
+    def plugin(self):
+        return self.store_fs.plugin
+
+    @property
     def pootle_changed(self):
-        return (
+        return bool(
             self.store_exists
             and (
-                self.store.get_max_unit_revision()
+                (self.store.data.max_unit_revision or 0)
                 != self.store_fs.last_sync_revision))
 
     @cached_property
     def store(self):
         return self.store_fs.store
-
-    def add(self):
-        logger.debug("Adding file: %s" % self.path)
-        self.store_fs.resolve_conflict = POOTLE_WINS
-        self.store_fs.save()
 
     def create_store(self):
         """
@@ -125,32 +127,29 @@ class FSFile(object):
             self.store_fs.delete()
         self.remove_file()
 
-    def fetch(self):
-        """
-        Called when FS file is fetched
-        """
-        logger.debug("Fetching file: %s" % self.path)
-        self.store_fs.resolve_conflict = FILE_WINS
-        self.store_fs.save()
-
-    def merge(self, pootle_wins):
-        if pootle_wins:
-            self.store_fs.resolve_conflict = POOTLE_WINS
-        else:
-            self.store_fs.resolve_conflict = FILE_WINS
-        self.store_fs.staged_for_merge = True
-        self.store_fs.save()
-
-    def on_sync(self):
+    def on_sync(self, last_sync_hash, last_sync_revision, save=True):
         """
         Called after FS and Pootle have been synced
         """
         self.store_fs.resolve_conflict = None
         self.store_fs.staged_for_merge = False
-        self.store_fs.last_sync_hash = self.latest_hash
-        self.store_fs.last_sync_revision = self.store.get_max_unit_revision()
-        self.store_fs.save()
-        logger.debug("File synced: %s" % self.path)
+        self.store_fs.last_sync_hash = last_sync_hash
+        self.store_fs.last_sync_revision = last_sync_revision
+        if save:
+            self.store_fs.save()
+
+    @property
+    def latest_user(self):
+        author, author_email = self.latest_author
+        if not author or not author_email:
+            return self.plugin.pootle_user
+        try:
+            return User.objects.get(email=author_email)
+        except User.DoesNotExist:
+            try:
+                return User.objects.get(username=author)
+            except User.DoesNotExist:
+                return self.plugin.pootle_user
 
     def pull(self, user=None, merge=False, pootle_wins=None):
         """
@@ -158,10 +157,12 @@ class FSFile(object):
         """
         if self.store_exists and not self.fs_changed:
             return
-        logger.debug("Pulling file: %s" % self.path)
+        logger.debug("Pulling file: %s", self.path)
         if not self.store_exists:
             self.create_store()
-        self._sync_to_pootle(user=user, merge=merge, pootle_wins=pootle_wins)
+        if self.store.obsolete:
+            self.store.resurrect()
+        self._sync_to_pootle(merge=merge, pootle_wins=pootle_wins)
 
     def push(self, user=None):
         """
@@ -172,10 +173,10 @@ class FSFile(object):
             or (self.file_exists and not self.pootle_changed))
         if dont_push:
             return
-        logger.debug("Pushing file: %s" % self.path)
+        logger.debug("Pushing file: %s", self.path)
         directory = os.path.dirname(self.file_path)
         if not os.path.exists(directory):
-            logger.debug("Creating directory: %s" % directory)
+            logger.debug("Creating directory: %s", directory)
             os.makedirs(directory)
         self._sync_from_pootle()
 
@@ -189,32 +190,20 @@ class FSFile(object):
         if self.file_exists:
             os.unlink(self.file_path)
 
-    def rm(self):
-        self.store_fs.staged_for_removal = True
-        self.store_fs.save()
-
-    def unstage(self):
-        should_remove = (
-            not self.store_fs.last_sync_revision
-            and not self.store_fs.last_sync_hash)
-        self.store_fs.resolve_conflict = None
-        self.store_fs.staged_for_merge = False
-        self.store_fs.staged_for_removal = False
-        if should_remove:
-            self.store_fs.delete()
-        else:
-            self.store_fs.save()
-
-    def deserialize(self):
-        if not self.file_exists:
+    def deserialize(self, create=False):
+        if not create and not self.file_exists:
             return
-        deserialized = ""
-        with open(self.file_path) as f:
-            deserialized = f.read()
+        if self.file_exists:
+            with open(self.file_path) as f:
+                f = AttributeProxy(f)
+                f.location_root = self.store_fs.project.local_fs_path
+                store_file = (
+                    self.store.syncer.file_class(f)
+                    if self.store and self.store.syncer.file_class
+                    else getclass(f)(f.read()))
+            return store_file
         if self.store_exists:
-            return self.store.deserialize(deserialized)
-        serial_io = io.BytesIO(deserialized)
-        return getclass(serial_io)(serial_io.read())
+            return self.store.deserialize(self.store.serialize())
 
     def serialize(self):
         if not self.store_exists:
@@ -225,22 +214,27 @@ class FSFile(object):
         """
         Update FS file with the serialized content from Pootle ```Store```
         """
+        disk_store = self.deserialize(create=True)
+        self.store.syncer.sync(disk_store, self.store.data.max_unit_revision)
         with open(self.file_path, "w") as f:
-            f.write(self.serialize())
-        logger.debug("Pushed file: %s" % self.path)
+            f.write(str(disk_store))
+        logger.debug("Pushed file: %s", self.path)
 
-    def _sync_to_pootle(self, merge=False, user=None, pootle_wins=None):
+    def _sync_to_pootle(self, merge=False, pootle_wins=None):
         """
         Update Pootle ``Store`` with the parsed FS file.
         """
-        User = get_user_model()
+        tmp_store = self.deserialize()
+        if not tmp_store:
+            logger.warn("File staged for sync has disappeared: %s", self.path)
+            return
         if pootle_wins is None:
             resolve_conflict = (
-                self.store_fs.resolve_conflict or FILE_WINS)
+                self.store_fs.resolve_conflict or SOURCE_WINS)
         elif pootle_wins:
             resolve_conflict = POOTLE_WINS
         else:
-            resolve_conflict = FILE_WINS
+            resolve_conflict = SOURCE_WINS
         if merge:
             revision = self.store_fs.last_sync_revision or 0
         else:
@@ -248,11 +242,10 @@ class FSFile(object):
             # This is analogous to the `overwrite` option in
             # Store.update_from_disk
             revision = Revision.get() + 1
-        tmp_store = self.deserialize()
         self.store.update(
             tmp_store,
             submission_type=SubmissionTypes.SYSTEM,
-            user=user or User.objects.get_system_user(),
+            user=self.latest_user,
             store_revision=revision,
             resolve_conflict=resolve_conflict)
-        logger.debug("Pulled file: %s" % self.path)
+        logger.debug("Pulled file: %s", self.path)

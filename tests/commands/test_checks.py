@@ -11,7 +11,8 @@ import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
-from pootle_store.models import Unit, TRANSLATED
+from pootle_store.constants import TRANSLATED
+from pootle_store.models import Unit
 
 
 @pytest.mark.cmd
@@ -25,7 +26,7 @@ def test_test_checks_noargs():
 
 @pytest.mark.cmd
 @pytest.mark.django_db
-def test_test_checks_unit_unkown(afrikaans_tutorial):
+def test_test_checks_unit_unkown():
     """Check a --unit that we won't have"""
     with pytest.raises(CommandError) as e:
         call_command('test_checks', '--unit=100000')
@@ -67,18 +68,6 @@ def test_test_checks_srctgt_pass(capfd):
 @pytest.mark.cmd
 def test_test_checks_srctgt_fail(capfd):
     """Failing --source --target check."""
-    call_command('test_checks', '--source="%s files"', '--target="%s leers"')
-    out, err = capfd.readouterr()
-    assert 'No errors found' in out
-    call_command('test_checks', '--source="%s files"', '--target="%d leers"')
-    out, err = capfd.readouterr()
-    assert 'Failing checks' in out
-
-
-@pytest.mark.cmd
-def test_test_checks_alt_checker(capfd, settings):
-    """Use an alternate checker."""
-    settings.POOTLE_QUALITY_CHECKER = 'pootle_misc.checks.ENChecker'
     call_command('test_checks', '--source="%s files"', '--target="%s leers"')
     out, err = capfd.readouterr()
     assert 'No errors found' in out

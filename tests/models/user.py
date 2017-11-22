@@ -13,11 +13,20 @@ import pytest
 
 from allauth.account.models import EmailAddress
 
+from pytest_pootle.fixtures.models.permission_set import _require_permission_set
 from pytest_pootle.fixtures.models.store import (_create_submission_and_suggestion,
                                                  _create_comment_on_unit)
 
 import accounts
-from pootle_store.util import FUZZY, TRANSLATED
+
+from pootle.core.delegate import review
+from pootle_app.models.directory import Directory
+from pootle_app.models.permissions import PermissionSet, check_user_permission
+from pootle_language.models import Language
+from pootle_project.models import Project
+from pootle_store.constants import FUZZY, TRANSLATED
+from pootle_store.models import Suggestion
+from pootle_translationproject.models import TranslationProject
 
 
 def _make_evil_member_updates(store, evil_member):
@@ -30,20 +39,15 @@ def _make_evil_member_updates(store, evil_member):
     #   - adds another unit
     member_suggestion = store.units[0].get_suggestions().first()
     evil_units = [
-        ("Hello, world", "Hello, world EVIL"),
-        ("Goodbye, world", "Goodbye, world EVIL")]
-    unit = store.units[0]
-    unit.reject_suggestion(member_suggestion,
-                           store.units[0].store.translation_project,
-                           evil_member)
+        ("Hello, world", "Hello, world EVIL", False),
+        ("Goodbye, world", "Goodbye, world EVIL", False)]
+    review.get(Suggestion)([member_suggestion], evil_member).reject()
     _create_submission_and_suggestion(store,
                                       evil_member,
                                       units=evil_units,
                                       suggestion="EVIL SUGGESTION")
     evil_suggestion = store.units[0].get_suggestions().first()
-    store.units[0].accept_suggestion(evil_suggestion,
-                                     store.units[0].store.translation_project,
-                                     evil_member)
+    review.get(Suggestion)([evil_suggestion], evil_member).accept()
     _create_comment_on_unit(store.units[0], evil_member, "EVIL COMMENT")
 
 
@@ -53,7 +57,7 @@ def _test_user_merged(unit, src_user, target_user):
         assert src_user.submitted.count() == 0
         assert src_user.suggestions.count() == 0
 
-    assert unit in list(target_user.submitted.all())
+    assert unit.change in list(target_user.submitted.all())
     assert (
         unit.get_suggestions().first()
         in list(target_user.suggestions.all()))
@@ -67,7 +71,7 @@ def _test_before_evil_user_updated(store, member, teststate=False):
 
     # Unit target was updated.
     assert unit.target_f == "Hello, world UPDATED"
-    assert unit.submitted_by == member
+    assert unit.change.submitted_by == member
 
     # But member also added a suggestion to the unit.
     assert unit.get_suggestions().count() == 1
@@ -75,7 +79,7 @@ def _test_before_evil_user_updated(store, member, teststate=False):
 
     # And added a comment on the unit.
     assert unit.translator_comment == "NICE COMMENT"
-    assert unit.commented_by == member
+    assert unit.change.commented_by == member
 
     # Only 1 unit round here.
     assert store.units.count() == 1
@@ -89,19 +93,19 @@ def _test_after_evil_user_updated(store, evil_member):
 
     # Evil member has accepted their own suggestion.
     assert unit.target_f == "EVIL SUGGESTION"
-    assert unit.submitted_by == evil_member
+    assert unit.change.submitted_by == evil_member
 
     # And rejected member's.
     assert unit.get_suggestions().count() == 0
 
     # And added their own comment.
     assert unit.translator_comment == "EVIL COMMENT"
-    assert unit.commented_by == evil_member
+    assert unit.change.commented_by == evil_member
 
     # Evil member has added another unit.
     assert store.units.count() == 2
     assert store.units[1].target_f == "Goodbye, world EVIL"
-    assert store.units[1].submitted_by == evil_member
+    assert store.units[1].change.submitted_by == evil_member
 
 
 def _test_user_purging(store, member, evil_member, purge):
@@ -110,9 +114,9 @@ def _test_user_purging(store, member, evil_member, purge):
     unit = store.units[0]
 
     # Get intitial change times
-    initial_submission_time = unit.submitted_on
-    initial_comment_time = unit.commented_on
-    initial_review_time = unit.reviewed_on
+    initial_submission_time = unit.change.submitted_on
+    initial_comment_time = unit.change.commented_on
+    initial_review_time = unit.change.reviewed_on
 
     # Test state before evil user has updated.
     _test_before_evil_user_updated(store, member, True)
@@ -125,15 +129,17 @@ def _test_user_purging(store, member, evil_member, purge):
     assert latest_revision > first_revision
 
     unit = store.units[0]
+    original_revision = unit.store.parent.revisions.get(
+        key="stats").value
 
     # Test submitted/commented/reviewed times on the unit.  This is an
     # unreliable test on MySQL due to datetime precision
-    if unit.submitted_on.time().microsecond != 0:
+    if unit.change.submitted_on.time().microsecond != 0:
 
         # Times have changed
-        assert unit.submitted_on != initial_submission_time
-        assert unit.commented_on != initial_comment_time
-        assert unit.reviewed_on != initial_review_time
+        assert unit.change.submitted_on != initial_submission_time
+        assert unit.change.commented_on != initial_comment_time
+        assert unit.change.reviewed_on != initial_review_time
 
     # Test state after evil user has updated.
     _test_after_evil_user_updated(store, evil_member)
@@ -147,9 +153,14 @@ def _test_user_purging(store, member, evil_member, purge):
     unit = store.units[0]
 
     # Times are back to previous times - by any precision
-    assert unit.submitted_on == initial_submission_time
-    assert unit.commented_on == initial_comment_time
-    assert unit.reviewed_on == initial_review_time
+    assert unit.change.submitted_on == initial_submission_time
+    assert unit.change.commented_on == initial_comment_time
+    assert unit.change.reviewed_on == initial_review_time
+
+    # Revision has been expired for unit's directory
+    assert (
+        unit.store.parent.revisions.get(key="stats").value
+        != original_revision)
 
     # State is be back to how it was before evil user updated.
     _test_before_evil_user_updated(store, member)
@@ -166,7 +177,6 @@ def test_merge_user(en_tutorial_po, member, member2):
 @pytest.mark.django_db
 def test_delete_user(en_tutorial_po):
     """Test default behaviour of User.delete - merge to nobody"""
-    from django.contrib.auth import get_user_model
     User = get_user_model()
 
     member = User.objects.get(username="member")
@@ -440,41 +450,67 @@ def test_update_user_email_bad_invalid_duplicate(member_with_email, member2):
 
 
 @pytest.mark.django_db
-def test_user_has_manager_permissions(no_perms_user, administrate, tutorial,
-                                      afrikaans, afrikaans_tutorial):
+def test_user_has_manager_permissions(no_perms_user, administrate, tp0):
     """Test user `has_manager_permissions` method."""
-    from pootle_app.models.permissions import PermissionSet
+    language0 = tp0.language
+    project0 = tp0.project
 
     # User has no permissions, so can't be manager.
     assert not no_perms_user.has_manager_permissions()
 
-    # Assign 'administrate' right for 'Afrikaans (Tutorial)' TP and check user
+    # Assign 'administrate' right for 'Language0 (Project0)' TP and check user
     # is manager.
     criteria = {
         'user': no_perms_user,
-        'directory': afrikaans_tutorial.directory,
+        'directory': tp0.directory,
     }
-    ps, created = PermissionSet.objects.get_or_create(**criteria)
-    ps.positive_permissions = [administrate]
+    ps = PermissionSet.objects.get_or_create(**criteria)[0]
+    ps.positive_permissions.set([administrate])
     ps.save()
     assert no_perms_user.has_manager_permissions()
     ps.positive_permissions.clear()
     assert not no_perms_user.has_manager_permissions()
 
-    # Assign 'administrate' right for 'Afrikaans' and check user is manager.
-    criteria['directory'] = afrikaans.directory
-    ps, created = PermissionSet.objects.get_or_create(**criteria)
-    ps.positive_permissions = [administrate]
+    # Assign 'administrate' right for 'Language0' and check user is manager.
+    criteria['directory'] = language0.directory
+    ps = PermissionSet.objects.get_or_create(**criteria)[0]
+    ps.positive_permissions.set([administrate])
     ps.save()
     assert no_perms_user.has_manager_permissions()
     ps.positive_permissions.clear()
     assert not no_perms_user.has_manager_permissions()
 
-    # Assign 'administrate' right for 'Tutorial' and check user is manager.
-    criteria['directory'] = tutorial.directory
-    ps, created = PermissionSet.objects.get_or_create(**criteria)
-    ps.positive_permissions = [administrate]
+    # Assign 'administrate' right for 'Project0' and check user is manager.
+    criteria['directory'] = project0.directory
+    ps = PermissionSet.objects.get_or_create(**criteria)[0]
+    ps.positive_permissions.set([administrate])
     ps.save()
     assert no_perms_user.has_manager_permissions()
     ps.positive_permissions.clear()
     assert not no_perms_user.has_manager_permissions()
+
+
+@pytest.mark.django_db
+def test_get_users_with_permission(default, member, translate):
+    language = Language.objects.get(code='language0')
+    project = Project.objects.get(code='project0')
+    User = get_user_model()
+
+    directory = TranslationProject.objects.get(
+        project=project,
+        language=language
+    ).directory
+
+    member.email = "member@poot.le"
+    member.save()
+    accounts.utils.verify_user(member)
+    _require_permission_set(member, directory, [translate])
+
+    # remove "Can submit translation" permission for default user
+    ps = PermissionSet.objects.filter(user=default,
+                                      directory=Directory.objects.root)[0]
+    ps.positive_permissions.set(ps.positive_permissions.exclude(id=translate.id))
+    ps.save()
+    users = User.objects.get_users_with_permission('translate', project, language)
+    for user in users:
+        assert check_user_permission(user, 'translate', directory)

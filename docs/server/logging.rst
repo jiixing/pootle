@@ -20,7 +20,7 @@ store changes, command execution and other activities.
 The generic log message is as follows (though some actions do produce slightly
 different log entries)::
 
-  [2015-05-04T15:06:39]   system  X   ./manage.py update_tmserver
+  [2015-05-04T15:06:39]   system  X   pootle update_tmserver
 
 That is::
 
@@ -59,7 +59,7 @@ Current action types are as follows:
 +----------+--------------+-------------------------------------------------+
 |  SD      | Store        | An existing store was deleted                   |
 +----------+--------------+-------------------------------------------------+
-|  X       | Command      | A ``./manage.py`` command was executed          |
+|  X       | Command      | A ``pootle`` command was executed               |
 +----------+--------------+-------------------------------------------------+
 |  QM      | Quality      | A quality check was muted (marked as a false    |
 |          | check        | positive)                                       |
@@ -68,10 +68,6 @@ Current action types are as follows:
 |          | check        | having been muted)                              |
 +----------+--------------+-------------------------------------------------+
 |  SC      | Score        | A users score has changed because of an action  |
-+----------+--------------+-------------------------------------------------+
-|  PTA     | Paid Task    | A paid task has been added                      |
-+----------+--------------+-------------------------------------------------+
-|  PTD     | Paid Task    | A paid task has been deleted                    |
 +----------+--------------+-------------------------------------------------+
 
 
@@ -132,8 +128,8 @@ Various of the action groups have different message structures as outlined here:
 *Command*::
 
   date  user  action command
-  [2015-05-06T11:24:28]	system	X	./manage.py update_stores --project=vfolders
-  [2015-05-05T20:22:46]	system	X	./manage.py migrate
+  [2015-05-06T11:24:28]	system	X	pootle update_stores --project=vfolders
+  [2015-05-05T20:22:46]	system	X	pootle migrate
 
 *Quality check*::
 
@@ -145,11 +141,6 @@ Various of the action groups have different message structures as outlined here:
 
   date  user    SC  score_delta  score_action    #unit  NS=wordcount    S=similarity   total
   [2015-05-19T14:19:11]   admin   SC      1.0     TA      #1      NS=1    S=0.0   (total: 2.28571428571)
-
-*Paid Task*::
-
-  date  user    action  Task: [id, user, date, type, amount, comment]
-  [2015-05-19T14:35:34]   admin   PTA     Task: [id=1, user=admin, month=2015-05, type=Translation, amount=1000.0, comment=Translate UI]
 
 
 Sync and Update messages

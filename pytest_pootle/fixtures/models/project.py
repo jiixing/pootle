@@ -21,12 +21,10 @@ def _require_project(code, name, source_language, **kwargs):
         'fullname': name,
         'source_language': source_language,
         'checkstyle': 'standard',
-        'localfiletype': 'po',
         'treestyle': 'auto',
     }
     criteria.update(kwargs)
-
-    new_project, created = Project.objects.get_or_create(**criteria)
+    new_project = Project.objects.get_or_create(**criteria)[0]
     return new_project
 
 
@@ -66,16 +64,82 @@ def project_bar(english):
 
 
 @pytest.fixture
-def vfolder_project(english, settings):
-    """Require `vfolder_test` test project."""
-    import pytest_pootle
+def project0():
+    """project0 Project"""
+    from pootle_project.models import Project
 
-    shutil.copytree(
-        os.path.join(
-            os.path.dirname(pytest_pootle.__file__),
-            "data", "po", "vfolder_test"),
-        os.path.join(
-            settings.POOTLE_TRANSLATION_DIRECTORY,
-            "vfolder_test"))
+    return Project.objects.select_related(
+        "source_language").get(code="project0")
 
-    return _require_project('vfolder_test', 'Virtual Folder Test', english)
+
+@pytest.fixture
+def project1():
+    """project0 Project"""
+    from pootle_project.models import Project
+
+    return Project.objects.select_related(
+        "source_language").get(code="project1")
+
+
+@pytest.fixture
+def project0_directory(po_directory, project0):
+    """project0 Project"""
+    return project0
+
+
+@pytest.fixture
+def project0_nongnu(project0_directory, project0, settings):
+    project0.treestyle = "nongnu"
+    project0.save()
+    project_dir = os.path.join(
+        settings.POOTLE_TRANSLATION_DIRECTORY, project0.code)
+    if not os.path.exists(project_dir):
+        os.makedirs(project_dir)
+    for tp in project0.translationproject_set.all():
+        tp.save()
+    return project0
+
+
+@pytest.fixture
+def project_dir_resources0(project0, subdir0):
+    """Returns a ProjectResource object for a Directory"""
+
+    from pootle_app.models import Directory
+    from pootle_project.models import ProjectResource
+
+    resources = Directory.objects.live().filter(
+        name=subdir0.name,
+        parent__translationproject__project=project0)
+    return ProjectResource(
+        resources,
+        ("/projects/%s/%s"
+         % (project0.code,
+            subdir0.name)))
+
+
+@pytest.fixture
+def project_store_resources0(project0, subdir0):
+    """Returns a ProjectResource object for a Store"""
+
+    from pootle_project.models import ProjectResource
+    from pootle_store.models import Store
+
+    store = subdir0.child_stores.live().first()
+    resources = Store.objects.live().filter(
+        name=store.name,
+        parent__name=subdir0.name,
+        translation_project__project=project0)
+
+    return ProjectResource(
+        resources,
+        ("/projects/%s/%s/%s"
+         % (project0.code,
+            subdir0.name,
+            store.name)))
+
+
+@pytest.fixture
+def project_set():
+    from pootle_project.models import Project, ProjectSet
+
+    return ProjectSet(Project.objects.exclude(disabled=True))

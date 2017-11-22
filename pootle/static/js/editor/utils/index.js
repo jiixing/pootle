@@ -7,5 +7,13 @@
  */
 
 export { decodeEntities } from './html';
+export {
+  highlightPunctuation, highlightEscapes, highlightHtml, highlightSymbols, nl2br,
+} from './highlight';
 export { normalizeCode } from './language';
 export { escapeUnsafeRegexSymbols, makeRegexForMultipleWords } from './search';
+
+
+export function getAreaId(index) {
+  return `target_f_${index}`;
+}

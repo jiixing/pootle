@@ -1,5 +1,5 @@
 {% load i18n %}
-<ul class="breadcrumb js-breadcrumb">
+<ul class="breadcrumb js-breadcrumb s2-pootle">
   <li>
     <select id="js-filter-status">
       {# Translators: This refers to "All strings" #}
@@ -21,10 +21,14 @@
   <li class="js-filter-checks-wrapper hide">
     <select id="js-filter-checks">
       <option selected value="none">{% trans 'Select type' %}</option>
-      {% for item in check_categories %}
+      {% for category, item in checks.items %}
       <optgroup label="{{ item.title }}">
+        <option
+	   class="checks-category"
+	   value="{{ category }}-category"
+	   data-title="{{ category }}">{{ category|title }}</option>
         {% for check in item.checks %}
-        <option value="{{ check.code }}" data-title="{{ check.title }}"></option>
+        <option value="{{ check.code }}" data-title="{{ check.title }}">{{ check.title }} ({{ check.count }})</option>
         {% endfor %}
       </optgroup>
       {% endfor %}

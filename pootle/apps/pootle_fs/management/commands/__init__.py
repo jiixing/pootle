@@ -11,6 +11,7 @@ from django.utils.lru_cache import lru_cache
 
 from pootle.core.exceptions import MissingPluginError, NotConfiguredError
 from pootle_fs.display import ResponseDisplay
+from pootle_fs.exceptions import FSStateError
 from pootle_fs.utils import FSPlugin
 from pootle_project.models import Project
 
@@ -70,14 +71,17 @@ class FSAPISubCommand(ProjectSubCommand):
             for k, v
             in options.items()
             if k in [
-                "pootle_path", "fs_path",
+                "pootle_path", "fs_path", "merge",
                 "force", "pootle_wins"]}
 
     def handle_api(self, **options):
         api_method = getattr(
             self.get_fs(options["project"]),
             self.api_method)
-        return api_method(**self.handle_api_options(options))
+        try:
+            return api_method(**self.handle_api_options(options))
+        except FSStateError as e:
+            raise CommandError(e)
 
     def display(self, **options):
         return ResponseDisplay(

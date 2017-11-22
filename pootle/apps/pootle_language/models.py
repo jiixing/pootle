@@ -6,56 +6,21 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
-import locale
 from collections import OrderedDict
 
-from django.conf import settings
-from django.core.cache import cache
-from django.core.urlresolvers import reverse
-from django.db import models
-from django.db.models.signals import post_delete, post_save
-from django.dispatch import receiver
-from django.utils.translation import ugettext_lazy as _
+from translate.lang.data import get_language_iso_fullname
 
-from pootle.core.cache import make_method_key
+from django.conf import settings
+from django.db import models
+from django.urls import reverse
+from django.utils import translation
+from django.utils.functional import cached_property
+
+from pootle.core.delegate import data_tool, language_code, site_languages
 from pootle.core.mixins import TreeItem
 from pootle.core.url_helpers import get_editor_filter
-from pootle.i18n.gettext import language_dir, tr_lang
+from pootle.i18n.gettext import language_dir, tr_lang, ugettext_lazy as _
 from staticpages.models import StaticPage
-
-
-class LiveLanguageManager(models.Manager):
-    """Manager that only considers `live` languages.
-
-    A live language is any language containing at least a project with
-    translatable files.
-    """
-
-    def get_queryset(self):
-        return super(LiveLanguageManager, self).get_queryset().filter(
-            translationproject__isnull=False,
-            project__isnull=True,
-        ).distinct()
-
-    def cached_dict(self, locale_code='en-us'):
-        """Retrieves a sorted list of live language codes and names.
-
-        :param locale_code: the UI locale for which language full names need to
-            be localized.
-        :return: an `OrderedDict`
-        """
-        key = make_method_key(self, 'cached_dict', locale_code)
-        languages = cache.get(key, None)
-        if languages is None:
-            languages = OrderedDict(
-                sorted([(lang[0], tr_lang(lang[1]))
-                        for lang in self.values_list('code', 'fullname')],
-                       cmp=locale.strcoll,
-                       key=lambda x: x[1])
-            )
-            cache.set(key, languages, settings.POOTLE_CACHE_TIMEOUT)
-
-        return languages
 
 
 class Language(models.Model, TreeItem):
@@ -96,10 +61,9 @@ class Language(models.Model, TreeItem):
         help_text=plurals_help_text)
 
     directory = models.OneToOneField('pootle_app.Directory', db_index=True,
-                                     editable=False)
+                                     editable=False, on_delete=models.CASCADE)
 
     objects = models.Manager()
-    live = LiveLanguageManager()
 
     class Meta(object):
         ordering = ['code']
@@ -107,14 +71,34 @@ class Language(models.Model, TreeItem):
 
     # # # # # # # # # # # # # #  Properties # # # # # # # # # # # # # # # # # #
 
+    @cached_property
+    def data_tool(self):
+        return data_tool.get(self.__class__)(self)
+
     @property
     def pootle_path(self):
         return '/%s/' % self.code
 
     @property
     def name(self):
-        """Localized fullname for the language."""
-        return tr_lang(self.fullname)
+        """localised ISO name for the language or fullname
+        if request lang == server lang, and fullname is set. Uses code
+        as the ultimate fallback
+        """
+        site_langs = site_languages.get()
+        server_code = language_code.get()(settings.LANGUAGE_CODE)
+        request_code = language_code.get()(translation.get_language())
+        use_db_name = (
+            not translation.get_language()
+            or (self.fullname
+                and server_code.matches(request_code)))
+        if use_db_name:
+            return self.fullname
+        iso_name = get_language_iso_fullname(self.code) or self.fullname
+        return (
+            site_langs.capitalize(tr_lang(iso_name))
+            if iso_name
+            else self.code)
 
     @property
     def direction(self):
@@ -131,8 +115,9 @@ class Language(models.Model, TreeItem):
 
         :param language_code: the code of the language to retrieve.
         """
+        qs = cls.objects.select_related("directory")
         try:
-            return cls.objects.get(code__iexact=language_code)
+            return qs.get(code__iexact=language_code)
         except cls.DoesNotExist:
             _lang_code = language_code
             if "-" in language_code:
@@ -140,7 +125,7 @@ class Language(models.Model, TreeItem):
             elif "_" in language_code:
                 _lang_code = language_code.replace("_", "-")
             try:
-                return cls.objects.get(code__iexact=_lang_code)
+                return qs.get(code__iexact=_lang_code)
             except cls.DoesNotExist:
                 return None
 
@@ -150,14 +135,20 @@ class Language(models.Model, TreeItem):
     def __init__(self, *args, **kwargs):
         super(Language, self).__init__(*args, **kwargs)
 
-    def __repr__(self):
-        return u'<%s: %s>' % (self.__class__.__name__, self.fullname)
-
     def save(self, *args, **kwargs):
         # create corresponding directory object
         from pootle_app.models.directory import Directory
         self.directory = Directory.objects.root.get_or_make_subdir(self.code)
 
+        # Do not repeat special chars.
+        self.specialchars = u"".join(
+            OrderedDict([
+                ((specialchar
+                  if isinstance(specialchar, unicode)
+                  else specialchar.decode("unicode_escape")),
+                 None)
+                for specialchar
+                in self.specialchars]).keys())
         super(Language, self).save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
@@ -185,14 +176,7 @@ class Language(models.Model, TreeItem):
     def get_children(self):
         return self.translationproject_set.live()
 
-    def get_cachekey(self):
-        return self.directory.pootle_path
-
     # # # /TreeItem
-
-    def get_stats_for_user(self, user):
-        self.set_children(self.get_children_for_user(user))
-        return self.get_stats()
 
     def get_children_for_user(self, user, select_related=None):
         return self.translationproject_set.for_user(
@@ -204,13 +188,3 @@ class Language(models.Model, TreeItem):
     def get_announcement(self, user=None):
         """Return the related announcement, if any."""
         return StaticPage.get_announcement_for(self.pootle_path, user)
-
-
-@receiver([post_delete, post_save])
-def invalidate_language_list_cache(sender, instance, **kwargs):
-    # XXX: maybe use custom signals or simple function calls?
-    if instance.__class__.__name__ not in ['Language', 'TranslationProject']:
-        return
-
-    key = make_method_key('LiveLanguageManager', 'cached_dict', '*')
-    cache.delete_pattern(key)

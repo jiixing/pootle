@@ -1,1 +1,1 @@
-[{{ settings.POOTLE_TITLE }}] {{ subject }}
+[{{ server_name }}] {{ email_subject|escape }}

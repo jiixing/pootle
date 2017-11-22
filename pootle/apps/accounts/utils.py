@@ -17,8 +17,14 @@ from django.db.models import Count
 from allauth.account.models import EmailAddress
 from allauth.account.utils import sync_user_email_addresses
 
-from pootle_store.models import SuggestionStates
-from pootle_store.util import FUZZY, UNTRANSLATED
+from pootle.core.contextmanagers import keep_data
+from pootle.core.delegate import score_updater
+from pootle.core.models import Revision
+from pootle.core.signals import update_data, update_revisions
+from pootle_app.models import Directory
+from pootle_statistics.models import SubmissionFields
+from pootle_store.constants import FUZZY, UNTRANSLATED
+from pootle_store.models import SuggestionState
 
 
 logger = logging.getLogger(__name__)
@@ -52,12 +58,13 @@ def write_stdout(start_msg, end_msg="DONE\n", fail_msg="FAILED\n"):
         def method_wrapper(self, *args, **kwargs):
             sys.stdout.write(start_msg % self.__dict__)
             try:
-                f(self, *args, **kwargs)
+                result = f(self, *args, **kwargs)
             except Exception as e:
                 sys.stdout.write(fail_msg % self.__dict__)
                 logger.exception(e)
                 raise e
             sys.stdout.write(end_msg % self.__dict__)
+            return result
         return method_wrapper
     return class_wrapper
 
@@ -96,6 +103,7 @@ class UserMerger(object):
     def merge_commented(self):
         """Merge commented_by attribute on units
         """
+        # TODO: this need to update unitchange not unit
         self.src_user.commented.update(commented_by=self.target_user)
 
     @write_stdout(" * Merging units reviewed: "
@@ -120,9 +128,8 @@ class UserMerger(object):
         # Delete orphaned submissions.
         self.src_user.submission_set.filter(unit__isnull=True).delete()
 
-        # Before we can save we first have to remove existing score_logs for
-        # src_user - they will be recreated on save for target_user
-        self.src_user.scorelog_set.all().delete()
+        score_updater.get(
+            self.src_user.__class__)(users=[self.src_user.id]).clear()
 
         # Update submitter on submissions
         self.src_user.submission_set.update(submitter=self.target_user)
@@ -163,21 +170,30 @@ class UserPurger(object):
         - Revert unit comments by user.
         - Revert unit state changes by user.
         - Delete any remaining submissions and suggestions.
+        - Expire caches for relevant directories
         """
 
-        self.remove_units_created()
-        self.revert_units_edited()
-        self.revert_units_reviewed()
-        self.revert_units_commented()
-        self.revert_units_state_changed()
+        stores = set()
+        with keep_data():
+            stores |= self.remove_units_created()
+            stores |= self.revert_units_edited()
+            stores |= self.revert_units_reviewed()
+            stores |= self.revert_units_commented()
+            stores |= self.revert_units_state_changed()
 
-        # Delete remaining submissions.
-        logger.debug("Deleting remaining submissions for: %s", self.user)
-        self.user.submission_set.all().delete()
+            # Delete remaining submissions.
+            logger.debug("Deleting remaining submissions for: %s", self.user)
+            self.user.submission_set.all().delete()
 
-        # Delete remaining suggestions.
-        logger.debug("Deleting remaining suggestions for: %s", self.user)
-        self.user.suggestions.all().delete()
+            # Delete remaining suggestions.
+            logger.debug("Deleting remaining suggestions for: %s", self.user)
+            self.user.suggestions.all().delete()
+        for store in stores:
+            update_data.send(store.__class__, instance=store)
+        update_revisions.send(
+            Directory,
+            object_list=Directory.objects.filter(
+                id__in=set(store.parent.id for store in stores)))
 
     @write_stdout(" * Removing units created by: %(user)s... ")
     def remove_units_created(self):
@@ -185,93 +201,111 @@ class UserPurger(object):
         activity.
         """
 
+        stores = set()
         # Delete units created by user without submissions by others.
         for unit in self.user.get_units_created().iterator():
-
+            stores.add(unit.store)
             # Find submissions by other users on this unit.
             other_subs = unit.submission_set.exclude(submitter=self.user)
 
             if not other_subs.exists():
                 unit.delete()
                 logger.debug("Unit deleted: %s", repr(unit))
+        return stores
 
     @write_stdout(" * Reverting unit comments by: %(user)s... ")
     def revert_units_commented(self):
         """Revert comments made by user on units to previous comment or else
         just remove the comment.
         """
-
+        stores = set()
         # Revert unit comments where self.user is latest commenter.
-        for unit in self.user.commented.iterator():
+        for unit_change in self.user.commented.select_related("unit").iterator():
+            unit = unit_change.unit
+            stores.add(unit.store)
 
             # Find comments by other self.users
             comments = unit.get_comments().exclude(submitter=self.user)
-
+            change = {}
             if comments.exists():
                 # If there are previous comments by others update the
                 # translator_comment, commented_by, and commented_on
                 last_comment = comments.latest('pk')
-                unit.translator_comment = last_comment.new_value
-                unit.commented_by = last_comment.submitter
-                unit.commented_on = last_comment.creation_time
+                translator_comment = last_comment.new_value
+                change["commented_by_id"] = last_comment.submitter_id
+                change["commented_on"] = last_comment.creation_time
                 logger.debug("Unit comment reverted: %s", repr(unit))
             else:
-                unit.translator_comment = ""
-                unit.commented_by = None
-                unit.commented_on = None
+                translator_comment = ""
+                change["commented_by"] = None
+                change["commented_on"] = None
                 logger.debug("Unit comment removed: %s", repr(unit))
-
-            # Increment revision
-            unit._comment_updated = True
-            unit.save()
+            unit_change.__class__.objects.filter(id=unit_change.id).update(
+                **change)
+            unit.__class__.objects.filter(id=unit.id).update(
+                translator_comment=translator_comment,
+                revision=Revision.incr())
+        return stores
 
     @write_stdout(" * Reverting units edited by: %(user)s... ")
     def revert_units_edited(self):
         """Revert unit edits made by a user to previous edit.
         """
+        stores = set()
         # Revert unit target where user is the last submitter.
-        for unit in self.user.submitted.iterator():
+        for unit_change in self.user.submitted.select_related("unit").iterator():
+            unit = unit_change.unit
+            stores.add(unit.store)
 
             # Find the last submission by different user that updated the
             # unit.target.
             edits = unit.get_edits().exclude(submitter=self.user)
-
+            updates = {}
+            unit_updates = {}
             if edits.exists():
                 last_edit = edits.latest("pk")
-                unit.target_f = last_edit.new_value
-                unit.submitted_by = last_edit.submitter
-                unit.submitted_on = last_edit.creation_time
+                unit_updates["target_f"] = last_edit.new_value
+                updates["submitted_by_id"] = last_edit.submitter_id
+                updates["submitted_on"] = last_edit.creation_time
                 logger.debug("Unit edit reverted: %s", repr(unit))
             else:
                 # if there is no previous submissions set the target to "" and
-                # set the unit.submitted_by to None
-                unit.target_f = ""
-                unit.submitted_by = None
-                unit.submitted_on = unit.creation_time
+                # set the unit.change.submitted_by to None
+                unit_updates["target_f"] = ""
+                updates["submitted_by"] = None
+                updates["submitted_on"] = unit.creation_time
                 logger.debug("Unit edit removed: %s", repr(unit))
 
             # Increment revision
-            unit._target_updated = True
-            unit.save()
+            unit_change.__class__.objects.filter(id=unit_change.id).update(
+                **updates)
+            unit.__class__.objects.filter(id=unit.id).update(
+                revision=Revision.incr(),
+                **unit_updates)
+        return stores
 
     @write_stdout(" * Reverting units reviewed by: %(user)s... ")
     def revert_units_reviewed(self):
         """Revert reviews made by user on suggestions to previous state.
         """
 
+        stores = set()
+        pending = SuggestionState.objects.get(name="pending")
+
         # Revert reviews by this user.
         for review in self.user.get_suggestion_reviews().iterator():
             suggestion = review.suggestion
-            if suggestion.user == self.user:
+            stores.add(suggestion.unit.store)
+            if suggestion.user_id == self.user.id:
                 # If the suggestion was also created by this user then remove
                 # both review and suggestion.
                 suggestion.delete()
                 logger.debug("Suggestion removed: %s", (suggestion))
-            elif suggestion.reviewer == self.user:
+            elif suggestion.reviewer_id == self.user.id:
                 # If the suggestion is showing as reviewed by the user, then
                 # set the suggestion back to pending and update
                 # reviewer/review_time.
-                suggestion.state = SuggestionStates.PENDING
+                suggestion.state = pending
                 suggestion.reviewer = None
                 suggestion.review_time = None
                 suggestion.save()
@@ -280,33 +314,47 @@ class UserPurger(object):
             # Remove the review.
             review.delete()
 
-        for unit in self.user.reviewed.iterator():
-            reviews = unit.get_suggestion_reviews().exclude(
-                submitter=self.user)
-            if reviews.exists():
-                previous_review = reviews.latest('pk')
-                unit.reviewed_by = previous_review.submitter
-                unit.reviewed_on = previous_review.creation_time
-                logger.debug("Unit reviewed_by reverted: %s", repr(unit))
+        for unit_change in self.user.reviewed.select_related("unit").iterator():
+            unit = unit_change.unit
+            stores.add(unit.store)
+            unit.suggestion_set.filter(reviewer=self.user).update(
+                state=SuggestionState.objects.get(name="pending"),
+                reviewer=None)
+            unit_updates = {}
+            updates = {}
+            if not unit.target:
+                unit_updates["state"] = UNTRANSLATED
+                updates["reviewed_by"] = None
+                updates["reviewed_on"] = None
             else:
-                unit.reviewed_by = None
-                unit.reviewed_on = None
-
-                # Increment revision
-                unit._target_updated = True
-                logger.debug("Unit reviewed_by removed: %s", repr(unit))
-            unit.save()
+                old_state_sub = unit.submission_set.exclude(
+                    submitter=self.user).filter(
+                        field=SubmissionFields.STATE).order_by(
+                            "-creation_time", "-pk").first()
+                if old_state_sub:
+                    unit_updates["state"] = old_state_sub.new_value
+                    updates["reviewed_by"] = old_state_sub.submitter
+                    updates["reviewed_on"] = old_state_sub.creation_time
+            logger.debug("Unit reviewed_by removed: %s", repr(unit))
+            unit_change.__class__.objects.filter(id=unit_change.id).update(
+                **updates)
+            # Increment revision
+            unit.__class__.objects.filter(id=unit.id).update(
+                revision=Revision.incr(),
+                **unit_updates)
+        return stores
 
     @write_stdout(" * Reverting unit state changes by: %(user)s... ")
     def revert_units_state_changed(self):
         """Revert unit edits made by a user to previous edit.
         """
-
+        stores = set()
         # Delete orphaned submissions.
         self.user.submission_set.filter(unit__isnull=True).delete()
 
         for submission in self.user.get_unit_states_changed().iterator():
             unit = submission.unit
+            stores.add(unit.store)
 
             # We have to get latest by pk as on mysql precision is not to
             # microseconds - so creation_time can be ambiguous
@@ -330,9 +378,10 @@ class UserPurger(object):
                 unit.state = new_state
 
                 # Increment revision
-                unit._state_updated = True
-                unit.save()
+                unit.__class__.objects.filter(id=unit.id).update(
+                    revision=Revision.incr())
                 logger.debug("Unit state reverted: %s", repr(unit))
+        return stores
 
 
 def verify_user(user):

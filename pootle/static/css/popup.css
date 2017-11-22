@@ -33,7 +33,7 @@
 .popup-ajax .popup-form,
 .lightbox-body
 {
-    line-height: 1!important;
+    line-height: 1 !important;
 }
 
 /* MFP popus are next to the body, they need a bigger font-size */
@@ -46,6 +46,11 @@
 .lightbox-body
 {
     font-size: 0.8em;
+}
+
+html[dir="rtl"] .lightbox-body
+{
+    text-align: right;
 }
 
 .popup-form h1,
@@ -71,7 +76,7 @@
 .popup-form .buttons input,
 .lightbox-body .buttons input
 {
-    margin: 0.3em 0px 0px;
+    margin: 0.3em 0 0;
 }
 
 .popup-form label,
@@ -84,5 +89,5 @@
 /* for forms displayed in lightbox mode (via magnificPopup plugin), use different shadow */
 .mfp-content .form
 {
-    box-shadow: 0px 2px 30px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 2px 30px rgba(0, 0, 0, 0.5);
 }

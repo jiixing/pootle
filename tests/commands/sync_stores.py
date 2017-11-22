@@ -11,13 +11,15 @@ import pytest
 from django.core.management import call_command
 
 from pootle_project.models import Project
-from pootle_store.models import PARSED, Store
+from pootle_store.constants import PARSED
+from pootle_store.models import Store
 
 
 @pytest.mark.cmd
 @pytest.mark.django_db
-def test_sync_stores_noargs(capfd, en_tutorial_po_member_updated):
+def test_sync_stores_noargs(capfd, project0, project1):
     """Site wide sync_stores"""
+    capfd.readouterr()
     call_command('sync_stores')
     out, err = capfd.readouterr()
     # FIXME we should work out how to get something here
@@ -34,7 +36,7 @@ def test_sync_stores_project_tree_none(capfd):
     store.file = store.name
     store.state = PARSED
     store.save()
-    project.treestyle = "none"
+    project.treestyle = 'pootle_fs'
     project.save()
     capfd.readouterr()
     call_command("sync_stores", "--project", project.code, "--force", "--overwrite")

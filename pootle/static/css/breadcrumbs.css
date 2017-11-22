@@ -4,9 +4,8 @@
 {
     font-size: 1.5em;
     font-weight: normal;
-    font-family: 'Helvetica Neue', Helvetica, Helvetica, Arial, sans-serif;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     visibility: hidden;
-    margin-left: -5px;
     padding: 5px 0;
     height: 2em;
     display: table-cell;
@@ -15,13 +14,13 @@
 
 .browser .breadcrumb
 {
-    padding: 5px 0 0 0;
+    padding: 5px 0 0;
 }
 
 /* By default (on small screens), place resource dropdown on the second line */
 #js-breadcrumb-resource
 {
-    display: block;
+    display: inline-block;
 }
 
 /* When browser window is wide enough, force breadcrumbs to be on the single line */
@@ -30,7 +29,7 @@
     .breadcrumb
     {
         white-space: nowrap;
-        overflow: hidden;
+        overflow: visible;
     }
 
     #js-breadcrumb-resource
@@ -46,6 +45,13 @@
     margin-left: 0.3em;
 }
 
+html[dir="rtl"] .breadcrumb li
+{
+    float: right;
+    margin-left: 0;
+    margin-right: 0.3em;
+}
+
 .breadcrumb li.hide
 {
     display: none;
@@ -56,7 +62,7 @@
     content: " / ";
 }
 
-.breadcrumb li:first-child:before,
+.breadcrumb li:first-child::before,
 .translate .breadcrumb li::before,
 .browser .breadcrumb li::before
 {
@@ -64,94 +70,25 @@
     content: normal;
 }
 
-/* select2 dropdown widgets in breadcrumbs */
-
-.breadcrumb .select2-container .select2-choice,
-.unit-sort .select2-container .select2-choice
+.select2-container .select2-results li .result-path::before
 {
-    height: auto;
-    padding: 0 0 0 4px;
+    content: " ";
+    height: 16px;
+    width: 16px;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 0.2em;
+    background-image: url('../images/sprite.png');
+    position: relative;
+    top: -2px;
 }
 
-.breadcrumb .select2-container .select2-choice
+.select2-container .select2-results li .directory::before
 {
-    line-height: 44px;
+    background-position: -101px 0;
 }
 
-.breadcrumb .navigation .select2-choice,
-.unit-sort .navigation .select2-choice
+.select2-container .select2-results li .store::before
 {
-    color: #0489b7;
-}
-
-.breadcrumb .select2-container .select2-choice div
-{
-    top: 8px;
-}
-
-.breadcrumb .select2-container .select2-choice abbr
-{
-    top: 15px;
-    right: 22px;
-}
-
-/* HACK: display background as a thin line */
-.breadcrumb-dropdown .select2-result-unselectable
-{
-    height: 1px;
-    margin: 0.5em;
-}
-
-.breadcrumb-dropdown .select2-result-unselectable .select2-result-label
-{
-    cursor: default;
-}
-/* END HACK */
-
-.select2-results .project-disabled
-{
-    font-style: italic;
-    opacity: 0.5;
-}
-
-.select2-results .folder
-{
-    font-weight: bold;
-}
-
-.select2-result-label .text
-{
-    margin-left: 0.3em;
-}
-
-.select2-result-label
-{
-    white-space: nowrap;
-}
-
-.select2-result-label .file
-{
-    margin-left: 1.5em;
-}
-
-.select2-resource-root .file
-{
-    margin-left: auto;
-}
-
-.select2-match
-{
-    color: #000;
-    background-color: rgba(255, 255, 0, 0.5);
-}
-
-.select2-results .select2-result.admin
-{
-    color: #c30;
-}
-
-.select2-results .select2-highlighted.admin
-{
-    background-color: #c30;
-    color: #fff;
+    background-position: -101px -32px;
 }

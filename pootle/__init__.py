@@ -7,7 +7,7 @@
 # AUTHORS file for copyright and authorship information.
 
 from pootle.core.utils.version import get_version
+from pootle.constants import VERSION
 
-VERSION = (2, 8, 0, 'beta', 1)
 
 __version__ = get_version(VERSION)

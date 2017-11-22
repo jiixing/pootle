@@ -9,19 +9,27 @@
 import logging
 import os
 import shutil
+import uuid
+
+from bulk_update.helper import bulk_update
 
 from django.contrib.auth import get_user_model
 from django.utils.functional import cached_property
 from django.utils.lru_cache import lru_cache
 
 from pootle.core.delegate import (
-    config, response as pootle_response, state as pootle_state)
-from pootle_store.models import FILE_WINS, POOTLE_WINS, Store
+    config, response as pootle_response, revision, state as pootle_state)
+from pootle_app.models import Directory
 from pootle_project.models import Project
+from pootle_store.constants import POOTLE_WINS, SOURCE_WINS
+from pootle_store.models import Store
 
+from .apps import PootleFSConfig
 from .decorators import emits_state, responds_to_state
 from .delegate import fs_finder, fs_matcher, fs_resources
-from .signals import fs_pre_push, fs_post_push, fs_pre_pull, fs_post_pull
+from .exceptions import FSStateError
+from .models import StoreFS
+from .signals import fs_post_pull, fs_post_push, fs_pre_pull, fs_pre_push
 
 
 logger = logging.getLogger(__name__)
@@ -29,6 +37,9 @@ logger = logging.getLogger(__name__)
 
 class Plugin(object):
     """Base Plugin implementation"""
+
+    ns = "pootle.fs.plugin"
+    sw_version = PootleFSConfig.version
 
     name = None
 
@@ -48,8 +59,20 @@ class Plugin(object):
         return "<%s(%s)>" % (self.__class__.__name__, self.project)
 
     @property
+    def cache_key(self):
+        return (
+            "%s.%s.%s"
+            % (self.pootle_revision,
+               self.sync_revision,
+               self.fs_revision))
+
+    @property
     def is_cloned(self):
         return os.path.exists(self.project.local_fs_path)
+
+    @property
+    def latest_hash(self):
+        raise NotImplementedError
 
     @property
     def finder_class(self):
@@ -60,8 +83,22 @@ class Plugin(object):
         return self.project.config["pootle_fs.fs_url"]
 
     @property
+    def fs_revision(self):
+        return self.latest_hash
+
+    @property
+    def pootle_revision(self):
+        return revision.get(Directory)(
+            self.project.directory).get(key="stats")
+
+    @property
     def response_class(self):
         return pootle_response.get(self.state_class)
+
+    @property
+    def sync_revision(self):
+        return revision.get(
+            Project)(self.project).get(key="pootle.fs.sync")
 
     @cached_property
     def matcher_class(self):
@@ -89,8 +126,8 @@ class Plugin(object):
                 return User.objects.get(username=username)
             except User.DoesNotExist:
                 logger.warning(
-                    "Misconfigured pootle_fs user: %s"
-                    % username)
+                    "Misconfigured pootle_fs user: %s",
+                    username)
 
     @cached_property
     def resources(self):
@@ -110,16 +147,45 @@ class Plugin(object):
         """
         return self.matcher.reverse_match(pootle_path)
 
+    def create_store_fs(self, items, **kwargs):
+        if not items:
+            return
+        to_add = []
+        paths = [
+            x.pootle_path
+            for x in items]
+        stores = dict(
+            Store.objects.filter(
+                pootle_path__in=paths).values_list("pootle_path", "pk"))
+        for item in items:
+            to_add.append(
+                self.store_fs_class(
+                    project=self.project,
+                    pootle_path=item.pootle_path,
+                    path=item.fs_path,
+                    store_id=stores.get(item.pootle_path),
+                    **kwargs))
+        self.store_fs_class.objects.bulk_create(to_add)
+
+    def delete_store_fs(self, items, **kwargs):
+        if not items:
+            return
+        self.store_fs_class.objects.filter(
+            pk__in=[fs.kwargs["store_fs"] for fs in items]).delete()
+
+    def update_store_fs(self, items, **kwargs):
+        if not items:
+            return
+        self.store_fs_class.objects.filter(
+            pk__in=[fs.kwargs["store_fs"] for fs in items]).update(**kwargs)
+
     def clear_repo(self):
         if self.is_cloned:
             shutil.rmtree(self.project.local_fs_path)
 
-    def create_store_fs(self, fs_path=None, pootle_path=None, store=None):
-        return self.store_fs_class.objects.create(
-            project=self.project,
-            pootle_path=pootle_path,
-            path=fs_path,
-            store=store)
+    def expire_sync_cache(self):
+        revision.get(Project)(self.project).set(
+            keys=["pootle.fs.sync"], value=uuid.uuid4().hex)
 
     def find_translations(self, fs_path=None, pootle_path=None):
         """
@@ -133,7 +199,7 @@ class Plugin(object):
         """
         return self.matcher.matches(fs_path, pootle_path)
 
-    def pull(self):
+    def fetch(self):
         """
         Pull the FS from external source if required.
         """
@@ -164,93 +230,77 @@ class Plugin(object):
           ``pootle_path``
         :returns state: Where ``state`` is an instance of self.state_class
         """
-        self.pull()
+        if not self.is_cloned:
+            raise FSStateError(
+                "Filesystem has not been fetched. "
+                "Use `pootle fs fetch ...` first.")
         return self.state_class(
             self, fs_path=fs_path, pootle_path=pootle_path)
 
     @responds_to_state
-    def add(self, state, response,
-            fs_path=None, pootle_path=None, force=False):
+    def add(self, state, response, fs_path=None, pootle_path=None, force=False):
         """
-        Stage translations from Pootle into the FS
+        Stage untracked or removed Stores or files
 
-        If ``force``=``True`` is present it will also:
-        - stage untracked conflicting files from Pootle
-        - stage tracked conflicting files to update from Pootle
-
-        :param force: Add conflicting translations.
+        :param force: Re-add removed Stores or files.
         :param fs_path: FS path glob to filter translations
         :param pootle_path: Pootle path glob to filter translations
         :returns response: Where ``response`` is an instance of self.respose_class
         """
-        to_add = state["pootle_untracked"]
+        self.create_store_fs(
+            state["fs_untracked"]
+            + state["pootle_untracked"])
         if force:
-            to_add = (
-                to_add
-                + state["conflict_untracked"]
-                + state["fs_removed"]
-                + state["conflict"])
-        for fs_state in to_add:
-            if fs_state.state_type in ["pootle_untracked", "conflict_untracked"]:
-                fs_state.kwargs["store_fs"] = self.create_store_fs(
-                    pootle_path=fs_state.pootle_path,
-                    fs_path=fs_state.fs_path)
-            fs_state.store_fs.file.add()
+            self.update_store_fs(
+                state["fs_removed"],
+                resolve_conflict=POOTLE_WINS)
+            self.update_store_fs(
+                state["pootle_removed"],
+                resolve_conflict=SOURCE_WINS)
+        for fs_state in state["fs_untracked"]:
+            response.add("added_from_fs", fs_state=fs_state)
+        for fs_state in state["pootle_untracked"]:
             response.add("added_from_pootle", fs_state=fs_state)
-        return response
-
-    @responds_to_state
-    def fetch(self, state, response,
-              fs_path=None, pootle_path=None, force=False):
-        """
-        Stage translations from FS into Pootle
-
-        If ``force``=``True`` is present it will also:
-        - stage untracked conflicting files from FS
-        - stage tracked conflicting files to update from FS
-
-        :param force: Fetch conflicting translations.
-        :param fs_path: FS path glob to filter translations
-        :param pootle_path: Pootle path glob to filter translations
-        :returns response: Where ``response`` is an instance of self.respose_class
-        """
-        to_fetch = state["fs_untracked"]
         if force:
-            to_fetch = (
-                to_fetch
-                + state["conflict_untracked"]
-                + state["pootle_removed"]
-                + state["conflict"])
-        for fs_state in to_fetch:
-            if fs_state.state_type in ["fs_untracked", "conflict_untracked"]:
-                fs_state.kwargs["store_fs"] = self.create_store_fs(
-                    pootle_path=fs_state.pootle_path,
-                    fs_path=fs_state.fs_path)
-            fs_state.store_fs.file.fetch()
-            response.add("fetched_from_fs", fs_state=fs_state)
+            for fs_state in state["fs_removed"]:
+                response.add("readded_from_pootle", fs_state=fs_state)
+            for fs_state in state["pootle_removed"]:
+                response.add("readded_from_fs", fs_state=fs_state)
+        if response.made_changes:
+            self.expire_sync_cache()
         return response
 
     @responds_to_state
-    def merge(self, state, response,
-              fs_path=None, pootle_path=None, pootle_wins=False):
+    def resolve(self, state, response, fs_path=None, pootle_path=None,
+                merge=True, pootle_wins=False):
         """
-        Stage translations for merge.
+        Resolve conflicting translations
 
-        :param pootle_wins: Prefer Pootle where there are conflicting units
+        Default is to merge with FS winning
+
+        :param merge: Merge Pootle and FS, defaults to True, otherwise overwrite
+        :param pootle_wins: Use unit from Pootle where conflicting
         :param fs_path: FS path glob to filter translations
         :param pootle_path: Pootle path glob to filter translations
         :returns response: Where ``response`` is an instance of self.respose_class
         """
+        kwargs = {}
+        if pootle_wins:
+            kwargs["resolve_conflict"] = POOTLE_WINS
+        if merge:
+            kwargs["staged_for_merge"] = True
+            if not pootle_wins:
+                kwargs["resolve_conflict"] = SOURCE_WINS
+        self.create_store_fs(state["conflict_untracked"], **kwargs)
+        self.update_store_fs(state["conflict"], **kwargs)
+        action_type = (
+            "staged_for_%s_%s"
+            % ((merge and "merge" or "overwrite"),
+               (pootle_wins and "pootle" or "fs")))
         for fs_state in state["conflict"] + state["conflict_untracked"]:
-            if fs_state.state_type == "conflict_untracked":
-                fs_state.kwargs["store_fs"] = self.create_store_fs(
-                    store=Store.objects.get(pootle_path=fs_state.pootle_path),
-                    fs_path=fs_state.fs_path)
-            fs_state.store_fs.file.merge(pootle_wins)
-            if pootle_wins:
-                response.add("staged_for_merge_pootle", fs_state=fs_state)
-            else:
-                response.add("staged_for_merge_fs", fs_state=fs_state)
+            response.add(action_type, fs_state=fs_state)
+        if response.made_changes:
+            self.expire_sync_cache()
         return response
 
     @responds_to_state
@@ -267,23 +317,23 @@ class Plugin(object):
         :param pootle_path: Pootle path glob to filter translations
         :returns response: Where ``response`` is an instance of self.respose_class
         """
-        removed = (
+        to_create = []
+        to_update = (
             state["pootle_removed"]
             + state["fs_removed"]
             + state["both_removed"])
         if force:
-            removed = (
-                removed
-                + state["conflict_untracked"]
+            to_update += state["conflict"]
+            to_create += (
+                state["conflict_untracked"]
                 + state["fs_untracked"]
                 + state["pootle_untracked"])
-        for fs_state in removed:
-            if fs_state.state_type.endswith("_untracked"):
-                fs_state.kwargs["store_fs"] = self.create_store_fs(
-                    pootle_path=fs_state.pootle_path,
-                    fs_path=fs_state.fs_path)
-            fs_state.store_fs.file.rm()
+        self.update_store_fs(to_update, staged_for_removal=True)
+        self.create_store_fs(to_create, staged_for_removal=True)
+        for fs_state in to_create + to_update:
             response.add("staged_for_removal", fs_state=fs_state)
+        if response.made_changes:
+            self.expire_sync_cache()
         return response
 
     @responds_to_state
@@ -291,21 +341,37 @@ class Plugin(object):
         """
         Unstage files staged for addition, merge or removal
         """
-        to_unstage = (
+        to_remove = []
+        to_update = (
             state["remove"]
             + state["merge_pootle_wins"]
             + state["merge_fs_wins"]
-            + state["pootle_ahead"]
-            + state["fs_ahead"]
             + state["pootle_staged"]
             + state["fs_staged"])
-        for fs_state in to_unstage:
-            staged = (
-                fs_state.state_type not in ["fs_ahead", "pootle_ahead"]
-                or fs_state.store_fs.resolve_conflict in [FILE_WINS, POOTLE_WINS])
-            if staged:
-                fs_state.store_fs.file.unstage()
-                response.add("unstaged", fs_state=fs_state)
+        for fs_state in state["pootle_ahead"] + state["fs_ahead"]:
+            if fs_state.store_fs.resolve_conflict in [SOURCE_WINS, POOTLE_WINS]:
+                to_update.append(fs_state)
+        for fs_state in to_update:
+            should_remove = (
+                fs_state.store_fs
+                and not fs_state.store_fs.last_sync_revision
+                and not fs_state.store_fs.last_sync_hash)
+            if should_remove:
+                to_remove.append(fs_state)
+        to_update = list(set(to_update) - set(to_remove))
+        self.update_store_fs(
+            to_update,
+            resolve_conflict=None,
+            staged_for_merge=False,
+            staged_for_removal=False)
+        self.delete_store_fs(to_remove)
+        updated = sorted(
+            to_remove + to_update,
+            key=lambda x: x.pootle_path)
+        for fs_state in updated:
+            response.add("unstaged", fs_state=fs_state)
+        if response.made_changes:
+            self.expire_sync_cache()
         return response
 
     @responds_to_state
@@ -317,7 +383,14 @@ class Plugin(object):
         :param pootle_path: Pootle path glob to filter translations
         :returns response: Where ``response`` is an instance of self.respose_class
         """
-        for fs_state in (state["merge_pootle_wins"] + state["merge_fs_wins"]):
+        sfs = {}
+        for fs_state in (state['merge_pootle_wins'] + state['merge_fs_wins']):
+            sfs[fs_state.kwargs["store_fs"]] = fs_state
+        _sfs = StoreFS.objects.filter(
+            id__in=sfs.keys()).select_related("store", "store__data")
+        for store_fs in _sfs:
+            fs_state = sfs[store_fs.id]
+            fs_state.store_fs = store_fs
             pootle_wins = (fs_state.state_type == "merge_pootle_wins")
             store_fs = fs_state.store_fs
             store_fs.file.pull(
@@ -325,10 +398,16 @@ class Plugin(object):
                 pootle_wins=pootle_wins,
                 user=self.pootle_user)
             store_fs.file.push()
+            state.resources.pootle_revisions[
+                store_fs.store_id] = store_fs.store.data.max_unit_revision
+            state.resources.file_hashes[
+                store_fs.pootle_path] = store_fs.file.latest_hash
             if pootle_wins:
                 response.add("merged_from_pootle", fs_state=fs_state)
             else:
                 response.add("merged_from_fs", fs_state=fs_state)
+        if response.made_changes:
+            self.expire_sync_cache()
         return response
 
     @responds_to_state
@@ -341,8 +420,20 @@ class Plugin(object):
         :param pootle_path: Pootle path glob to filter translations
         :returns response: Where ``response`` is an instance of self.respose_class
         """
+        sfs = {}
         for fs_state in (state['fs_staged'] + state['fs_ahead']):
-            fs_state.store_fs.file.pull(user=self.pootle_user)
+            sfs[fs_state.kwargs["store_fs"]] = fs_state
+        _sfs = StoreFS.objects.filter(
+            id__in=sfs.keys()).select_related("store", "store__data")
+        for store_fs in _sfs:
+            store_fs.file.pull(user=self.pootle_user)
+            if store_fs.store and store_fs.store.data:
+                state.resources.pootle_revisions[
+                    store_fs.store_id] = store_fs.store.data.max_unit_revision
+            state.resources.file_hashes[
+                store_fs.pootle_path] = store_fs.file.latest_hash
+            fs_state = sfs[store_fs.id]
+            fs_state.store_fs = store_fs
             response.add("pulled_to_pootle", fs_state=fs_state)
         return response
 
@@ -357,8 +448,20 @@ class Plugin(object):
         :returns response: Where ``response`` is an instance of self.respose_class
         """
         pushable = state['pootle_staged'] + state['pootle_ahead']
+        stores_fs = StoreFS.objects.filter(
+            id__in=[
+                fs_state.store_fs.id
+                for fs_state
+                in pushable])
+        stores_fs = {sfs.id: sfs for sfs in stores_fs.select_related("store")}
         for fs_state in pushable:
-            fs_state.store_fs.file.push()
+            store_fs = stores_fs[fs_state.store_fs.id]
+            fs_state.store_fs = store_fs
+            store_fs.file.push()
+            state.resources.pootle_revisions[
+                store_fs.store_id] = store_fs.store.data.max_unit_revision
+            state.resources.file_hashes[
+                store_fs.pootle_path] = store_fs.file.latest_hash
             response.add('pushed_to_fs', fs_state=fs_state)
         return response
 
@@ -372,9 +475,16 @@ class Plugin(object):
         :param pootle_path: Pootle path glob to filter translations
         :returns response: Where ``response`` is an instance of self.respose_class
         """
+        sfs = {}
         for fs_state in state['remove']:
-            fs_state.store_fs.file.delete()
-            response.add("removed", fs_state=fs_state)
+            sfs[fs_state.kwargs["store_fs"]] = fs_state
+        for store_fs in StoreFS.objects.filter(id__in=sfs.keys()):
+            fs_state = sfs[store_fs.pk]
+            store_fs.file.delete()
+            if store_fs.store and store_fs.store.data:
+                state.resources.pootle_revisions[
+                    store_fs.store_id] = store_fs.store.data.max_unit_revision
+            response.add("removed", fs_state=fs_state, store_fs=store_fs)
         return response
 
     @responds_to_state
@@ -399,8 +509,29 @@ class Plugin(object):
         sync_types = [
             "pushed_to_fs", "pulled_to_pootle",
             "merged_from_pootle", "merged_from_fs"]
+        fs_to_update = {}
+        file_hashes = state.resources.file_hashes
+        pootle_revisions = state.resources.pootle_revisions
         for sync_type in sync_types:
             if sync_type in response:
                 for response_item in response.completed(sync_type):
-                    response_item.store_fs.file.on_sync()
+                    store_fs = response_item.store_fs
+                    last_sync_revision = None
+                    if store_fs.store_id in pootle_revisions:
+                        last_sync_revision = pootle_revisions[store_fs.store_id]
+                    file_hash = file_hashes.get(
+                        store_fs.pootle_path, store_fs.file.latest_hash)
+                    store_fs.file.on_sync(
+                        file_hash,
+                        last_sync_revision,
+                        save=False)
+                    fs_to_update[store_fs.id] = store_fs
+        if fs_to_update:
+            bulk_update(
+                fs_to_update.values(),
+                update_fields=[
+                    "last_sync_revision", "last_sync_hash",
+                    "resolve_conflict", "staged_for_merge"])
+        if response.made_changes:
+            self.expire_sync_cache()
         return response

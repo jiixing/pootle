@@ -10,9 +10,10 @@ import logging
 
 from django.conf import settings
 from django.http import JsonResponse
-from django.utils.translation import ugettext_lazy as _
 
 from allauth.account.adapter import DefaultAccountAdapter
+
+from pootle.i18n.gettext import ugettext_lazy as _
 
 
 logger = logging.getLogger('action')
@@ -20,15 +21,18 @@ logger = logging.getLogger('action')
 
 class PootleAccountAdapter(DefaultAccountAdapter):
     """Reimplementation of DefaultAccountAdapter from allauth to change
-    ajax_response.
+    ajax_response and username validation.
 
     Differences:
       - the html key is removed for performance reasons
       - form_errors is renamed to errors
+      - Latin1 usernames are allowed
     """
 
-    def ajax_response(self, request, response, redirect_to=None, form=None):
-        data = {}
+    def ajax_response(self, request, response, form=None, data=None,
+                      redirect_to=None):
+        if data is None:
+            data = {}
         if redirect_to:
             status = 200
             data["location"] = redirect_to

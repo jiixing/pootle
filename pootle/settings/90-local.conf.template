@@ -4,18 +4,16 @@
 
 This file includes the settings that administrators will likely change.
 You can find the defaults in the ``*.conf`` files for more advanced settings.
-
-In order for this configuration changes to take effect, bear in mind that you
-need to change the extension of this file from ``.conf.sample`` to ``.conf``.
 """
 
+from pootle.i18n.gettext import ugettext_lazy as _
 
 #
 # Base
 #
 
 # Site title
-POOTLE_TITLE = 'Pootle Translation Server'
+POOTLE_TITLE = _(u'Pootle Translation Server')
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -28,14 +26,17 @@ TIME_ZONE = 'UTC'
 SECRET_KEY = %(default_key)s
 
 # A list of strings representing the host/domain names that this Pootle server
-# can serve. This is a Django's security measure. More details at
-# https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
+# can serve. This is a Django's security measure.
 ALLOWED_HOSTS = [
     '127.0.0.1',
     'localhost',
     #'${your_server}',
 ]
 
+# Set this to a canonical url for your site *without trailing slash*
+# This will be used when deriving urls to send out emails
+# If you use the `django.contrib.sites` framework set this to blank
+POOTLE_CANONICAL_URL = "http://localhost"
 
 #
 # Backends
@@ -44,7 +45,7 @@ ALLOWED_HOSTS = [
 # Database backend settings
 DATABASES = {
     'default': {
-        # Replace 'sqlite3' with 'postgresql_psycopg2' or 'mysql'.
+        # Replace 'sqlite3' with 'postgresql' or 'mysql'.
         'ENGINE': %(db_engine)s,
         # Database name or path to database file if using sqlite3.
         'NAME': %(db_name)s,
@@ -56,9 +57,17 @@ DATABASES = {
         'HOST': %(db_host)s,
         # Set to empty string for default. Not used with sqlite3.
         'PORT': %(db_port)s,
-        # See https://docs.djangoproject.com/en/1.6/topics/db/transactions/
-        # required for Django 1.6 + sqlite
+        # See https://docs.djangoproject.com/en/1.10/topics/db/transactions/
+        # required for Django + sqlite
         'ATOMIC_REQUESTS': True,
+        #'OPTIONS' : {
+        #    # MySQL:
+        #    # https://docs.djangoproject.com/en/1.10/ref/databases/#setting-sql-mode
+        #    'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+        #},
+        'TEST': {
+            'NAME': 'test_pootle',
+        }
     }
 }
 
@@ -66,7 +75,7 @@ DATABASES = {
 # Cache Backend settings
 
 # For more information, check
-# http://docs.djangoproject.com/en/dev/topics/cache/#setting-up-the-cache
+# https://docs.djangoproject.com/en/1.10/topics/cache/#setting-up-the-cache
 # and http://niwibe.github.io/django-redis/
 #CACHES = {
 #    'default': {
@@ -79,10 +88,10 @@ DATABASES = {
 #        'LOCATION': 'redis://127.0.0.1:6379/2',
 #        'TIMEOUT': None,
 #    },
-#    'stats': {
+#    'lru': {
 #        'BACKEND': 'django_redis.cache.RedisCache',
 #        'LOCATION': 'redis://127.0.0.1:6379/3',
-#        'TIMEOUT': None,
+#        'TIMEOUT': 604800,  # 1 week
 #    },
 #    'exports': {
 #        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
@@ -140,7 +149,6 @@ ADMINS = (
 # Mail settings
 
 # Default email address to use for messages sent by Pootle.
-# https://docs.djangoproject.com/en/dev/ref/settings/#default-from-email
 DEFAULT_FROM_EMAIL = 'info@YOUR_DOMAIN.com'
 
 # Address to receive messages sent by contact form.
@@ -152,6 +160,9 @@ POOTLE_CONTACT_ENABLED = True
 # Use this as a way to forward string error reports to an address
 # different from the general contact address.
 POOTLE_CONTACT_REPORT_EMAIL = 'string_errors_manager@YOUR_DOMAIN.com'
+
+# Whether to email reviewer's feedback to suggesters.
+POOTLE_EMAIL_FEEDBACK_ENABLED = False
 
 # Mail server settings
 
@@ -176,23 +187,12 @@ POOTLE_TRANSLATION_DIRECTORY = working_path('translations')
 
 # Two-tuple defining the markup filter to apply in certain textareas.
 #
-# - Accepted values for the first element are 'textile', 'markdown',
-#   'restructuredtext' and None.
+# - Accepted values for the first element are 'markdown' and
+#   'html' (deprecated).
 # - The second element should be a dictionary of keyword arguments that will be
 #   passed to the markup function.
 #
-# IMPORTANT: If you want to use one of these markup filters you must install on
-# your own the required packages.
-#
-# Examples:
-#    POOTLE_MARKUP_FILTER = (None, {})
-#    POOTLE_MARKUP_FILTER = ('markdown', {'safe_mode': 'escape'})
-#    POOTLE_MARKUP_FILTER = ('restructuredtext', {
-#                                'settings_overrides': {
-#                                    'report_level': 'quiet',
-#                                }
-#                            })
-POOTLE_MARKUP_FILTER = (None, {})
+POOTLE_MARKUP_FILTER = ('markdown', {})
 
 # Set the backends you want to use to enable translation suggestions through
 # several online services. To disable this feature completely just comment all

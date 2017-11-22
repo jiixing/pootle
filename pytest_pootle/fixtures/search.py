@@ -12,10 +12,10 @@ import pytest
 
 
 UNITS_TEXT_SEARCH_TESTS = OrderedDict()
-UNITS_TEXT_SEARCH_TESTS["exact:Translated (source)"] = {
+UNITS_TEXT_SEARCH_TESTS["case:Translated (source)"] = {
     "text": "Translated",
     "sfields": ["source"]}
-UNITS_TEXT_SEARCH_TESTS["exact:Translated (source/target)"] = {
+UNITS_TEXT_SEARCH_TESTS["case:Translated (source/target)"] = {
     "text": "Translated",
     "sfields": ["source", "target"]}
 UNITS_TEXT_SEARCH_TESTS["Suggestion for Translated (target)"] = {
@@ -28,7 +28,7 @@ UNITS_TEXT_SEARCH_TESTS["suggestion for translated (source)"] = {
     "text": "suggestion for translated",
     "sfields": ["source"],
     "empty": True}
-UNITS_TEXT_SEARCH_TESTS["exact:Translated (source_f/target_f)"] = {
+UNITS_TEXT_SEARCH_TESTS["case:Translated (source_f/target_f)"] = {
     "text": "Translated",
     "sfields": ["source_f", "target_f"]}
 UNITS_TEXT_SEARCH_TESTS["Suggestion for Translated (target_f)"] = {
@@ -45,10 +45,10 @@ UNITS_TEXT_SEARCH_TESTS["suggestion for translated (source/target)"] = {
     "text": "suggestion for translated",
     "sfields": ["target", "source"]}
 UNITS_TEXT_SEARCH_TESTS["exact: suggestion for translated (target)"] = {
-    "text": "suggestion for translated",
+    "text": "Suggestion for Translated",
     "sfields": ["target"]}
 UNITS_TEXT_SEARCH_TESTS["exact: suggestion for translated (source/target)"] = {
-    "text": "suggestion for translated",
+    "text": "Suggestion for Translated",
     "sfields": ["target", "source"]}
 UNITS_TEXT_SEARCH_TESTS["suggestion translated for (target)"] = {
     "text": "suggestion translated for",
@@ -106,7 +106,7 @@ def units_state_searches(request):
 
 @pytest.fixture(params=UNITS_CHECKS_SEARCH_TESTS)
 def units_checks_searches(request):
-    from pootle_misc.checks import get_category_id
+    from pootle_checks.utils import get_category_id
 
     check_type, check_data = request.param.split(":")
     if check_type == "category":
@@ -122,6 +122,11 @@ def units_contributor_searches(request):
 @pytest.fixture(params=UNITS_TEXT_SEARCH_TESTS.keys())
 def units_text_searches(request):
     text = request.param
+    if text.startswith("case:"):
+        text = text[6:]
+        case = True
+    else:
+        case = False
     if text.startswith("exact:"):
         text = text[6:]
         exact = True
@@ -130,5 +135,6 @@ def units_text_searches(request):
     test = UNITS_TEXT_SEARCH_TESTS[request.param]
     test["text"] = test.get("text", text)
     test["empty"] = test.get("empty", False)
+    test["case"] = case
     test["exact"] = exact
     return test

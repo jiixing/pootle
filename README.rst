@@ -1,13 +1,18 @@
-Pootle
-======
+|logo| Pootle
+=============
 
-.. image:: https://img.shields.io/gitter/room/translate/pootle.svg?style=flat-square
-   :alt: Join the chat at https://gitter.im/translate/pootle
-   :target: https://gitter.im/translate/pootle
+|chat| |build| |health| |coverage| |requirements|
 
-.. image:: https://img.shields.io/travis/translate/pootle.svg?style=flat-square
-    :alt: Build Status
-    :target: https://travis-ci.org/translate/pootle
+
+.. Resources
+
+`Docs <http://docs.translatehouse.org/projects/pootle/en/stable-2.8.x/>`_ |
+`Changes <http://docs.translatehouse.org/projects/pootle/en/stable-2.8.x/releases/2.8.2.html>`_ |
+`Issues <https://github.com/translate/pootle/issues>`_ |
+`Community Support <https://gitter.im/translate/pootle>`_ |
+`Contributing <https://github.com/translate/pootle/blob/master/CONTRIBUTING.rst>`_ |
+`Development Channel <https://gitter.im/translate/dev>`_
+
 
 `Pootle <http://pootle.translatehouse.org/>`_ is an online translation and
 localization tool.  It works to lower the barrier of entry, providing tools to
@@ -24,29 +29,47 @@ A number of translation projects for a number of languages can be hosted on
 Pootle.  Teams can manage their files, permissions, projects, and translate
 on-line.  Files can be downloaded for offline translation.
 
-Installation can be done via pip::
 
-  pip install Pootle
+Installation
+------------
 
-But don't forget to read the `installation guide
-<http://docs.translatehouse.org/projects/pootle/en/latest/server/installation.html>`_
-for the important details.
+::
 
+  pip install --process-dependency-links Pootle
 
-Resources
----------
+Don't forget to read the `installation guide
+<http://docs.translatehouse.org/projects/pootle/en/stable-2.8.x/server/installation.html>`_
+for important details.
 
-- `Pootle Website <http://pootle.translatehouse.org/>`_
-- `Documentation <http://docs.translatehouse.org/projects/pootle/>`_
-- `Translations <http://pootle.locamotion.org/projects/pootle/>`_
-- `Bug Tracker <https://github.com/translate/pootle/issues>`_
-- `Mailing List
-  <https://lists.sourceforge.net/lists/listinfo/translate-pootle>`_
-- `Support channel <https://gitter.im/translate/pootle>`_
-- `Development channel <https://gitter.im/translate/dev>`_
 
 Copying
 -------
 
 Pootle is released under the General Public License, version 3 or later. See
-the file LICENSE for details.
+the `LICENSE <https://github.com/translate/pootle/blob/master/LICENSE>`_ file
+for details.
+
+
+.. |logo| image:: https://cdn.rawgit.com/translate/pootle/master/pootle/static/images/logo-color.svg
+          :target: https://github.com/translate/pootle
+          :align: bottom
+
+.. |chat| image:: https://img.shields.io/gitter/room/translate/pootle.svg?style=flat-square
+        :alt: Join the chat at https://gitter.im/translate/pootle
+        :target: https://gitter.im/translate/pootle
+
+.. |build| image:: https://img.shields.io/travis/translate/pootle/stable/2.8.x.svg?style=flat-square
+        :alt: Build Status
+        :target: https://travis-ci.org/translate/pootle/branches
+
+.. |health| image:: https://landscape.io/github/translate/pootle/stable/2.8.x/landscape.svg?style=flat-square
+        :target: https://landscape.io/github/translate/pootle/stable/2.8.x
+        :alt: Code Health
+
+.. |coverage| image:: https://img.shields.io/codecov/c/github/translate/pootle/stable%2F2.8.x.svg?style=flat-square
+        :target: https://codecov.io/gh/translate/pootle/branch/stable%2F2.8.x
+        :alt: Test Coverage
+
+.. |requirements| image:: https://img.shields.io/requires/github/translate/pootle/stable/2.8.x.svg?style=flat-square
+        :target: https://requires.io/github/translate/pootle/requirements/?branch=stable%2F2.8.x
+        :alt: Requirements

@@ -13,12 +13,18 @@ import os
 
 SECRET_KEY = "test_secret_key"
 
+# Ideally this setting would be set in a per-test basis, unfortunately some code
+# such as `django.utils.timezone.get_default_timezone` read from this setting
+# and at the same time are behind a `lru_cache` decorator, which makes it
+# impossible to alter the value at runtime because decorators are applied at
+# function definition time.
+TIME_ZONE = 'Pacific/Honolulu'
 
 ROOT_DIR = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
 POOTLE_TRANSLATION_DIRECTORY = os.path.join(ROOT_DIR, 'pytest_pootle', 'data', 'po')
 
 
-MIDDLEWARE_CLASSES = [
+MIDDLEWARE = [
     #: Resolves paths
     'pootle.middleware.baseurl.BaseUrlMiddleware',
     #: Must be as high as possible (see above)
@@ -37,8 +43,6 @@ MIDDLEWARE_CLASSES = [
     'pootle.middleware.auth.AuthenticationMiddleware',
     #: User-related
     'django.middleware.locale.LocaleMiddleware',
-    #: Sets Python's locale based on request's locale for sorting, etc.
-    'pootle.middleware.setlocale.SetLocale',
     #: Nice 500 and 403 pages (must be after locale to have translated versions)
     'pootle.middleware.errorpages.ErrorPagesMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -53,18 +57,18 @@ CACHES = {
     # place that will abort everything otherwise
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': 'redis://127.0.0.1:6379/15',
-        'TIMEOUT': None,
+        'LOCATION': 'redis://127.0.0.1:6379/13',
+        'TIMEOUT': 604800,  # 1 week
     },
     'redis': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': 'redis://127.0.0.1:6379/15',
+        'LOCATION': 'redis://127.0.0.1:6379/14',
         'TIMEOUT': None,
     },
-    'stats': {
+    'lru': {
         'BACKEND': 'django_redis.cache.RedisCache',
         'LOCATION': 'redis://127.0.0.1:6379/15',
-        'TIMEOUT': None,
+        'TIMEOUT': 604800,  # 1 week
     },
     'exports': {
         'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
@@ -86,10 +90,16 @@ RQ_QUEUES = {
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 
+POOTLE_EMAIL_FEEDBACK_ENABLED = True
+
+
 # Faster password hasher
 PASSWORD_HASHERS = (
     'django.contrib.auth.hashers.MD5PasswordHasher',
 )
+
+
+SCRIPT_NAME = '/'
 
 
 SILENCED_SYSTEM_CHECKS = [

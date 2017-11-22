@@ -8,32 +8,43 @@
 
 from django import forms
 from django.core.validators import EMPTY_VALUES
-from django.utils.translation import ugettext_lazy as _
+from django.forms.models import ModelChoiceIterator
+
+from pootle.i18n.gettext import ugettext_lazy as _
+
+
+class GroupedModelChoiceIterator(ModelChoiceIterator):
+    def __init__(self, field):
+        self.field = field
+        self.choice_groups = field.choice_groups
+
+    def __iter__(self):
+        if self.field.empty_label is not None:
+            yield (u'', self.field.empty_label)
+
+        for title, queryset in self.choice_groups:
+            if title is not None:
+                yield (title, [self.choice(choice) for choice in queryset])
+            else:
+                for choice in queryset:
+                    yield self.choice(choice)
 
 
 class GroupedModelChoiceField(forms.ModelChoiceField):
-    def __init__(self, querysets, *args, **kwargs):
+    """A `ModelChoiceField` with grouping capabilities.
+
+    :param choice_groups: List of tuples including the `title` and `queryset` of
+        each individual choice group.
+    """
+
+    def __init__(self, choice_groups, *args, **kwargs):
+        self.choice_groups = choice_groups
         super(GroupedModelChoiceField, self).__init__(*args, **kwargs)
-        self.querysets = querysets
 
     def _get_choices(self):
-        orig_queryset = self.queryset
-        orig_empty_label = self.empty_label
-        if self.empty_label is not None:
-            yield (u"", self.empty_label)
-            self.empty_label = None
-
-        for title, queryset in self.querysets:
-            self.queryset = queryset
-            if title is None:
-                for choice in super(GroupedModelChoiceField, self).choices:
-                    yield choice
-            else:
-                yield (title, [choice for choice in
-                               super(GroupedModelChoiceField, self).choices])
-
-        self.queryset = orig_queryset
-        self.empty_label = orig_empty_label
+        if hasattr(self, '_choices'):
+            return self._choices
+        return GroupedModelChoiceIterator(self)
     choices = property(_get_choices, forms.ModelChoiceField._set_choices)
 
 
@@ -86,6 +97,7 @@ class SearchForm(forms.Form):
 
     search = forms.CharField(
         widget=forms.TextInput(attrs={
+            'autocomplete': 'off',
             'size': '15',
             'placeholder': _('Search'),
             'title': _("Search (Ctrl+Shift+S)<br/>Type and press Enter to "
@@ -96,9 +108,8 @@ class SearchForm(forms.Form):
         required=False,
         widget=forms.CheckboxSelectMultiple,
         choices=(
-            ('exact', _('Exact Match')),
-        ),
-    )
+            ('exact', _('Phrase match')),
+            ('case', _('Case-sensitive match'))))
     sfields = forms.MultipleChoiceField(
         required=False,
         widget=forms.CheckboxSelectMultiple,

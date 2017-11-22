@@ -4,6 +4,22 @@ Features
 ========
 
 
+.. _features#pootle_fs:
+
+Pootle FS
+---------
+
+.. toctree::
+   :maxdepth: 2
+
+   pootle_fs
+   pootle_fs_install_plugins
+   pootle_fs_add_project
+   migrate_to_pootle_fs
+   using_pootle_fs
+   pootle_fs_statuses
+
+
 .. _features#backends:
 
 Backends and storage
@@ -48,4 +64,5 @@ Administrative features
 
    staticpages
    captcha
+   teams
    permissions

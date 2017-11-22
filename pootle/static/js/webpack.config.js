@@ -8,19 +8,17 @@
 
 var webpack = require('webpack');
 var path = require('path');
-var _ = require('lodash');
 
 var env = process.env.NODE_ENV;
 var DEBUG = env !== 'production';
 
-
 var entries = {
   'admin/general': './admin/general/app.js',
   admin: './admin/app.js',
+  fs: './fs/app.js',
   user: './user/app.js',
   common: ['./common.js'],
   editor: ['./editor/app.js'],
-  reports: ['./reports/app.js'],
   vendor: [
     'react', 'react-dom', 'react-addons-pure-render-mixin', 'jquery',
     'underscore', 'backbone'
@@ -29,21 +27,17 @@ var entries = {
 
 
 var resolve = {
-  extensions: ['', '.js'],
+  extensions: ['', '.js', '.css'],
   modulesDirectories: ['node_modules', 'shared'],
   alias: {
     pootle: __dirname,
 
     jquery: __dirname + '/vendor/jquery/jquery.js',
     backbone: __dirname + '/vendor/backbone/backbone.js',
-    underscore: __dirname + '/vendor/underscore.js',
 
     'backbone-move': __dirname + '/vendor/backbone/backbone.move.js',
-    'backbone-safesync': __dirname + '/vendor/backbone/backbone.safesync.js',
-    'backbone-relational': __dirname + '/vendor/backbone/backbone-relational.js',
 
     'jquery-bidi': __dirname + '/vendor/jquery/jquery.bidi.js',
-    'jquery-caret': __dirname + '/vendor/jquery/jquery.caret.js',
     'jquery-easing': __dirname + '/vendor/jquery/jquery.easing.js',
     'jquery-flot': __dirname + '/vendor/jquery/jquery.flot.js',
     'jquery-flot-stack': __dirname + '/vendor/jquery/jquery.flot.stack.js',
@@ -52,14 +46,11 @@ var resolve = {
     'jquery-highlightRegex': __dirname + '/vendor/jquery/jquery.highlightRegex.js',
     'jquery-history': __dirname + '/vendor/jquery/jquery.history.js',
     'jquery-magnific-popup': __dirname + '/vendor/jquery/jquery.magnific-popup.js',
-    'jquery-select2': __dirname + '/vendor/jquery/jquery.select2.js',
     'jquery-serializeObject': __dirname + '/vendor/jquery/jquery.serializeObject.js',
     'jquery-tipsy': __dirname + '/vendor/jquery/jquery.tipsy.js',
     'jquery-utils': __dirname + '/vendor/jquery/jquery.utils.js',
 
     levenshtein: __dirname + '/vendor/levenshtein.js', // FIXME: use npm module
-    moment: __dirname + '/vendor/moment.js', // FIXME: use npm module
-    odometer: __dirname + '/vendor/odometer.js', // FIXME: use npm module
     sorttable: __dirname + '/vendor/sorttable.js',
     spin: __dirname + '/vendor/spin.js', // FIXME: use npm module
   }
@@ -73,16 +64,28 @@ if (root !== undefined) {
   var customPaths = root.split(':');
   resolve.root = [path.join(__dirname, 'node_modules')].concat(customPaths);
 
-  var mergeArrays = function (a, b) {
-    return _.isArray(a) ? a.concat(b) : undefined;
-  };
+  function mergeWithArrays(target, source) {
+    var rv = Object(target);
+    var value;
+    Object.getOwnPropertyNames(source).forEach(function (key) {
+      value = source[key];
+      // Merge values if a key exists both in source and target objects and the
+      // target contains an array
+      if (target.hasOwnProperty(key) && Array.isArray(target[key])) {
+        value = target[key].concat(source[key]);
+      }
+      rv[key] = value;
+    });
+
+    return rv;
+  }
 
   for (var i=0; i<customPaths.length; i++) {
     var customPath = customPaths[i];
 
     try {
       var manifestEntries = require(path.join(customPath, 'manifest.json'));
-      entries = _.merge(entries, manifestEntries, mergeArrays);
+      entries = mergeWithArrays(entries, manifestEntries);
     } catch (e) {
       console.error(e.message);
     }
@@ -139,13 +142,14 @@ var config = {
         test: /\.js$/,
         loader: 'babel-loader',
         query: {
+          babelrc: false,
           cacheDirectory: true,
           presets: [
             require.resolve('babel-preset-es2015'),
             require.resolve('babel-preset-react'),
           ],
         },
-        exclude: /node_modules|vendor/,
+        exclude: /node_modules|vendor|.*\.test\.js/,
       }
     ]
   },

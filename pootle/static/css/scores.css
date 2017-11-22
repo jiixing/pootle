@@ -6,6 +6,20 @@
  * AUTHORS file for copyright and authorship information.
  */
 
+.user-score
+{
+    font-size: 1em;
+    font-weight: 300;
+    color: #168bd3;
+    white-space: nowrap;
+    background: #ddd;
+    overflow: hidden;
+    margin: 0 0.25em;
+    padding: 2px 4px;
+    border-radius: 4px;
+    box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.2) inset, 0 1px 0 rgba(0, 0, 0, 0.2) inset;
+}
+
 #top-scorers
 {
     width: 100%;
@@ -40,6 +54,14 @@
 {
     display: inline-block;
     float: left;
+}
+
+
+html[dir="rtl"] #top-scorers .user .gravatar,
+html[dir="rtl"] #top-scorers .user .properties
+{
+    float: right;
+    text-align: right;
 }
 
 #top-scorers .user .properties
@@ -83,6 +105,17 @@
     float: left;
 }
 
+html[dir="rtl"] .path-summary-more .top-scorers .top-scorer,
+html[dir="rtl"] .path-summary-more .top-scorers .user,
+html[dir="rtl"] .path-summary-more .top-scorers .number,
+html[dir="rtl"] .path-summary-more .top-scorers .place,
+html[dir="rtl"] .path-summary-more .path-summary-collapsed label
+{
+    padding-right: auto;
+    padding-left: 3px;
+    float: right;
+}
+
 .path-summary-more .top-scorer .user-name
 {
     overflow: hidden;
@@ -90,6 +123,11 @@
     font-size: 1em;
     white-space: nowrap;
     display: block;
+}
+
+html[dir="rtl"] .path-summary-more .top-scorer .user-name
+{
+    display: inherit;
 }
 
 .path-summary-more .path-summary-collapsed .top-scorer .user-name
@@ -102,11 +140,15 @@
     padding-left: 1em;
 }
 
+html[dir="rtl"] .path-summary-more .top-scorers .top-scorer
+{
+    padding-right: 1em;
+}
+
 .path-summary-more .top-scorers-table
 {
     font-size: 1em;
     width: 100%;
-    table-layout: fixed;
 }
 
 .path-summary-more .top-scorers-table tr td.number:last-child
@@ -115,10 +157,28 @@
     text-align: right;
 }
 
+html[dir="rtl"] .path-summary-more .top-scorers-table tr td.number:last-child
+{
+    text-align: left;
+}
+
 .path-summary-more .top-scorers-table tr td.number:first-child
 {
     text-align: left;
-    width: 2em;
+    width: 1em;
+    padding-right: 1em;
+}
+
+html[dir="rtl"] .path-summary-more .top-scorers-table tr td.number:first-child
+{
+    text-align: right;
+    padding-left: 1em;
+    padding-right: auto;
+}
+
+html[dir="rtl"] .path-summary-more .top-scorers-table tr td.number:first-child
+{
+    text-align: right;
 }
 
 .top-scorer a
@@ -132,8 +192,19 @@
     margin-left: 24px;
 }
 
+html[dir="rtl"] .top-scorer .user-name
+{
+    margin-left: auto;
+    margin-right: 24px;
+}
+
 .top-scorer img.avatar
 {
     position: absolute;
     top: -3px;
+}
+
+html[dir="rtl"] .top-scorer img.avatar
+{
+    right: 0;
 }

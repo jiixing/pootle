@@ -18,3 +18,5 @@ class PootleStoreConfig(AppConfig):
 
     def ready(self):
         importlib.import_module("pootle_store.getters")
+        importlib.import_module("pootle_store.providers")
+        importlib.import_module("pootle_store.receivers")

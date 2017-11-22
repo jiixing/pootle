@@ -9,16 +9,66 @@
 import datetime
 
 from django import template
-from django.contrib.auth import get_user_model
+from django.utils.translation import get_language
+
+from pootle.i18n import formatter
+from pootle.i18n.dates import timesince
+from pootle.i18n.gettext import ugettext_lazy as _
 
 
 register = template.Library()
 
 
-@register.inclusion_tag('browser/_table.html', takes_context=True)
-def display_table(context, table):
+@register.filter
+def time_since(timestamp):
+    return (
+        timesince(
+            timestamp, locale=get_language())
+        if timestamp
+        else "")
+
+
+@register.inclusion_tag('includes/avatar.html')
+def avatar(username, email_hash, size):
+    # TODO: return sprite if its a system user
+    if username == "system":
+        return dict(icon="icon-pootle")
+    return dict(
+        avatar_url=(
+            'https://secure.gravatar.com/avatar/%s?s=%d&d=mm'
+            % (email_hash, size)))
+
+
+@register.inclusion_tag('browser/_progressbar.html')
+def progress_bar(total, fuzzy, translated):
+    if not total:
+        fuzzy_frac = translated_frac = untranslated_frac = 0
+        cldrformat = "0%"
+    else:
+        untranslated = total - translated - fuzzy
+        untranslated_frac = float(untranslated)/total
+        fuzzy_frac = float(fuzzy)/total
+        translated_frac = float(translated)/total
+        cldrformat = "#,##0.0%"
+    untranslated_display = (_("{percentage} untranslated")).format(
+        percentage=formatter.percent(untranslated_frac, cldrformat))
+    fuzzy_display = (_("{percentage} needs work")).format(
+        percentage=formatter.percent(fuzzy_frac, cldrformat))
+    translated_display = (_("{percentage} translated")).format(
+        percentage=formatter.percent(translated_frac, cldrformat))
+    return dict(
+        untranslated_percent_display=untranslated_display,
+        fuzzy_percent_display=fuzzy_display,
+        translated_percent_display=translated_display,
+        untranslated_bar=round(untranslated_frac * 100, 1),
+        fuzzy_bar=round(fuzzy_frac * 100, 1),
+        translated_bar=round(translated_frac * 100, 1))
+
+
+@register.inclusion_tag('browser/_table.html')
+def display_table(table, can_translate):
     return {
-        'can_translate': context["can_translate"],
+        'can_translate': can_translate,
         'table': table,
     }
 
@@ -58,16 +108,8 @@ def label_tag(field, suffix=None):
 
 
 @register.inclusion_tag('core/_top_scorers.html')
-def top_scorers(*args, **kwargs):
-    User = get_user_model()
-    allowed_kwargs = ('days', 'language', 'project', 'limit')
-    lookup_kwargs = dict(
-        (k, v) for (k, v) in kwargs.iteritems() if k in allowed_kwargs and v
-    )
-
-    return {
-        'top_scorers': User.top_scorers(**lookup_kwargs),
-    }
+def top_scorers(user, top_scorers):
+    return dict(user=user, top_scorers=top_scorers)
 
 
 @register.simple_tag

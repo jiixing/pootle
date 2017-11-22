@@ -6,21 +6,22 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
-
-import datetime
 import os
 os.environ['DJANGO_SETTINGS_MODULE'] = 'pootle.settings'
 
 from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand
 
-from pootle_statistics.models import ScoreLog
+from pootle.core.delegate import score_updater
+from pootle_translationproject.models import TranslationProject
+
+from . import PootleCommand
 
 
-class Command(BaseCommand):
+class Command(PootleCommand):
     help = "Refresh score"
 
     def add_arguments(self, parser):
+        super(Command, self).add_arguments(parser)
         parser.add_argument(
             '--reset',
             action='store_true',
@@ -35,44 +36,27 @@ class Command(BaseCommand):
             help='User to refresh',
         )
 
-    def handle(self, **options):
-        self.stdout.write('Start running of refresh_scores command...')
+    def get_users(self, **options):
+        return (
+            list(get_user_model().objects.filter(
+                username__in=options["users"]).values_list("pk", flat=True))
+            if options["users"]
+            else None)
 
-        User = get_user_model()
-        users = User.objects.all()
-        if options['users']:
-            users = users.filter(username__in=options['users'])
+    def handle_all_stores(self, translation_project, **options):
+        users = self.get_users(**options)
+        updater = score_updater.get(TranslationProject)(translation_project)
+        if options["reset"]:
+            updater.clear(users)
+        else:
+            updater.refresh_scores(users)
 
-        if options['reset']:
-            users.update(score=0)
-            scorelogs = ScoreLog.objects.all()
-            if options['users']:
-                scorelogs = scorelogs.filter(user__in=users)
-
-            scorelogs.delete()
-
-            if options['users']:
-                self.stdout.write('Scores for specified users were reset to 0.')
+    def handle_all(self, **options):
+        if not self.projects and not self.languages:
+            users = self.get_users(**options)
+            if options["reset"]:
+                score_updater.get(get_user_model())(users=users).clear()
             else:
-                self.stdout.write('Scores for all users were reset to 0.')
-            return
-
-        start = datetime.datetime.now()
-        for user_pk, username in users.values_list("pk", "username"):
-            self.stdout.write("Processing user %s..." % username)
-            scorelog_qs = ScoreLog.objects.filter(user=user_pk) \
-                .select_related(
-                    'submission',
-                    'submission__suggestion',
-                    'submission__unit')
-            user_score = 0
-            for scorelog in scorelog_qs.iterator():
-                score_delta = scorelog.get_score_delta()
-                user_score += score_delta
-                ScoreLog.objects.filter(id=scorelog.id) \
-                    .update(score_delta=score_delta)
-            self.stdout.write("Score for user %s set to %.3f" %
-                              (username, user_score))
-            User.objects.filter(id=user_pk).update(score=user_score)
-        end = datetime.datetime.now()
-        self.stdout.write('All done in %s.' % (end - start))
+                score_updater.get(get_user_model())().refresh_scores(users)
+        else:
+            super(Command, self).handle_all(**options)

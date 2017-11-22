@@ -13,47 +13,38 @@ import Select from 'react-select';
 const FormSelectInput = React.createClass({
 
   propTypes: {
-    clearAllText: React.PropTypes.string,
-    clearValueText: React.PropTypes.string,
     handleChange: React.PropTypes.func.isRequired,
+    multiple: React.PropTypes.bool,
     name: React.PropTypes.string.isRequired,
-    noResultsText: React.PropTypes.string,
     options: React.PropTypes.array.isRequired,
-    placeholder: React.PropTypes.string,
-    searchPromptText: React.PropTypes.string,
     value: React.PropTypes.oneOfType([
+      React.PropTypes.array,
       React.PropTypes.number,
       React.PropTypes.string,
+      React.PropTypes.array,
     ]).isRequired,
   },
 
-  getDefaultProps() {
-    return {
-      placeholder: gettext('Select...'),
-      noResultsText: gettext('No results found'),
-      clearValueText: gettext('Clear value'),
-      clearAllText: gettext('Clear all'),
-      searchPromptText: gettext('Type to search'),
-    };
-  },
-
-
-  /* Handlers */
-
   handleChange(value) {
-    this.props.handleChange(this.props.name, value);
+    const newValue = this.props.multiple ? value.split(',') : value;
+    this.props.handleChange(this.props.name, newValue);
   },
-
-
-  /* Layout */
 
   render() {
+    const { value } = this.props;
+    /* FIXME: react-select#25 prevents using non-string values */
+    const selectValue = this.props.multiple ? value : value.toString();
     return (
       <Select
+        clearAllText={gettext('Clear all')}
+        clearValueText={gettext('Clear value')}
+        noResultsText={gettext('No results found')}
         onChange={this.handleChange}
+        placeholder={gettext('Select...')}
+        searchPromptText={gettext('Type to search')}
         {...this.props}
-        /* FIXME: react-select#25 prevents using non-string values */
-        value={this.props.value.toString()}
+        multi={this.props.multiple}
+        value={selectValue}
       />
     );
   },

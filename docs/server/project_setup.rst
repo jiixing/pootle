@@ -78,8 +78,8 @@ Below you can see an example with two projects using the GNU layout:
 Among the regular translation files there are two files named 
 :file:`templates.pot`. These are the template (master or reference) files that
 contain the original strings. Usually these files contain only English strings,
-it is much less confusing to use the term ``templates`` than e.g. ``en`` or
-``English``.
+however it is much less confusing to use the term ``templates`` than e.g.
+``en`` or ``English``.
 
 To get started, create a :file:`my-project` directory in the location pointed
 to by :setting:`POOTLE_TRANSLATION_DIRECTORY` and place within it the 
@@ -108,9 +108,13 @@ will see a **New Project** button:
 Click on that button and the **Add Project** form will be displayed. Enter the
 new project's details. **Code** must match the name of the directory within
 :setting:`POOTLE_TRANSLATION_DIRECTORY` that contains the project translation
-files, in our example :file:`my-project`. You can also provide a **Full Name**
-easily readable for humans. You don't need to change the rest of the fields
-unless you need to further customize your project.
+files, in our example :file:`my-project`. Also you must specify the
+**File Types** used in this new project, in our example
+``Gettext PO (po/pot)``.
+
+You can also provide a **Full Name** easily readable for humans. You don't need
+to change the rest of the fields unless you need to further customize your
+project.
 
 .. image:: ../_static/add_project_form.png
 
@@ -122,7 +126,7 @@ of the Pootle server:
 
 .. code-block:: console
 
-    $ pootle update_stores --project=my-project
+    (env) $ pootle update_stores --project=my-project
 
 
 This will import all the translations from disk into Pootle, calculate the
@@ -192,7 +196,7 @@ update the template translations in the Pootle database.
 
 .. code-block:: console
 
-    $ pootle update_stores --project=my-project --language=templates
+    (env) $ pootle update_stores --project=my-project --language=templates
 
 
 This command will ensure that new strings are added to the project and any
@@ -204,7 +208,7 @@ language. The first step is to save all the Pootle translations to disk:
 
 .. code-block:: console
 
-    $ pootle sync_stores --project=my-project
+    (env) $ pootle sync_stores --project=my-project
 
 
 Then update all those translations on disk against the newer templates. We
@@ -213,9 +217,9 @@ command line tool because it can handle other formats besides Gettext PO.
 
 .. code-block:: console
 
-    $ cd $POOTLE_TRANSLATION_DIRECTORY  # Use the actual path!
-    $ cd my-project
-    $ pot2po -t af.po templates.pot af.po  # Repeat for each language by changing the language code.
+    (env) $ cd $POOTLE_TRANSLATION_DIRECTORY  # Use the actual path!
+    (env) $ cd my-project
+    (env) $ pot2po -t af.po templates.pot af.po  # Repeat for each language by changing the language code.
 
 
 .. note:: To preserve the existing translations we pass the previous
@@ -227,7 +231,7 @@ to Pootle:
 
 .. code-block:: console
 
-    $ pootle update_stores --project=my-project
+    (env) $ pootle update_stores --project=my-project
 
 
 .. note:: If your project languages contain many translations you might want to

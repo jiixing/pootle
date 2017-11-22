@@ -1,25 +1,25 @@
 #!/bin/bash
 
-# Checks that all our ./manage.py commands have at last a django-admin
+# Checks that all our pootle runner commands have at last a django-admin
 # marker. Really a simple hack to see that they are documented.
 
 BASE_DIR=$(dirname $0)/../..
 DOCS_DIR=$BASE_DIR/docs
 EGREP_EXCLUDE_DIR="--exclude-dir=$DOCS_DIR/_build"
 
-# ./manage.py $command
+# pootle $command
 
 pootle_commands=$(
 for app in pootle_app import_export virtualfolder
 do
-    $BASE_DIR/manage.py --help | \
+    pootle | \
     sed -E -n "/^\[$app\]$/,/^\[/ p" | \
     sed "/^\[/d" | \
     sed "s/^[ ]*//g"
 done)
 
 django_commands=$(
-    $BASE_DIR/manage.py --help | \
+    pootle | \
     sed -E -n "/^\[.*\]$/,$ p" | \
     sed "/^\[/d" | \
     sed "s/^[ ]*//g" | \
@@ -54,6 +54,15 @@ do
         egrep -r $EGREP_EXCLUDE_DIR "manage.py $command ?[^<]" $DOCS_DIR
         egrep -r $EGREP_EXCLUDE_DIR  "pootle $command" $DOCS_DIR
         egrep -r $EGREP_EXCLUDE_DIR  "\`\`$command\`\`" $DOCS_DIR
+    fi
+done
+
+echo
+echo "We don't want manage.py \$command we want pootle \$command"
+for command in $django_commands
+do
+    if [[ ! $(echo "$pootle_commands" | egrep $command) ]]; then
+        egrep -r $EGREP_EXCLUDE_DIR "manage.py $command ?[^<]" $DOCS_DIR
     fi
 done
 

@@ -12,7 +12,7 @@
 
 #actions
 {
-    padding-bottom: .5em;
+    padding-bottom: 0.5em;
     z-index: 200;
     position: relative;
 }
@@ -47,10 +47,16 @@ body.translate #actions
 
 #translate-actions li
 {
-    display: none;
+    display: inline-block;
     margin-left: 2em;
     margin-right: -0.5em;
     font-weight: bold;
+}
+
+html[dir="rtl"] #translate-actions li
+{
+    margin-right: 2em;
+    margin-left: -0.5em;
 }
 
 #translate-actions li.non-zero,
@@ -196,10 +202,12 @@ body.translate #actions
     vertical-align: text-top;
 }
 
-#translate-filters .breadcrumb .select2-container
+html[dir="rtl"] #translate-filters .breadcrumb
 {
-    top: 0;
+    margin-left: auto;
+    margin-right: 2em;
 }
+
 
 #translate-filters .breadcrumb .select2-container .select2-choice
 {

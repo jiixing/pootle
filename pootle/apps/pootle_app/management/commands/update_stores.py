@@ -14,9 +14,13 @@ from pootle_app.management.commands import PootleCommand
 from pootle_translationproject.models import scan_translation_projects
 
 
+logger = logging.getLogger(__name__)
+
+
 class Command(PootleCommand):
     help = "Update database stores from files."
     process_disabled_projects = True
+    log_name = "update"
 
     def add_arguments(self, parser):
         super(Command, self).add_arguments(parser)
@@ -42,7 +46,7 @@ class Command(PootleCommand):
         """
         :return: flag if child stores should be updated
         """
-        if translation_project.project.treestyle == "none":
+        if translation_project.project.treestyle == 'pootle_fs':
             return
         if translation_project.directory_exists_on_disk():
             translation_project.update_from_disk(
@@ -53,22 +57,10 @@ class Command(PootleCommand):
             translation_project.directory.makeobsolete()
         else:
             # Skip if project directory ceased to exist on disk.
-            logging.warning(u"Missing project directory for %s. Skipping %s.",
-                            translation_project.project, translation_project)
-
+            logger.warning(
+                u"[update] Missing project directory (skipping): %s",
+                translation_project)
         return False
-
-    def handle_store(self, store, **options):
-        if not store.file:
-            return
-        disk_mtime = store.get_file_mtime()
-        if not options["force"] and disk_mtime == store.file_mtime:
-            # The file on disk wasn't changed since the last sync
-            logging.debug(u"File didn't change since last sync, "
-                          "skipping %s", store.pootle_path)
-            return
-
-        store.update_from_disk(overwrite=options["overwrite"])
 
     def handle_all(self, **options):
         scan_translation_projects(languages=self.languages,

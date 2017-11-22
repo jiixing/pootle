@@ -3,9 +3,10 @@
 -r base.txt
 
 # Database
-MySQL-python>=1.2.1p2
+# MySQL
+-r _db_mysql.txt
 # Uncomment for PostgreSQL
-# psycopg2>=2.4.5
+# -r _db_postgresql.txt
 
 # Logging
-raven
+raven==6.1.0

@@ -6,6 +6,7 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
+import os
 from subprocess import call
 
 import pytest
@@ -20,7 +21,11 @@ def test_pootle_noargs(capfd):
     """Pootle no args should give help"""
     call(['pootle'])
     out, err = capfd.readouterr()
-    assert "Type 'pootle help <subcommand>'" in out
+    # Expected:
+    #   Type 'pootle help <subcommand>'
+    # but 'pootle' is 'pootle-script.py' on Windows
+    assert "Type 'pootle" in out
+    assert " help <subcommand>'" in out
 
 
 @pytest.mark.cmd
@@ -42,9 +47,9 @@ def test_pootle_init(capfd):
 
 
 @pytest.mark.cmd
-def test_pootle_init_db_sqlite(capfd, tmpdir):
+def test_pootle_init_db_sqlite(capsys, tmpdir):
     """pootle init --help"""
     test_conf_file = tmpdir.join("pootle.conf")
+    assert not os.path.exists(str(test_conf_file))
     call(['pootle', 'init', '--db=sqlite', '--config=%s' % test_conf_file])
-    out, err = capfd.readouterr()
-    assert "Configuration file created" in out
+    assert os.path.exists(str(test_conf_file))

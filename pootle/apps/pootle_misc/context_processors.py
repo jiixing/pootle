@@ -7,10 +7,8 @@
 # AUTHORS file for copyright and authorship information.
 
 from django.conf import settings
-from django.utils import translation
 
 from pootle.core.markup import get_markup_filter_name
-from pootle_language.models import Language
 from pootle_project.models import Project
 from staticpages.models import LegalPage
 
@@ -21,7 +19,7 @@ def _agreement_context(request):
     nocheck = filter(lambda x: request_path.startswith(x),
                      settings.POOTLE_LEGALPAGE_NOCHECK_PREFIXES)
 
-    if (request.user.is_authenticated() and not nocheck and
+    if (request.user.is_authenticated and not nocheck and
         LegalPage.objects.has_pending_agreement(request.user)):
         return True
 
@@ -40,9 +38,12 @@ def _get_social_auth_providers(request):
 def pootle_context(request):
     """Exposes settings to templates."""
     # FIXME: maybe we should expose relevant settings only?
+
     return {
         'settings': {
+            'POOTLE_CUSTOM_LOGO': getattr(settings, "POOTLE_CUSTOM_LOGO", ""),
             'POOTLE_TITLE': settings.POOTLE_TITLE,
+            'POOTLE_FAVICONS_PATH': settings.POOTLE_FAVICONS_PATH,
             'POOTLE_INSTANCE_ID': settings.POOTLE_INSTANCE_ID,
             'POOTLE_CONTACT_ENABLED': (settings.POOTLE_CONTACT_ENABLED and
                                        settings.POOTLE_CONTACT_EMAIL),
@@ -53,7 +54,6 @@ def pootle_context(request):
             'DEBUG': settings.DEBUG,
         },
         'custom': settings.POOTLE_CUSTOM_TEMPLATE_CONTEXT,
-        'ALL_LANGUAGES': Language.live.cached_dict(translation.get_language()),
         'ALL_PROJECTS': Project.objects.cached_dict(request.user),
         'SOCIAL_AUTH_PROVIDERS': _get_social_auth_providers(request),
         'display_agreement': _agreement_context(request),

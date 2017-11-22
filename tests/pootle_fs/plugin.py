@@ -7,24 +7,31 @@
 # AUTHORS file for copyright and authorship information.
 
 import os
+import sys
 
 import pytest
 
+from pootle.core.delegate import revision
 from pootle.core.response import Response
 from pootle.core.state import State
+from pootle_app.models import Directory
+from pootle_fs.apps import PootleFSConfig
+from pootle_fs.exceptions import FSStateError
 from pootle_fs.matcher import FSPathMatcher
+from pootle_fs.models import StoreFS
 from pootle_fs.plugin import Plugin
 from pootle_fs.utils import FSPlugin
 from pootle_project.models import Project
+from pootle_store.constants import POOTLE_WINS, SOURCE_WINS
 
 
 FS_CHANGE_KEYS = [
-    "_added", "_fetched", "_pulled",
-    "_synced", "_pushed", "_merged",
-    "_removed", "_unstaged"]
+    "_added", "_pulled",
+    "_synced", "_pushed",
+    "_resolved", "_removed", "_unstaged"]
 
 
-def _test_dummy_response(responses, **kwargs):
+def _test_dummy_response(action, responses, **kwargs):
     stores = kwargs.pop("stores", None)
     if stores:
         assert len(responses) == len(stores)
@@ -32,19 +39,72 @@ def _test_dummy_response(responses, **kwargs):
     if stores_fs:
         assert len(responses) == len(stores_fs)
     for response in responses:
+        if action.startswith("add"):
+            if response.fs_state.state_type.endswith("_untracked"):
+                store_fs = StoreFS.objects.get(
+                    pootle_path=response.pootle_path,
+                    path=response.fs_path)
+            else:
+                store_fs = response.store_fs
+                store_fs.refresh_from_db()
+            if response.fs_state.state_type == "fs_removed":
+                assert store_fs.resolve_conflict == POOTLE_WINS
+            elif response.fs_state.state_type == "pootle_removed":
+                assert store_fs.resolve_conflict == SOURCE_WINS
+            assert not store_fs.staged_for_merge
+            continue
+        if action.startswith("rm"):
+            if response.fs_state.state_type.endswith("_untracked"):
+                store_fs = StoreFS.objects.get(
+                    pootle_path=response.pootle_path,
+                    path=response.fs_path)
+            else:
+                store_fs = response.store_fs
+                store_fs.refresh_from_db()
+            assert store_fs.staged_for_removal
+            continue
+        remove_states = ["fs_staged", "pootle_staged", "remove"]
+        if action.startswith("unstage"):
+            if response.fs_state.state_type in remove_states:
+                with pytest.raises(StoreFS.DoesNotExist):
+                    response.store_fs.refresh_from_db()
+                continue
+            store_fs = response.store_fs
+            store_fs.refresh_from_db()
+            assert not store_fs.staged_for_merge
+            assert not store_fs.resolve_conflict
+            continue
         if stores:
-            assert response.store_fs.store in stores
-        if stores_fs:
+            if response.store_fs:
+                assert response.store_fs.store in stores
+            else:
+                assert stores.filter(
+                    pootle_path=response.pootle_path).exists()
+        if action.startswith("resolve"):
+            if response.fs_state.state_type.endswith("_untracked"):
+                store_fs = StoreFS.objects.get(
+                    path=response.fs_state.fs_path,
+                    pootle_path=response.fs_state.pootle_path)
+            else:
+                store_fs = response.store_fs
+                store_fs.refresh_from_db()
+            if "pootle" in action:
+                assert store_fs.resolve_conflict == POOTLE_WINS
+            if not action.endswith("overwrite"):
+                assert store_fs.staged_for_merge is True
+            continue
+        check_store_fs = (
+            stores_fs
+            and not response.fs_state.state_type == "fs_untracked")
+        if check_store_fs:
             assert response.store_fs in stores_fs
-        for k in FS_CHANGE_KEYS:
-            assert getattr(response.store_fs.file, k) == kwargs.get(k, False)
-        for k in kwargs:
-            if k not in FS_CHANGE_KEYS:
-                assert getattr(response.store_fs.file, k) == kwargs[k]
 
 
 @pytest.mark.django_db
-def test_fs_plugin_unstage_response(capsys, localfs_envs):
+@pytest.mark.xfail(
+    sys.platform == 'win32',
+    reason="path mangling broken on windows")
+def test_fs_plugin_unstage_response(capsys, no_complex_po_, localfs_envs):
     state_type, plugin = localfs_envs
     action = "unstage"
     original_state = plugin.state()
@@ -54,26 +114,31 @@ def test_fs_plugin_unstage_response(capsys, localfs_envs):
         "merge_fs_wins", "merge_pootle_wins"]
     if state_type in unstaging_states:
         assert plugin_response.made_changes is True
-        _test_dummy_response(plugin_response["unstaged"], _unstaged=True)
+        _test_dummy_response(
+            action, plugin_response["unstaged"], _unstaged=True)
     else:
         assert plugin_response.made_changes is False
         assert not plugin_response["unstaged"]
 
 
 @pytest.mark.django_db
-def test_fs_plugin_unstage_staged_response(capsys, localfs_staged_envs):
+def test_fs_plugin_unstage_staged_response(capsys,
+                                           no_complex_po_,
+                                           localfs_staged_envs):
     state_type, plugin = localfs_staged_envs
     action = "unstage"
     original_state = plugin.state()
     plugin_response = getattr(plugin, action)(
         state=original_state)
     assert plugin_response.made_changes is True
-    _test_dummy_response(plugin_response["unstaged"], _unstaged=True)
+    _test_dummy_response(
+        action, plugin_response["unstaged"], _unstaged=True)
 
 
 @pytest.mark.django_db
 def test_fs_plugin_paths(project_fs_empty, possible_actions):
     __, cmd, __, cmd_args = possible_actions
+    project_fs_empty.fetch()
     pootle_path, fs_path = "FOO", "BAR"
     response = getattr(project_fs_empty, cmd)(
         pootle_path=pootle_path, fs_path=fs_path, **cmd_args)
@@ -93,6 +158,9 @@ def test_fs_plugin_paths(project_fs_empty, possible_actions):
 
 
 @pytest.mark.django_db
+@pytest.mark.xfail(
+    sys.platform == 'win32',
+    reason="path mangling broken on windows")
 def test_fs_plugin_response(localfs_envs, possible_actions, fs_response_map):
     state_type, plugin = localfs_envs
     action_name, action, command_args, plugin_kwargs = possible_actions
@@ -112,8 +180,6 @@ def test_fs_plugin_response(localfs_envs, possible_actions, fs_response_map):
         changes = ["_pulled", "_pushed", "_synced"]
     elif expected[0] == "added_from_pootle":
         changes = ["_added"]
-    elif expected[0] == "fetched_from_fs":
-        changes = ["_fetched"]
     elif expected[0] == "pushed_to_fs":
         changes = ["_pushed", "_synced"]
     elif expected[0] == "pulled_to_pootle":
@@ -134,6 +200,7 @@ def test_fs_plugin_response(localfs_envs, possible_actions, fs_response_map):
         dict(stores=stores,
              stores_fs=stores_fs))
     _test_dummy_response(
+        action_name,
         plugin_response[expected[0]],
         **kwargs)
 
@@ -150,9 +217,9 @@ def test_plugin_instance_bad_args(project_fs_empty):
 
 
 @pytest.mark.django_db
-def test_plugin_pull(project_fs_empty):
+def test_plugin_fetch(project_fs_empty):
     assert project_fs_empty.is_cloned is False
-    project_fs_empty.pull()
+    project_fs_empty.fetch()
     assert project_fs_empty.is_cloned is True
     project_fs_empty.clear_repo()
     assert project_fs_empty.is_cloned is False
@@ -225,6 +292,12 @@ def test_fs_plugin_sync_all():
     plugin = SyncPlugin(project)
     state = State("dummy")
     response = Response(state)
+
+    class DummyResources(object):
+        file_hashes = {}
+        pootle_revisions = {}
+
+    state.resources = DummyResources()
     plugin.sync(state, response, fs_path="FOO", pootle_path="BAR")
     for result in [plugin._merged, plugin._pushed, plugin._rmed, plugin._pulled]:
         assert result[0] is state
@@ -241,7 +314,10 @@ def test_fs_plugin_not_implemented():
     plugin = Plugin(project)
 
     with pytest.raises(NotImplementedError):
-        plugin.pull()
+        plugin.latest_hash
+
+    with pytest.raises(NotImplementedError):
+        plugin.fetch()
 
     with pytest.raises(NotImplementedError):
         plugin.push()
@@ -257,6 +333,9 @@ def test_fs_plugin_matcher(localfs):
 
 
 @pytest.mark.django_db
+@pytest.mark.xfail(
+    sys.platform == 'win32',
+    reason="path mangling broken on windows")
 def test_fs_plugin_localfs_push(localfs_pootle_staged_real):
     plugin = localfs_pootle_staged_real
     response = plugin.sync()
@@ -268,3 +347,34 @@ def test_fs_plugin_localfs_push(localfs_pootle_staged_real):
         with open(src_file) as target:
             with open(target_file) as src:
                 assert src.read() == target.read()
+
+
+@pytest.mark.django_db
+def test_fs_plugin_cache_key(project_fs):
+    plugin = project_fs
+    assert plugin.ns == "pootle.fs.plugin"
+    assert plugin.sw_version == PootleFSConfig.version
+    assert (
+        plugin.fs_revision
+        == plugin.latest_hash)
+    assert (
+        plugin.sync_revision
+        == revision.get(
+            Project)(plugin.project).get(key="pootle.fs.sync"))
+    assert (
+        plugin.pootle_revision
+        == revision.get(
+            Directory)(plugin.project.directory).get(key="stats"))
+    assert (
+        plugin.cache_key
+        == ("%s.%s.%s"
+            % (plugin.pootle_revision,
+               plugin.sync_revision,
+               plugin.fs_revision)))
+
+
+@pytest.mark.django_db
+def test_fs_plugin_fetch_bad(project0):
+
+    with pytest.raises(FSStateError):
+        FSPlugin(project0).add()

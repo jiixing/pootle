@@ -1,3 +1,4 @@
+=============
 Release Notes
 =============
 
@@ -11,32 +12,69 @@ Also be aware of the :ref:`important changes in the Translate Toolkit
 If you are upgrading Pootle, you might want to see some tips to ensure your
 :doc:`upgrade goes smoothly </server/upgrading>`.
 
+
+Final releases
+==============
+
+2.8 series
+----------
 .. toctree::
    :maxdepth: 1
 
-   2.8.0b1 <2.8.0b1>
+   2.8.2 <2.8.2>
+   2.8.1 <2.8.1>
+   2.8.0 <2.8.0>
+
+2.7 series
+----------
+.. toctree::
+   :maxdepth: 1
+
    2.7.6 <2.7.6>
    2.7.5 <2.7.5>
    2.7.4 <2.7.4>
    2.7.3 <2.7.3>
-   2.7.3b1 <2.7.3b1>
    2.7.2 <2.7.2>
    2.7.1 <2.7.1>
    2.7.0 <2.7.0>
+
+2.6 series
+----------
+.. toctree::
+   :maxdepth: 1
+
+   2.6.4 <2.6.4>
+   2.6.3 <2.6.3>
    2.6.2 <2.6.2>
    2.6.1 <2.6.1>
    2.6.0 <2.6.0>
+
+2.5 series
+----------
+.. toctree::
+   :maxdepth: 1
+
    2.5.1.3 <2.5.1.3>
    2.5.1.2 <2.5.1.2>
    2.5.1.1 <2.5.1.1>
    2.5.1 <2.5.1>
-   2.5.1-rc1 <2.5.1-rc1>
    2.5.0 <2.5.0>
-   2.5.0-rc1 <2.5.0-rc1>
+
+2.1 series
+----------
+.. toctree::
+   :maxdepth: 1
+
    2.1.6 <2.1.6>
    2.1.5 <2.1.5>
    2.1.4 <2.1.4>
    2.1.3 <2.1.3>
    2.1.2 <2.1.2>
    2.1.1 <2.1.1>
-   Older releases (0.10 to 2.1) <old_releases>
+
+Older releases
+--------------
+.. toctree::
+   :maxdepth: 1
+
+   0.10 to 2.1 <old_releases>

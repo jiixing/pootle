@@ -11,6 +11,8 @@
 # Copyright (c) Django Software Foundation and individual contributors.  All
 # rights reserved.
 
+from __future__ import print_function
+
 import datetime
 import os
 import subprocess
@@ -24,6 +26,8 @@ except ImportError:
         def fake(func):
             return func
         return fake
+
+from pootle.constants import VERSION
 
 
 CANDIDATE_MARKERS = ('alpha', 'beta', 'rc', 'final')
@@ -144,10 +148,10 @@ def get_complete_version(version=None):
     >>> get_complete_version((1, 2, 3, 'alpha', 0))
     (1, 2, 3, 'alpha', 0)
     """
-    if version is None:
-        from pootle import VERSION as version
+    if version is not None:
+        return version
 
-    return version
+    return VERSION
 
 
 def get_docs_version(version=None, positions=2):
@@ -169,11 +173,11 @@ def get_docs_version(version=None, positions=2):
 
 def get_rtd_version(version=None):
     """Return the docs version string reported in the RTD site."""
-    version_str = get_docs_version(version=version, positions=3)
+    version_str = get_docs_version(version=version, positions=2)
     return (
         'latest'
         if version_str == 'dev'
-        else 'stable-%s' % (version_str, )
+        else 'stable-%s.x' % (version_str, )
     )
 
 
@@ -181,13 +185,16 @@ def _shell_command(command):
     """Return the first result of a shell ``command``"""
     repo_dir = os.path.dirname(os.path.abspath(__file__))
 
-    command_subprocess = subprocess.Popen(
-        command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        cwd=repo_dir,
-        universal_newlines=True
-    )
+    try:
+        command_subprocess = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=repo_dir,
+            universal_newlines=True
+        )
+    except OSError:
+        return None
 
     return command_subprocess.communicate()[0]
 
@@ -221,22 +228,26 @@ def get_git_branch():
     'feature/proper_version'
     """
     branch = _shell_command(['/usr/bin/git', 'symbolic-ref', '-q',
-                             'HEAD']).strip()
+                             'HEAD'])
     if not branch:
         return None
-    return "/".join(branch.split("/")[2:])
+    return "/".join(branch.strip().split("/")[2:])
 
 
 @lru_cache()
 def get_git_hash():
-    """Returns the current git commit hash.
+    """Returns the current git commit hash or None.
 
     >>> get_git_hash()
     'ad768e8'
     """
-    return _shell_command(
+    git_hash = _shell_command(
         ['/usr/bin/git', 'rev-parse', '--verify', '--short', 'HEAD']
-    ).strip()
+    )
+    if git_hash:
+        return git_hash.strip()
+    return None
+
 
 if __name__ == "__main__":
     from sys import argv
@@ -249,3 +260,9 @@ if __name__ == "__main__":
             print(get_docs_version())
     else:
         print(get_version())
+
+
+def is_prerelease(version=None):
+    """Is this a final release or not"""
+
+    return _get_candidate(get_complete_version(version)) != 'final'

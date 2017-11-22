@@ -42,7 +42,7 @@ class Command(PootleCommand):
         )
 
     def handle_all_stores(self, translation_project, **options):
-        if translation_project.project.treestyle == "none":
+        if translation_project.project.treestyle == 'pootle_fs':
             return
         if translation_project.directory_exists_on_disk():
             translation_project.sync(
@@ -50,11 +50,3 @@ class Command(PootleCommand):
                 skip_missing=options['skip_missing'],
                 only_newer=not options['force']
             )
-
-    def handle_store(self, store, **options):
-        store.sync(
-            conservative=not options['overwrite'],
-            update_structure=options['overwrite'],
-            skip_missing=options['skip_missing'],
-            only_newer=not options['force']
-        )

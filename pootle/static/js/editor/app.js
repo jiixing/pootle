@@ -9,13 +9,12 @@
 import $ from 'jquery';
 import _ from 'underscore';
 import React from 'react';
-import ReactDOM from 'react-dom';
 
 import TimeSince from 'components/TimeSince';
 import ReactRenderer from 'utils/ReactRenderer';
 
 // jQuery plugins
-import 'jquery-caret';
+import 'jquery-bidi';
 import 'jquery-easing';
 import 'jquery-highlightRegex';
 import 'jquery-history';
@@ -23,46 +22,73 @@ import 'jquery-serializeObject';
 import 'jquery-utils';
 
 // Other plugins
-import autosize from 'autosize';
 import cx from 'classnames';
 import Levenshtein from 'levenshtein';
 import mousetrap from 'mousetrap';
 import assign from 'object-assign';
 
-import StatsAPI from 'api/StatsAPI';
 import UnitAPI from 'api/UnitAPI';
 import cookie from 'utils/cookie';
+import { q, qAll } from 'utils/dom';
 import fetch from 'utils/fetch';
 import linkHashtags from 'utils/linkHashtags';
 
-import SuggestionFeedbackForm from './components/SuggestionFeedbackForm';
 import UploadTimeSince from './components/UploadTimeSince';
 
 import captcha from '../captcha';
 import { UnitSet } from '../collections';
 import helpers from '../helpers';
 import msg from '../msg';
-import score from '../score';
 import search from '../search';
 import utils from '../utils';
 import suttacentral from '../suttacentral';
 import {
-  decodeEntities, escapeUnsafeRegexSymbols, makeRegexForMultipleWords,
+  decodeEntities, escapeUnsafeRegexSymbols, getAreaId, makeRegexForMultipleWords,
 } from './utils';
+
+import ReactEditor from './index';
+
+// Make the react-based editor available to templates. Long term, `index` would
+// be the actual entry point, entirely superseding the `app` module.
+PTL.reactEditor = ReactEditor;
+
 
 const CTX_STEP = 1;
 
 const ALLOWED_SORTS = ['oldest', 'newest', 'default'];
+
+const debounce = function (func, wait) {
+  let timeout;
+  let immediate;
+  return function (...args) {
+    const context = this;
+    const later = function () {
+      timeout = null;
+      if (!immediate) {
+        func.apply(context, args);
+      }
+    };
+    const callNow = !timeout;
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+    if (callNow) {
+      immediate = true;
+      func.apply(context, args);
+    } else {
+      immediate = false;
+    }
+  };
+};
 
 
 const filterSelectOpts = {
   dropdownAutoWidth: true,
   width: 'off',
 };
+
 const sortSelectOpts = assign({
   minimumResultsForSearch: -1,
 }, filterSelectOpts);
-
 
 const mtProviders = [];
 
@@ -70,7 +96,6 @@ const mtProviders = [];
 function _refreshChecksSnippet(newChecks) {
   const $checks = $('.js-unit-checks');
   const focusedArea = $('.focusthis')[0];
-
   $checks.html(newChecks).show();
   utils.blinkClass($checks, 'blink', 4, 200);
   focusedArea.focus();
@@ -94,11 +119,26 @@ PTL.editor = {
       assign(this.settings, options);
     }
 
+    this.formats = {};
+
+    this.setActiveUnit = debounce((body, newUnit) => {
+      this.fetchUnits().always(() => {
+        UnitAPI.fetchUnit(newUnit.id, body)
+          .then(
+            (data) => {
+              this.setEditUnit(data);
+              this.renderUnit();
+            },
+            this.error
+          );
+      });
+    }, 250);
+
     /* Cached elements */
-    this.backToBrowserEl = document.querySelector('.js-back-to-browser');
+    this.backToBrowserEl = q('.js-back-to-browser');
     this.$editorActivity = $('#js-editor-act');
     this.$editorBody = $('.js-editor-body');
-    this.editorTableEl = document.querySelector('.js-editor-table');
+    this.editorTableEl = q('.js-editor-table');
     this.$filterStatus = $('#js-filter-status');
     this.$filterChecks = $('#js-filter-checks');
     this.$filterChecksWrapper = $('.js-filter-checks-wrapper');
@@ -106,8 +146,8 @@ PTL.editor = {
     this.$msgOverlay = $('#js-editor-msg-overlay');
     this.$navNext = $('#js-nav-next');
     this.$navPrev = $('#js-nav-prev');
-    this.unitCountEl = document.querySelector('.js-unit-count');
-    this.unitIndexEl = document.querySelector('.js-unit-index');
+    this.unitCountEl = q('.js-unit-count');
+    this.unitIndexEl = q('.js-unit-index');
     this.offsetRequested = 0;
 
     /* Initialize variables */
@@ -132,15 +172,11 @@ PTL.editor = {
 
     this.fetchingOffsets = [];
 
-    /* Regular expressions */
-    this.cpRE = /^(<[^>]+>|\[n\|t]|\W$^\n)*(\b|$)/gm;
-
     /* Levenshtein word comparer */
     this.wordComparer = new Levenshtein({ compare: 'words' });
 
     /* Compile templates */
     this.tmpl = {
-      vUnit: _.template($('#view_unit').html()),
       tm: _.template($('#tm_suggestions').html()),
       editCtx: _.template($('#editCtx').html()),
       msg: _.template($('#js-editor-msg').html()),
@@ -158,9 +194,11 @@ PTL.editor = {
     /* Select2 */
     this.$filterStatus.select2(filterSelectOpts);
     this.$filterSortBy.select2(sortSelectOpts);
+    // hack - prevent tooltips
+    $('.select2-selection__rendered').removeAttr('title');
 
     /* Screenshot images */
-    $(document).on('click', '.js-dev-img', function displayScreenshot(e) {
+    $('#editor').on('click', '.js-dev-img', function displayScreenshot(e) {
       e.preventDefault();
 
       $(this).magnificPopup({
@@ -175,97 +213,107 @@ PTL.editor = {
      * Bind event handlers
      */
 
+    /* Editor toolbar navigation/search/filtering */
+    $('#toolbar').on('keypress', '.js-unit-index', (e) => this.gotoIndex(e));
+    $('#toolbar').on('dblclick click', '.js-unit-index', (e) => this.unitIndex(e));
+    $('#toolbar').on('click', '#js-nav-prev', () => this.gotoPrev());
+    $('#toolbar').on('click', '#js-nav-next', () => this.gotoNext());
+    $('#toolbar').on('change', '#js-filter-sort', () => this.filterSort());
+
+    /* Filtering */
+    $('#actions').on('change', '#js-filter-status', () => this.filterStatus());
+    $('#actions').on('change', '#js-filter-checks', () => this.filterChecks());
+
     /* State changes */
-    $(document).on('input', '.js-translation-area',
-                   (e) => this.onTextareaChange(e));
-    $(document).on('change', 'input.fuzzycheck',
+    $('#editor').on('change', 'input.fuzzycheck',
                    () => this.onStateChange());
-    $(document).on('click', 'input.fuzzycheck',
+    $('#editor').on('click', 'input.fuzzycheck',
                    () => this.onStateClick());
-    $(document).on('input', '#id_translator_comment',
+    $('#editor').on('input', '#id_translator_comment',
                    () => this.handleTranslationChange());
 
     /* Suggest / submit */
-    $(document).on('click', '.switch-suggest-mode a',
+    $('#editor').on('click', '.switch-suggest-mode a',
                    (e) => this.toggleSuggestMode(e));
 
     /* Update focus when appropriate */
-    $(document).on('focus', '.focusthis', (e) => {
+    $('#editor').on('focus', '.focusthis', (e) => {
       PTL.editor.focused = e.target;
+    });
+    $('#editor').on('focus', '.js-translation-area', (e) => {
+      $(e.target).closest('.js-editor-area-wrapper').addClass('is-focused');
+    });
+    $('#editor').on('blur', '.js-translation-area', (e) => {
+      $(e.target).closest('.js-editor-area-wrapper').removeClass('is-focused');
     });
 
     /* General */
-    $(document).on('click', '.js-editor-reload', (e) => {
+    $('#editor').on('click', '.js-editor-reload', (e) => {
       e.preventDefault();
       $.history.load('');
     });
 
+    $('#editor').on('keydown', '.js-auto-matched-translation', (e) => {
+      if (e.keyCode !== 17) {
+        $('.js-auto-matched-translation').toggleClass('js-auto-matched-translation', false);
+        $('.js-auto-match-msg').slideUp(200, 'easeOutQuad');
+      }
+    });
+
     /* Write TM results, special chars... into the currently focused element */
-    $(document).on('click', '.js-editor-copytext', (e) => this.copyText(e));
+    $('#editor').on('click', '.js-editor-copytext', (e) => this.copyText(e));
+    $('#editor').on('click', '.js-editor-copy-tm-text', (e) => this.copyTMText(e));
 
     /* Copy translator comment */
-    $(document).on('click', '.js-editor-copy-comment', (e) => {
+    $('#editor').on('click', '.js-editor-copy-comment', (e) => {
       const text = e.currentTarget.dataset.string;
       this.copyComment(text);
     });
 
     /* Copy original translation */
-    $(document).on('click', '.js-copyoriginal', (e) => {
-      const uId = e.currentTarget.dataset.uid;
-      const sources = [
-        ...document.querySelectorAll(`#js-unit-${uId} .js-translation-text`),
-      ].map((el) => el.textContent);
-      this.copyOriginal(sources);
+    $('#editor').on('click', '.js-copyoriginal', (e) => {
+      this.copyOriginal(e.currentTarget.dataset.languageCode);
     });
 
     /* Editor navigation/submission */
-    $(document).on('mouseup', 'tr.view-row, tr.ctx-row', this.gotoUnit);
-    $(document).on('keypress', '.js-unit-index', (e) => this.gotoIndex(e));
-    $(document).on('dblclick click', '.js-unit-index', (e) => this.unitIndex(e));
-    $(document).on('click', 'input.submit', (e) => {
+    $('#editor').on('mouseup', 'tr.view-row, tr.ctx-row', this.gotoUnit);
+    $('#editor').on('click', 'input.submit', (e) => {
       e.preventDefault();
       this.handleSubmit();
     });
-    $(document).on('click', 'input.suggest', (e) => {
+    $('#editor').on('click', 'input.suggest', (e) => {
       e.preventDefault();
       this.handleSuggest();
     });
-    $(document).on('click', '#js-nav-prev', () => this.gotoPrev());
-    $(document).on('click', '#js-nav-next', () => this.gotoNext());
-    $(document).on('click', '.js-suggestion-reject', (e) => {
+    $('#editor').on('click', '.js-suggestion-reject', (e) => {
       e.stopPropagation();
       this.rejectSuggestion(e.currentTarget.dataset.suggId);
     });
-    $(document).on('click', '.js-suggestion-accept', (e) => {
+    $('#editor').on('click', '.js-suggestion-accept', (e) => {
       e.stopPropagation();
       this.acceptSuggestion(e.currentTarget.dataset.suggId);
     });
-    $(document).on('click', '.js-suggestion-toggle',
+    $('#editor').on('click', '.js-suggestion-toggle',
       (e) => this.toggleSuggestion(e, { canHide: true }));
 
     if (this.settings.canReview) {
-      $(document).on('click', '.js-user-suggestion',
+      $('#editor').on('click', '.js-user-suggestion',
         (e) => this.toggleSuggestion(e, { canHide: false }));
     }
 
-    $(document).on('click', '.js-translate-lightbox', () => this.closeSuggestion());
+    $('#editor').on('click', '.js-translate-lightbox', () => this.closeSuggestion());
 
-    $(document).on('click', '#js-toggle-timeline', (e) => this.toggleTimeline(e));
-    $(document).on('click', '.js-toggle-check', (e) => {
+    $('#editor').on('click', '#js-toggle-timeline', (e) => this.toggleTimeline(e));
+    $('#editor').on('click', '.js-toggle-check', (e) => {
       this.toggleCheck(e.currentTarget.dataset.checkId);
     });
-
-    /* Filtering */
-    $(document).on('change', '#js-filter-status', () => this.filterStatus());
-    $(document).on('change', '#js-filter-checks', () => this.filterChecks());
-    $(document).on('change', '#js-filter-sort', () => this.filterSort());
-    $(document).on('click', '.js-more-ctx', () => this.moreContext());
-    $(document).on('click', '.js-less-ctx', () => this.lessContext());
-    $(document).on('click', '.js-show-ctx', () => this.showContext());
-    $(document).on('click', '.js-hide-ctx', () => this.hideContext());
+    $('#editor').on('click', '.js-more-ctx', () => this.moreContext());
+    $('#editor').on('click', '.js-less-ctx', () => this.lessContext());
+    $('#editor').on('click', '.js-show-ctx', () => this.showContext());
+    $('#editor').on('click', '.js-hide-ctx', () => this.hideContext());
 
     /* Commenting */
-    $(document).on('click', '.js-editor-comment', (e) => {
+    $('#editor').on('click', '.js-editor-comment', (e) => {
       e.preventDefault();
       const $elem = $('.js-editor-comment-form');
       const $comment = $('.js-editor-comment');
@@ -277,17 +325,18 @@ PTL.editor = {
         $elem.css('display', 'none');
       }
     });
-    $(document).on('submit', '#js-comment-form', (e) => this.addComment(e));
-    $(document).on('click', '.js-comment-remove', (e) => this.removeComment(e));
+    $('#editor').on('submit', '#js-comment-form', (e) => this.addComment(e));
+    $('#editor').on('click', '.js-comment-remove', (e) => this.removeComment(e));
 
     /* Misc */
     $(document).on('click', '.js-editor-msg-hide', () => this.hideMsg());
 
-    $(document).on('click', '.js-toggle-raw', (e) => {
+    $('#editor').on('click', '.js-toggle-raw', (e) => {
       e.preventDefault();
       $('.js-translate-translation').toggleClass('raw');
-      $('.js-toggle-raw').toggleClass('selected');
-      autosize.update(document.querySelector('.js-translation-area'));
+      const toggle = document.querySelector('.js-toggle-raw');
+      toggle.classList.toggle('selected');
+      ReactEditor.setProps({ isRawMode: toggle.classList.contains('selected') });
     });
 
     /* Confirmation prompt */
@@ -304,32 +353,40 @@ PTL.editor = {
     const hotkeys = mousetrap(document.body);
 
     // FIXME: move binding to `SuggestionFeedbackForm` component
-    hotkeys.bind('esc', () => {
+    hotkeys.bind('esc', (e) => {
+      e.preventDefault();
       if (this.selectedSuggestionId !== undefined) {
         this.closeSuggestion();
       }
     });
-    hotkeys.bind('ctrl+return', () => {
+    hotkeys.bind('ctrl+return', (e) => {
+      e.preventDefault();
       if (this.isSuggestMode()) {
         this.handleSuggest();
       } else {
         this.handleSubmit();
       }
     });
-    hotkeys.bind('ctrl+space', () => this.toggleState());
-    hotkeys.bind('ctrl+shift+space', (e) => this.toggleSuggestMode(e));
-
-    hotkeys.bind('ctrl+up', () => this.gotoPrev());
-    hotkeys.bind('ctrl+,', () => this.gotoPrev());
-
-    hotkeys.bind('ctrl+down', () => this.gotoNext({ isSubmission: false }));
-    hotkeys.bind('ctrl+.', () => this.gotoNext({ isSubmission: false }));
-
-    hotkeys.bind('alt+down', function() {
-      console.log('Copy Original!');
-      $('.js-copyoriginal').click()
+    hotkeys.bind('ctrl+space', (e) => {
+      e.preventDefault();
+      this.toggleState();
     });
-    hotkeys.bind('ctrl+b', function() {
+    hotkeys.bind('ctrl+shift+space', (e) => {
+      e.preventDefault();
+      this.toggleSuggestMode(e);
+    });
+
+    hotkeys.bind(['ctrl+up', 'ctrl+,'], (e) => {
+      e.preventDefault();
+      this.gotoPrev();
+    });
+    hotkeys.bind(['ctrl+down', 'ctrl+.'], (e) => {
+      e.preventDefault();
+      this.gotoNext({ isSubmission: false });
+
+    });
+
+    hotkeys.bind('ctrl+b', (e) => {
       console.log('Copy Original!');
       $('.js-copyoriginal').click()
     });
@@ -344,17 +401,24 @@ PTL.editor = {
       );
       this.$navPrev.attr('title',
         gettext(
-          'Go to the previous string (Ctrl+,)<br/><br/>Also:</br>Previous page: ' +
+          'Go to the previous string (Ctrl+,)<br/><br/>Also:<br/>Previous page: ' +
           'Ctrl+Shift+,<br/>First page: Ctrl+Shift+Home'
         )
       );
     }
 
-    hotkeys.bind('ctrl+shift+n', (e) => this.unitIndex(e));
+    hotkeys.bind('ctrl+shift+n', (e) => {
+      e.preventDefault();
+      this.unitIndex(e);
+    });
 
     /* XHR activity indicator */
     $(document).ajaxStart(() => {
       clearTimeout(this.delayedActivityTimer);
+      if (this.isLoading) {
+        return;
+      }
+
       this.delayedActivityTimer = setTimeout(() => {
         this.showActivity();
       }, 3000);
@@ -380,9 +444,6 @@ PTL.editor = {
       });
     });
 
-    // Update relative dates every minute
-    setInterval(helpers.updateRelativeDates, 6e4);
-
     /* History support */
     $.history.init((hash) => {
       const params = utils.getParsedHash(hash);
@@ -393,7 +454,6 @@ PTL.editor = {
       if (this.selectedSuggestionId !== undefined) {
         this.closeSuggestion({ checkIfCanNavigate: false });
       }
-      ReactRenderer.unmountComponents();
 
       // Walk through known filtering criterias and apply them to the editor object
 
@@ -486,7 +546,6 @@ PTL.editor = {
           if (!values.hasOwnProperty(key)) {
             continue;
           }
-
           newOpts.push(`
             <option value="${key}" data-user="${user}" class="js-user-filter">
               ${values[key]}
@@ -522,7 +581,7 @@ PTL.editor = {
       this.preventNavigation = true;
 
       const filterValue = this.filter === 'search' ? 'all' : this.filter;
-      this.$filterStatus.select2('val', filterValue);
+      this.$filterStatus.val(filterValue).trigger('change.select2');
 
       if (this.filter === 'checks') {
         // if the checks selector is empty (i.e. the 'change' event was not fired
@@ -532,11 +591,14 @@ PTL.editor = {
         }
       }
 
-      this.$filterSortBy.select2('val', this.sortBy);
+      this.$filterSortBy.val(this.sortBy).trigger('change.select2');
 
       if (this.filter === 'search') {
         this.$filterChecksWrapper.hide();
       }
+
+      // hack - prevent tooltips
+      $('.select2-selection__rendered').removeAttr('title');
 
       // re-enable normal event handling
       this.preventNavigation = false;
@@ -555,7 +617,6 @@ PTL.editor = {
             uId = this.units.uIds[this.offsetRequested - this.initialOffset - 1];
           } else {
             uId = this.units.uIds[0];
-            $.history.load(utils.updateHashPart('unit', uId));
           }
         }
         this.offsetRequested = 0;
@@ -571,18 +632,8 @@ PTL.editor = {
       this.displayObsoleteMsg();
     }
 
-    autosize(document.querySelector('textarea.expanding:not([disabled="disabled"])'));
-
     // set direction of the comment body
     $('.extra-item-comment').filter(':not([dir])').bidi();
-    // set direction of the suggestion body
-    $('.suggestion-translation-body').filter(':not([dir])').bidi();
-
-    // Focus on the first textarea, if any
-    const firstArea = $('.focusthis')[0];
-    if (firstArea) {
-      firstArea.focus();
-    }
 
     const $devComments = $('.js-developer-comments');
     $devComments.html(linkHashtags($devComments.html()));
@@ -606,8 +657,6 @@ PTL.editor = {
     this.keepState = false;
     this.isLoading = false;
     this.hideActivity();
-    this.updateExportLink();
-    helpers.updateRelativeDates();
     
     window.suttacentral.init();
   },
@@ -652,10 +701,18 @@ PTL.editor = {
     ]).reduce((a, b) => a.concat(b), []);
 
     let hlRegex;
-    if (searchOptions.indexOf('exact') >= 0) {
-      hlRegex = new RegExp(`(${escapeUnsafeRegexSymbols(searchText)})`);
+    if (searchOptions.indexOf('phrase') >= 0) {
+      if (searchOptions.indexOf('case') >= 0) {
+        hlRegex = new RegExp(`(${escapeUnsafeRegexSymbols(searchText)})`, 'i');
+      } else {
+        hlRegex = new RegExp(`(${escapeUnsafeRegexSymbols(searchText)})`);
+      }
     } else {
-      hlRegex = new RegExp(makeRegexForMultipleWords(searchText), 'i');
+      if (searchOptions.indexOf('case') >= 0) {
+        hlRegex = new RegExp(makeRegexForMultipleWords(searchText), 'i');
+      } else {
+        hlRegex = new RegExp(makeRegexForMultipleWords(searchText));
+      }
     }
     $(sel.join(', ')).highlightRegex(hlRegex);
   },
@@ -665,20 +722,26 @@ PTL.editor = {
   copyText(e) {
     const $el = $(e.currentTarget);
     const action = $el.data('action');
-    const text = $el.data('string') || $el.data('translation-aid') || $el.text();
-    const $target = $(this.focused);
-    let start;
+    const text = (
+      $el.data('codepoint') && JSON.parse(`"${$el.data('codepoint')}"`) ||
+      $el.data('string') ||
+      $el.data('translation-aid') ||
+      $el.text()
+    );
 
     if (action === 'overwrite') {
-      $target.val(text).trigger('input');
-      start = text.length;
+      ReactEditor.setValueFor(this.focused || 0, text);
     } else {
-      start = $target.caret().start + text.length;
-      $target.val($target.caret().replace(text)).trigger('input');
+      ReactEditor.insertAtCaretFor(this.focused || 0, text);
     }
+  },
 
-    $target.caret(start, start);
-    autosize.update(this.focused);
+  copyTMText(e) {
+    // Don't do anything if we're selecting text
+    if (window.getSelection().toString() !== '') {
+      return;
+    }
+    this.copyText(e);
   },
 
 
@@ -716,9 +779,9 @@ PTL.editor = {
   },
 
   copyComment(text) {
-    const comment = document.querySelector('.js-editor-comment');
-    const commentForm = document.querySelector('.js-editor-comment-form');
-    const commentInput = document.querySelector('#id_translator_comment');
+    const comment = q('.js-editor-comment');
+    const commentForm = q('.js-editor-comment-form');
+    const commentInput = q('#id_translator_comment');
 
     if (!comment.classList.contains('selected')) {
       commentForm.style.display = 'inline-block';
@@ -728,7 +791,6 @@ PTL.editor = {
     commentInput.focus();
     commentInput.value = text;
   },
-
 
   /*
    * Fuzzying / unfuzzying functions
@@ -809,54 +871,47 @@ PTL.editor = {
 
   /* Updates unit textarea and input's `default*` values. */
   updateUnitDefaultProperties() {
-    $('.js-translation-area').each(function setDefaultValue() {
-      this.defaultValue = this.value;
-    });
-    const checkbox = document.querySelector('#id_state');
+    ReactEditor.setProps({ initialValues: ReactEditor.stateValues.slice() });
+
+    const checkbox = q('#id_is_fuzzy');
     checkbox.defaultChecked = checkbox.checked;
     this.handleTranslationChange();
   },
 
   /* Updates comment area's `defaultValue` value. */
   updateCommentDefaultProperties() {
-    const comment = document.querySelector('#id_translator_comment');
+    const comment = q('#id_translator_comment');
     comment.defaultValue = comment.value;
     this.handleTranslationChange();
   },
 
   handleTranslationChange() {
-    const comment = document.querySelector('#id_translator_comment');
+    const comment = q('#id_translator_comment');
     const commentChanged = comment !== null ?
                            comment.value !== comment.defaultValue : false;
 
-    const submit = document.querySelector('.js-submit');
-    const suggest = document.querySelector('.js-suggest');
-    const translations = $('.js-translation-area').get();
+    const submit = q('.js-submit');
+    const suggest = q('.js-suggest');
     const suggestions = $('.js-user-suggestion').map(function getSuggestions() {
       return $(this).data('translation-aid');
     }).get();
-    const checkbox = document.querySelector('#id_state');
+    const checkbox = q('#id_is_fuzzy');
     const stateChanged = checkbox.defaultChecked !== checkbox.checked;
 
-    let areaChanged = false;
     let needsReview = false;
     let suggestionExists = false;
-    let area;
 
     // Non-admin users are required to clear the fuzzy checkbox
     if (!this.settings.isAdmin) {
       needsReview = checkbox.checked === true;
     }
 
-    for (let i = 0; i < translations.length && !areaChanged; i++) {
-      area = translations[i];
-      areaChanged = area.defaultValue !== area.value;
-    }
+    const areaChanged = this.isTextareaValueDirty();
 
+    const valueState = ReactEditor.stateValues;
     if (suggestions.length) {
-      for (let i = 0; i < translations.length && !suggestionExists; i++) {
-        area = translations[i];
-        suggestionExists = suggestions.indexOf(area.value) !== -1;
+      for (let i = 0; i < valueState.length && !suggestionExists; i++) {
+        suggestionExists = suggestions.indexOf(valueState[i]) !== -1;
       }
     }
 
@@ -882,13 +937,10 @@ PTL.editor = {
     this.keepState = true;
   },
 
-  onTextareaChange(e) {
+  onTextareaChange() {
     this.handleTranslationChange();
 
-    const el = e.target;
-    const hasChanged = el.defaultValue !== el.value;
-
-    if (hasChanged && !this.keepState) {
+    if (this.isTextareaValueDirty() && !this.keepState) {
       this.ungoFuzzy();
     }
 
@@ -899,18 +951,16 @@ PTL.editor = {
     }, 200);
   },
 
+  isTextareaValueDirty() {
+    return !_.isEqual(ReactEditor.props.initialValues,
+                      ReactEditor.stateValues);
+  },
+
 
   /*
    * Translation's similarity
    */
 
-  getSimilarityData() {
-    const currentUnit = this.units.getCurrent();
-    return {
-      similarity: currentUnit.get('similarityHuman'),
-      mt_similarity: currentUnit.get('similarityMT'),
-    };
-  },
 
   calculateSimilarity(newTranslation, $elements, dataSelector) {
     let maxSimilarity = 0;
@@ -952,8 +1002,7 @@ PTL.editor = {
       return false;
     }
 
-    const currentUnit = this.units.getCurrent();
-    const newTranslation = $('.js-translation-area').val();
+    const newTranslation = ReactEditor.stateValues[0];
     let simHuman = { max: 0, boxId: null };
     let simMT = { max: 0, boxId: null };
 
@@ -965,24 +1014,18 @@ PTL.editor = {
       simMT = this.calculateSimilarity(newTranslation, $aidElementsMT,
                                        dataSelectorMT);
     }
-
-    currentUnit.set({
-      similarityHuman: simHuman.max,
-      similarityMT: simMT.max,
-    });
-
     const similarity = (simHuman.max > simMT.max) ? simHuman : simMT;
     this.highlightBox(similarity.boxId, similarity.max === 1);
     return true;
   },
 
   /* Applies highlight classes to `boxId`. */
-  highlightBox(boxId, isExact) {
+  highlightBox(boxId, isCase) {
     const bestMatchCls = 'best-match';
-    const exactMatchCls = 'exact-match';
+    const caseMatchCls = 'case-match';
 
     $('.translate-table').find(`.${bestMatchCls}`)
-                         .removeClass(`${bestMatchCls} ${exactMatchCls}`);
+                         .removeClass(`${bestMatchCls} ${caseMatchCls}`);
 
     if (boxId === null) {
       return false;
@@ -990,7 +1033,7 @@ PTL.editor = {
 
     $(boxId).addClass(cx({
       [bestMatchCls]: true,
-      [exactMatchCls]: isExact,
+      [caseMatchCls]: isCase,
     }));
     return true;
   },
@@ -1026,15 +1069,6 @@ PTL.editor = {
     } else {
       this.doSuggestMode();
     }
-  },
-
-  updateExportLink() {
-    const $exportOpt = $('.js-export-view');
-    const baseUrl = $exportOpt.data('export-url');
-    const hash = utils.getHash().replace(/&?unit=\d+/, '');
-    const exportLink = hash ? `${baseUrl}?${hash}` : baseUrl;
-
-    $exportOpt.data('href', exportLink);
   },
 
   /*
@@ -1084,6 +1118,7 @@ PTL.editor = {
       text = gettext('Error while connecting to the server');
     } else if (xhr.status === 402) {
       captcha.onError(xhr, 'PTL.editor.error');
+      return;
     } else if (xhr.status === 404) {
       text = gettext('Not found');
     } else if (xhr.status === 500) {
@@ -1131,9 +1166,10 @@ PTL.editor = {
 
   /* Checks whether editor needs the next batch of units */
   needsNextUnitBatch() {
+    const fetchOffset = Math.round((2.0 / 3 * this.units.chunkSize)) * 2;
     return (
-      this.units.uIds.slice(-7).indexOf(this.units.activeUnit.id) !== -1 &&
-      this.getOffsetOfLastUnit() < this.units.total
+      this.units.uIds.slice(-fetchOffset).indexOf(this.units.activeUnit.id) !== -1
+      && this.getOffsetOfLastUnit() < this.units.frozenTotal
     );
   },
 
@@ -1152,9 +1188,11 @@ PTL.editor = {
 
   /* Sets the offset in the browser location */
   setOffset(uid) {
-    $.history.load(utils.updateHashPart(
-      'offset', this.getStartOfChunk(this.getOffsetOfUid(uid)))
-    );
+    const offset = this.getOffsetOfUid(uid);
+    if (offset === -1) {
+      return;
+    }
+    $.history.load(utils.updateHashPart('offset', this.getStartOfChunk(offset)));
   },
 
   /* Gets the offset of the last unit currently held by the client */
@@ -1172,7 +1210,7 @@ PTL.editor = {
   /* Removes remembered offsets once the XHR call has completed */
   markAsFetched(offset) {
     if (this.fetchingOffsets.indexOf(offset) !== -1) {
-      this.fetchingOffsets = this.fetchingOffsets.splice(
+      this.fetchingOffsets.splice(
         this.fetchingOffsets.indexOf(offset), 1
       );
     }
@@ -1211,11 +1249,30 @@ PTL.editor = {
       reqData['modified-since'] = this.modifiedSince;
     }
 
+    if (this.month !== null) {
+      reqData.month = this.month;
+    }
+
     if (this.user) {
       reqData.user = this.user;
     }
 
     return reqData;
+  },
+
+  getValueStateData(valueState) {
+    const data = {};
+    for (let i = 0; i < valueState.length; i++) {
+      data[getAreaId(i)] = valueState[i];
+    }
+    return data;
+  },
+
+  getCheckedStateData() {
+    const checkbox = document.querySelector('#id_is_fuzzy');
+    return {
+      [checkbox.name]: checkbox.checked ? 1 : 0,
+    };
   },
 
 
@@ -1225,11 +1282,15 @@ PTL.editor = {
 
 
   /* Renders a single row */
-  renderRow(unit) {
+  renderRow(unitId) {
+    const unit = this.viewUnits[unitId];
     return (`
-      <tr id="row${unit.id}" class="view-row">
-        ${this.tmpl.vUnit({ unit: unit.toJSON() })}
-      </tr>
+      <tr
+        id="row${unitId}"
+        class="view-row"
+        data-id="${unitId}"
+        data-target="${unit.url}"
+      ><td></td><td></td></tr>
     `);
   },
 
@@ -1256,6 +1317,8 @@ PTL.editor = {
     const currentUnit = this.units.getCurrent();
 
     const rows = [];
+    this.viewUnits = {};
+    this.viewCtxUnits = {};
 
     unitGroups.forEach((unitGroup) => {
       // Don't display a delimiter row if all units have the same origin
@@ -1273,7 +1336,8 @@ PTL.editor = {
         if (unit.id === currentUnit.id) {
           rows.push(this.renderEditorRow(unit));
         } else {
-          rows.push(this.renderRow(unit));
+          this.viewUnits[unit.id] = unit.toJSON();
+          rows.push(this.renderRow(unit.id));
         }
       }
     });
@@ -1289,12 +1353,16 @@ PTL.editor = {
 
     for (let i = 0; i < units.length; i++) {
       // FIXME: Please let's use proper models for context units
-      let unit = units[i];
-      unit = assign({}, currentUnit.toJSON(), unit);
-
-      rows += `<tr id="ctx${unit.id}" class="ctx-row ${extraCls}">`;
-      rows += this.tmpl.vUnit({ unit });
-      rows += '</tr>';
+      const unit = assign({}, currentUnit.toJSON(), units[i]);
+      this.viewCtxUnits[unit.id] = unit;
+      rows += (`
+        <tr
+          id="ctx${unit.id}"
+          data-id="${unit.id}"
+          data-target="${unit.url}"
+          class="ctx-row ${extraCls}"
+        ><td></td><td></td></tr>
+      `);
     }
 
     return rows;
@@ -1303,29 +1371,25 @@ PTL.editor = {
 
   /* Returns the unit groups for the current editor state */
   getUnitGroups() {
-    const limit = parseInt(((this.units.chunkSize - 1) / 2), 10);
     const unitCount = this.units.length;
     const currentUnit = this.units.getCurrent();
     const curIndex = this.units.indexOf(currentUnit);
 
-    let begin = curIndex - limit;
-    let end = curIndex + 1 + limit;
+    // Display only one unit before the current unit
+    const numberOfUnitsBeforeCurrent = 1;
+    let begin = curIndex - numberOfUnitsBeforeCurrent;
+    let end = curIndex + this.units.chunkSize - 1;
     let prevPath = null;
 
     if (begin < 0) {
-      end = end + -begin;
+      end = end - begin;
       begin = 0;
     } else if (end > unitCount) {
-      if (begin > end - unitCount) {
-        begin = begin + -(end - unitCount);
-      } else {
-        begin = 0;
-      }
       end = unitCount;
     }
 
     return this.units.slice(begin, end).reduce((out, unit) => {
-      const pootlePath = unit.get('store').get('pootlePath');
+      const pootlePath = unit.get('pootlePath');
 
       if (pootlePath === prevPath) {
         out[out.length - 1].units.push(unit);
@@ -1335,7 +1399,6 @@ PTL.editor = {
           units: [unit],
         });
       }
-
       prevPath = pootlePath;
 
       return out;
@@ -1355,20 +1418,41 @@ PTL.editor = {
 
   /* reDraws the translate table rows */
   reDraw(newTbody) {
-    const $oldRows = this.$editorBody.find('tr');
-
-    // Remove autosize event listeners for textarea before removing
-    autosize.destroy(document.querySelectorAll('textarea.expanding'));
-
-    $oldRows.remove();
+    this.$editorBody.find('tr').remove();
 
     if (newTbody !== undefined) {
-      this.$editorBody.append(newTbody);
-
+      this.$editorBody.html(newTbody);
+      this.renderViewRowValues('.view-row', this.viewUnits);
       this.ready();
     }
   },
 
+  renderViewRowValues(selector, units) {
+    const rows = document.querySelectorAll(selector);
+    for (let i = 0; i < rows.length; i++) {
+      const unit = units[rows[i].dataset.id];
+      const sourceProps = {
+        dir: unit.store.source_dir,
+        language: unit.store.source_lang,
+        values: unit.source,
+        type: 'original',
+        fileType: unit.store.filetype,
+        hasPlurals: unit.source.length > 1,
+      };
+      const targetProps = {
+        isFuzzy: unit.isfuzzy,
+        dir: unit.store.target_dir,
+        language: unit.store.target_lang,
+        values: unit.target,
+        fileType: unit.store.filetype,
+        type: 'translation',
+        hasPlurals: unit.target.length > 1,
+      };
+
+      ReactEditor.renderViewUnitComponent(sourceProps, rows[i].cells[0]);
+      ReactEditor.renderViewUnitComponent(targetProps, rows[i].cells[1]);
+    }
+  },
 
   /* Updates a button in `selector` to the `disable` state */
   updateNavButton($button, disable) {
@@ -1451,7 +1535,7 @@ PTL.editor = {
       }
       return UnitAPI.fetchUnits(reqData)
         .then(
-          (data) => this.storeUnitData(data),
+          (data) => this.storeUnitData(data, { isInitial: initial }),
           this.error
         ).always(() => this.markAsFetched(offsetToFetch));
     }
@@ -1460,14 +1544,14 @@ PTL.editor = {
     /* eslint-enable new-cap */
   },
 
-  storeUnitData(data) {
+  storeUnitData(data, { isInitial = false } = {}) {
     const { total } = data;
     const { start } = data;
     const { end } = data;
     let { unitGroups } = data;
     let prependUnits = false;
 
-    if (!unitGroups.length && !this.units.uIds.length) {
+    if (!unitGroups.length && isInitial) {
       this.noResults();
       return false;
     }
@@ -1529,30 +1613,16 @@ PTL.editor = {
     if (this.settings.vFolder) {
       body.vfolder = this.settings.vFolder;
     }
-    this.fetchUnits().always(() => {
-      this.updateNavigation();
-      UnitAPI.fetchUnit(newUnit.id, body)
-        .then(
-          (data) => {
-            this.setEditUnit(data);
-            this.renderUnit();
-            const unit_id = newUnit.id;
-            if (utils.getParsedHash(utils.getHash()).unit != newUnit.id) {
-              console.log('old Unit id == ', utils.getParsedHash(utils.getHash()).unit);
-              let newHash = utils.updateHashPart('unit', newUnit.id);
-              console.log('Updating hash part unit to ', newUnit.id);
-              $.history.load(newHash);
-            }
-          },
-          this.error
-        );
-    });
+    this.updateNavigation();
+    this.setActiveUnit(body, newUnit);
   },
 
   /* Pushes translation submissions and moves to the next unit */
-  handleSubmit(comment = '') {
-    const el = document.querySelector('input.submit');
-    const newTranslation = $('.js-translation-area')[0].value;
+  handleSubmit({ translations = null, comment = '' } = {}) {
+    const el = q('input.submit');
+    const values = translations !== null ? translations : ReactEditor.stateValues;
+    const valueStateData = this.getValueStateData(values);
+    const newTranslation = valueStateData[0];
     const suggestions = $('.js-user-suggestion').map(function getSuggestions() {
       return {
         text: this.dataset.translationAid,
@@ -1564,8 +1634,6 @@ PTL.editor = {
       efn: 'PTL.editor.error',
     };
 
-    const body = $('#translate').serializeObject();
-
     this.updateUnitDefaultProperties();
 
     // Check if the string being submitted is already in the set of
@@ -1576,8 +1644,13 @@ PTL.editor = {
     const suggestionIndex = suggestionTexts.indexOf(newTranslation);
 
     if (suggestionIndex !== -1 && !this.isFuzzy()) {
-      this.acceptSuggestion(suggestionIds[suggestionIndex], { skipToNext: true });
-      return;
+      if (this.settings.canReview) {
+        this.acceptSuggestion(suggestionIds[suggestionIndex], { skipToNext: true });
+        return;
+      }
+      // Exact match suggestions are still accepted this way for users
+      // with no review right
+      this.selectedSuggestionId = suggestionIds[suggestionIndex];
     }
 
     // If similarities were in the process of being calculated by the time
@@ -1588,7 +1661,12 @@ PTL.editor = {
       this.checkSimilarTranslations();
     }
 
-    assign(body, this.getReqData(), this.getSimilarityData(), captchaCallbacks);
+    const body = assign(
+      {},
+      this.getCheckedStateData(),
+      valueStateData,
+      this.getReqData(),
+      captchaCallbacks);
 
     el.disabled = true;
 
@@ -1600,7 +1678,6 @@ PTL.editor = {
       };
       assign(body, suggData);
     }
-
     UnitAPI.addTranslation(this.units.getCurrent().id, body)
       .then(
         (data) => this.processSubmission(data),
@@ -1614,20 +1691,11 @@ PTL.editor = {
       return;
     }
 
-    // FIXME: handle this via events
-    const translations = $('.js-translation-area').map((i, el) => $(el).val())
-                                                  .get();
-
     const unit = this.units.getCurrent();
-    unit.setTranslation(translations);
+    const hasCriticalChecks = data.critical_checks_active;
+    unit.setTranslation(data.newtargets);
     unit.set('isfuzzy', this.isFuzzy());
-
-    const hasCriticalChecks = !!data.checks;
     $('.translate-container').toggleClass('error', hasCriticalChecks);
-
-    if (data.user_score) {
-      score.set(data.user_score);
-    }
 
     if (hasCriticalChecks) {
       _refreshChecksSnippet(data.checks);
@@ -1643,15 +1711,10 @@ PTL.editor = {
       efn: 'PTL.editor.error',
     };
 
-    const body = $('#translate').serializeObject();
-
     this.updateUnitDefaultProperties();
 
-    // in suggest mode, do not send the fuzzy state flag
-    // even if it is set in the form internally
-    delete body.state;
-
-    assign(body, this.getReqData(), this.getSimilarityData(), captchaCallbacks);
+    const body = assign({}, this.getValueStateData(ReactEditor.stateValues),
+                        this.getReqData(), captchaCallbacks);
 
     UnitAPI.addSuggestion(this.units.getCurrent().id, body)
       .then(
@@ -1660,12 +1723,11 @@ PTL.editor = {
       );
   },
 
-  processSuggestion(data) {
-    if (data.user_score) {
-      score.set(data.user_score);
-    }
-
-    this.gotoNext();
+  processSuggestion() {
+    // Using `PTL.editor` instead of `this` to avoid using of wrong `this`
+    // and hitting the error when anonymous user is redirected from a captcha
+    // page after he added a suggestion.
+    PTL.editor.gotoNext();
   },
 
 
@@ -1711,17 +1773,18 @@ PTL.editor = {
       return false;
     }
 
+    const $el = e.target.nodeName !== 'TR' ?
+                $(e.target).parents('tr') :
+                $(e.target);
+
     // Ctrl + click / Alt + click / Cmd + click / Middle click opens a new tab
     if (e.ctrlKey || e.altKey || e.metaKey || e.which === 2) {
-      const $el = e.target.nodeName !== 'TD' ?
-                  $(e.target).parents('td') :
-                  $(e.target);
       window.open($el.data('target'), '_blank');
       return false;
     }
 
-    // Don't load anything if we're just selecting text
-    if (window.getSelection().toString() !== '') {
+    // Don't load anything if we're just selecting text or right-clicking
+    if (window.getSelection().toString() !== '' || e.which === 3) {
       return false;
     }
 
@@ -1737,6 +1800,13 @@ PTL.editor = {
       } else {
         newHash = `unit=${encodeURIComponent(uid)}`;
       }
+
+      const offset = PTL.editor.getOffsetOfUid(uid);
+      if (offset === -1) {
+        window.location.href = $el.data('target');
+        return false;
+      }
+
       $.history.load(newHash);
       PTL.editor.setOffset(uid);
     }
@@ -1763,24 +1833,29 @@ PTL.editor = {
     }
 
     e.preventDefault();
-    const index = parseInt(this.unitIndexEl.textContent, 10) - 1;
+
+    let index = parseInt(this.unitIndexEl.textContent, 10);
     if (isNaN(index)) {
       return;
     }
-
-    // if index is outside of current uids clear units first
-    if (index < this.initialOffset || index >= this.getOffsetOfLastUnit()) {
-      this.initialOffset = -1;
-      this.offset = 0;
-      this.offsetRequested = index + 1;
-      const newHash = utils.updateHashPart('offset',
-                                           this.getStartOfChunk(index),
-                                           ['unit']);
-      $.history.load(newHash);
-    } else if (index >= 0 && index <= this.units.total) {
-      const uId = this.units.uIds[(index - this.initialOffset)];
-      const newHash = utils.updateHashPart('unit', uId);
-      $.history.load(newHash);
+    index = Math.max(0, index - 1);
+    if (index >= 0 && index <= this.units.total) {
+      // if index is outside of current uids clear units first
+      if (index < this.initialOffset || index >= this.getOffsetOfLastUnit()) {
+        this.initialOffset = -1;
+        this.offset = 0;
+        this.offsetRequested = index + 1;
+        $.history.load(utils.updateHashPart('offset',
+                                            this.getStartOfChunk(index),
+                                            ['unit']));
+      } else {
+        const uId = this.units.uIds[(index - this.initialOffset)];
+        const newHash = utils.updateHashPart('unit', uId);
+        $.history.load(utils.updateHashPart('offset',
+                                            this.getStartOfChunk(index),
+                                            [],
+                                            newHash));
+      }
     }
   },
 
@@ -1790,11 +1865,16 @@ PTL.editor = {
 
   /* Gets the failing check options for the current query */
   getCheckOptions() {
-    StatsAPI.getChecks(this.settings.pootlePath)
-      .then(
-        (data) => this.appendChecks(data),
-        this.error
-      );
+    const $checks = this.$filterChecks;
+    let selectedValue = 'none';
+    if (this.category && this.category.length) {
+      selectedValue = [this.category, '-category'].join('');
+    } else {
+      selectedValue = this.checks[0] || 'none';
+    }
+    $checks.select2(filterSelectOpts);
+    $checks.val(selectedValue).trigger('change.select2');
+    this.$filterChecksWrapper.css('display', 'inline-block');
   },
 
   /* Loads units based on checks filtering */
@@ -1810,53 +1890,24 @@ PTL.editor = {
 
     if (filterChecks !== 'none') {
       const sortBy = this.$filterSortBy.val();
-      const newHash = {
-        filter: 'checks',
-        checks: filterChecks,
-      };
-
+      let newHash = {};
+      if (filterChecks.endsWith('-category')) {
+        newHash = {
+          filter: 'checks',
+          category: filterChecks.slice(0, -9),
+        };
+      } else {
+        newHash = {
+          filter: 'checks',
+          checks: filterChecks,
+        };
+      }
       if (sortBy !== 'default') {
         newHash.sort = sortBy;
       }
-
       $.history.load($.param(newHash));
     }
     return true;
-  },
-
-  /* Adds the failing checks to the UI */
-  appendChecks(checks) {
-    if (Object.keys(checks).length) {
-      const $checks = this.$filterChecks;
-      const selectedValue = this.checks[0] || 'none';
-
-      $checks.find('optgroup').each(function displayGroups() {
-        const $gr = $(this);
-        let empty = true;
-
-        $gr.find('option').each(function displayOptions() {
-          const $opt = $(this);
-          const value = $opt.val();
-
-          if (value in checks) {
-            empty = false;
-            $opt.text(`${$opt.data('title')}(${checks[value]})`);
-          } else {
-            $opt.remove();
-          }
-        });
-
-        if (empty) {
-          $gr.hide();
-        }
-      });
-
-      $checks.select2(filterSelectOpts).select2('val', selectedValue);
-      this.$filterChecksWrapper.css('display', 'inline-block');
-    } else { // No results
-      this.displayMsg({ body: gettext('No results.') });
-      this.$filterStatus.select2('val', this.filter);
-    }
   },
 
   filterSort() {
@@ -1962,6 +2013,8 @@ PTL.editor = {
     const editCtxRows = $('tr.edit-ctx');
     editCtxRows.first().after(before);
     editCtxRows.last().before(after);
+    this.renderViewRowValues('.ctx-row', this.viewCtxUnits);
+
     return undefined;
   },
 
@@ -2082,8 +2135,6 @@ PTL.editor = {
         .prependTo('#extras-container').delay(200)
         .hide().animate({ height: 'show' }, 1000, 'easeOutQuad');
     }
-
-    helpers.updateRelativeDates();
   },
 
   /* Removes last comment */
@@ -2132,17 +2183,20 @@ PTL.editor = {
         $(data.timeline).hide().prependTo('#extras-container')
                         .slideDown(1000, 'easeOutQuad');
       }
-      [...document.querySelectorAll('.js-mount-timesince')].forEach((el, i) => {
+      qAll('.js-mount-timesince').forEach((el, i) => {
         const props = {
-          title: data.entries_group[i].display_datetime,
-          dateTime: data.entries_group[i].iso_datetime,
+          title: data.event_groups[i].display_datetime,
+          dateTime: data.event_groups[i].iso_datetime,
+          relativeTime: data.event_groups[i].relative_time,
         };
-        if (data.entries_group[i].via_upload) {
+        if (data.event_groups[i].via_upload) {
           ReactRenderer.render(<UploadTimeSince {...props} />, el);
         } else {
           ReactRenderer.render(<TimeSince {...props} />, el);
         }
       });
+
+      utils.highlightRONodes('.js-unit-highlight');
 
       $('.timeline-field-body').filter(':not([dir])').bidi();
       $('#js-show-timeline').addClass('selected');
@@ -2163,7 +2217,7 @@ PTL.editor = {
 
 
   /*
-   * User and TM suggestions
+   * User suggestions and TM matches
    */
 
   /* Filters TM results and does some processing */
@@ -2174,16 +2228,15 @@ PTL.editor = {
 
     // FIXME: move this side-effect elsewhere
     if (results.length > 0 && results[0].source === sourceText) {
-      const $element = $(this.focused);
-      // set only if the textarea is empty
-      if ($element.val() === '') {
+      const allowAutofill = this.settings.canSuggest || this.settings.canTranslate;
+      if (ReactEditor.stateValues[0] === '' && allowAutofill) {
         // save unit editor state to restore it after autofill changes
-        const isUnitDirty = PTL.editor.isUnitDirty;
+        const isUnitDirty = this.isUnitDirty;
         const text = results[0].target;
-        $element.val(text).trigger('input');
-        $element.caret(text.length, text.length);
-        this.goFuzzy();
-        PTL.editor.isUnitDirty = isUnitDirty;
+        ReactEditor.setValueFor(this.focused || 0, text);
+        this.isUnitDirty = isUnitDirty;
+        $('.js-mount-editor').toggleClass('js-auto-matched-translation', true);
+        $('.js-auto-match-msg').slideDown(200, 'easeOutQuad');
       }
     }
 
@@ -2205,7 +2258,7 @@ PTL.editor = {
     return filtered;
   },
 
-  /* TM suggestions */
+  /* TM matches */
   getTMUnitsContent(data) {
     const unit = this.units.getCurrent();
     const store = unit.get('store');
@@ -2216,7 +2269,7 @@ PTL.editor = {
     if (filtered.length) {
       return this.tmpl.tm({
         name,
-        store: store.toJSON(),
+        store,
         unit: unit.toJSON(),
         suggs: filtered,
       });
@@ -2225,19 +2278,24 @@ PTL.editor = {
     return '';
   },
 
-  /* Gets TM suggestions from amaGama */
+  /* Gets TM matches from amaGama */
   getTMUnits() {
     const unit = this.units.getCurrent();
-    const store = unit.get('store');
-    const src = store.get('source_lang');
-    const tgt = store.get('target_lang');
     const sText = unit.get('source')[0];
+    const store = unit.get('store');
+    const src = store.source_lang;
+    const tgt = store.target_lang;
 
     if (!sText.length || src === tgt) {
       return;
     }
+    // Exit if source language is not supported by tm service.
+    if (this.settings.tmSourceLanguages === undefined ||
+        this.settings.tmSourceLanguages.indexOf(src) < 0) {
+      return;
+    }
 
-    const pStyle = store.get('project_style');
+    const pStyle = store.project_style;
     let tmUrl = `${this.settings.tmUrl}${src}/${tgt}/unit/` +
       `?source=${encodeURIComponent(sText)}`;
 
@@ -2248,6 +2306,7 @@ PTL.editor = {
     fetch({ url: tmUrl, crossDomain: true })
       .then(
         (data) => this.handleTmResults(data, store, unit),
+        // eslint-disable-next-line no-console
         (xhr, s) => console.error(`HTTP ${xhr.status} (${s}): ${tmUrl}`)
       );
   },
@@ -2262,7 +2321,7 @@ PTL.editor = {
     const name = gettext('Similar translations');
     const tm = PTL.editor.tmpl.tm({
       name,
-      store: store.toJSON(),
+      store,
       unit: unit.toJSON(),
       suggs: filtered,
     });
@@ -2287,10 +2346,6 @@ PTL.editor = {
   },
 
   processRejectSuggestion(data, suggId) {
-    if (data.user_score) {
-      score.set(data.user_score);
-    }
-
     $(`#suggestion-${suggId}`).fadeOut(200, function handleRemove() {
       PTL.editor.closeSuggestion({ checkIfCanNavigate: false });
       $(this).remove();
@@ -2308,10 +2363,8 @@ PTL.editor = {
     suggId, { requestData = {}, isSuggestionChanged = false } = {}
   ) {
     if (isSuggestionChanged) {
-      const area = document.querySelector('.js-translation-area');
-      area.value = decodeEntities(requestData.translation);
       this.undoFuzzyBox();
-      this.handleSubmit(requestData.comment);
+      this.handleSubmit(requestData);
     } else {
       this.acceptSuggestion(suggId, { requestData });
     }
@@ -2326,32 +2379,16 @@ PTL.editor = {
   },
 
   processAcceptSuggestion(data, suggId, skipToNext) {
-    // Update target textareas
     if (data.newtargets !== undefined) {
-      $.each(data.newtargets, (i, target) => {
-        $(`#id_target_f_${i}`).val(target).focus();
-      });
+      ReactEditor.setValues(data.newtargets);
     }
+    this.updateUnitDefaultProperties();
 
-    if (data.newdiffs !== undefined) {
-      // Update remaining suggestion's diff
-      $.each(data.newdiffs, (suggestionId, sugg) => {
-        $.each(sugg, (i, target) => {
-          $(`#suggdiff-${suggestionId}-${i}`).html(target);
-        });
-      });
-    }
-
-    // FIXME: handle this via events
-    const translations = $('.js-translation-area').map((i, el) => $(el).val())
-                                                  .get();
     const unit = this.units.getCurrent();
-    unit.setTranslation(translations);
+    unit.setTranslation(ReactEditor.stateValues);
     unit.set('isfuzzy', false);
 
-    if (data.user_score) {
-      score.set(data.user_score);
-    }
+    ReactEditor.renderSuggestions(data.newtargets);
 
     const hasCriticalChecks = !!data.checks;
     $('.translate-container').toggleClass('error', hasCriticalChecks);
@@ -2374,10 +2411,10 @@ PTL.editor = {
   /* Mutes or unmutes a quality check marking it as false positive or not */
   toggleCheck(checkId) {
     const $check = $(`.js-check-${checkId}`);
-    const isFalsePositive = !$check.hasClass('false-positive');
+    const isFalsePositive = $check.hasClass('false-positive');
 
-    UnitAPI.toggleCheck(this.units.getCurrent().id, checkId,
-                        { mute: isFalsePositive })
+    const opts = isFalsePositive ? null : { mute: 1 };
+    UnitAPI.toggleCheck(this.units.getCurrent().id, checkId, opts)
       .then(
         () => this.processToggleCheck(checkId, isFalsePositive),
         this.error
@@ -2385,7 +2422,7 @@ PTL.editor = {
   },
 
   processToggleCheck(checkId, isFalsePositive) {
-    $(`.js-check-${checkId}`).toggleClass('false-positive', isFalsePositive);
+    $(`.js-check-${checkId}`).toggleClass('false-positive', !isFalsePositive);
 
     const hasError = $('#translate-checks-block .check')
       .not('.false-positive').size() > 0;
@@ -2411,50 +2448,45 @@ PTL.editor = {
       return false;
     }
 
-    const area = document.querySelector('.js-translation-area');
-
-    area.value = decodeEntities(translation);
-    autosize.update(area);
+    ReactEditor.setValueFor(this.focused || 0, decodeEntities(translation));
 
     // Save a copy of the resulting text in the DOM for further
     // similarity comparisons
-    area.dataset.translationAidMt = translation;
-
-    area.dispatchEvent((new Event('input')));
-    area.focus();
+    this.focused.dataset.translationAidMt = translation;
 
     this.goFuzzy();
 
     return true;
   },
 
+  openSuggestion(suggId) {
+    this.selectedSuggestionId = suggId;
+    const mountSelector = `.js-mnt-suggestion-feedback-${suggId}`;
+    const mountNode = q(mountSelector);
+    const editorBody = q('.js-editor-body .translate-full');
+    const suggestion = document.getElementById(`suggestion-${suggId}`);
+
+    const props = {
+      suggId,
+      onAcceptSuggestion: this.handleAcceptSuggestion.bind(this),
+      onRejectSuggestion: this.handleRejectSuggestion.bind(this),
+      onChange: this.handleSuggestionFeedbackChange.bind(this),
+    };
+
+    suggestion.classList.add('suggestion-expanded');
+    editorBody.classList.add('suggestion-expanded');
+    this.isSuggestionFeedbackFormDirty = false;
+
+    ReactEditor.renderSuggestionFeedbackForm(props, mountNode);
+  },
+
   toggleSuggestion(e, { canHide = false } = {}) {
-    e.stopPropagation();
-    const suggestionId = parseInt(e.currentTarget.dataset.suggId, 10);
-    const suggestion = document.getElementById(`suggestion-${suggestionId}`);
-
     if (this.selectedSuggestionId === undefined) {
-      this.selectedSuggestionId = suggestionId;
-      const props = {
-        suggId: this.selectedSuggestionId,
-        initialSuggestionText: e.currentTarget.dataset.translationAid,
-        localeDir: this.settings.localeDir,
-        onAcceptSuggestion: this.handleAcceptSuggestion.bind(this),
-        onRejectSuggestion: this.handleRejectSuggestion.bind(this),
-        onChange: this.handleSuggestionFeedbackChange.bind(this),
-      };
-      const mountSelector = `.js-mnt-suggestion-feedback-${suggestionId}`;
-      const feedbackMountPoint = document.querySelector(mountSelector);
-      const editorBody = document.querySelector('.js-editor-body .translate-full');
-      suggestion.classList.add('suggestion-expanded');
-      editorBody.classList.add('suggestion-expanded');
-
-      this.isSuggestionFeedbackFormDirty = false;
-      this.suggestionFeedbackForm = ReactDOM.render(
-        <SuggestionFeedbackForm {...props} />,
-        feedbackMountPoint
-      );
+      e.stopPropagation();
+      const suggestionId = parseInt(e.currentTarget.dataset.suggId, 10);
+      this.openSuggestion(suggestionId);
     } else if (canHide) {
+      e.stopPropagation();
       this.closeSuggestion();
     }
   },
@@ -2466,16 +2498,17 @@ PTL.editor = {
   closeSuggestion({ checkIfCanNavigate = true } = {}) {
     if (this.selectedSuggestionId !== undefined &&
         (!checkIfCanNavigate || this.canNavigate())) {
-      const suggestion = document.querySelector(`#suggestion-${this.selectedSuggestionId}`);
-      const editorBody = document.querySelector('.js-editor-body .translate-full');
-      const mountSelector = `.js-mnt-suggestion-feedback-${this.selectedSuggestionId}`;
-      const feedbackMountPoint = document.querySelector(mountSelector);
+      const suggestion = q(`#suggestion-${this.selectedSuggestionId}`);
+      const editorBody = q('.js-editor-body .translate-full');
       editorBody.classList.remove('suggestion-expanded');
       suggestion.classList.remove('suggestion-expanded');
-      ReactDOM.unmountComponentAtNode(feedbackMountPoint);
       this.selectedSuggestionId = undefined;
-      this.suggestionFeedbackForm = undefined;
       this.isSuggestionFeedbackFormDirty = false;
+      ReactEditor.unmountSuggestionFeedbackForm();
     }
+  },
+
+  addFormats(formats) {
+    this.formats = assign(this.formats, formats);
   },
 };

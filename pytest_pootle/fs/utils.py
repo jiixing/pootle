@@ -14,11 +14,16 @@ def parse_fs_action_args(action):
         action = action[:-6]
         command_args.append("--force")
         plugin_kwargs["force"] = True
-    elif action.startswith("merge_"):
-        if action.endswith("pootle"):
+    elif action.startswith("resolve"):
+        if action.endswith("_overwrite"):
+            command_args.append("--overwrite")
+            plugin_kwargs["merge"] = False
+        else:
+            plugin_kwargs["merge"] = True
+        if "pootle" in action:
             command_args.append("--pootle-wins")
             plugin_kwargs["pootle_wins"] = True
         else:
             plugin_kwargs["pootle_wins"] = False
-        action = "merge"
+        action = "resolve"
     return action, command_args, plugin_kwargs

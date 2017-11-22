@@ -11,9 +11,9 @@ know programming! Want to know how? Please keep reading.
   <https://lists.sourceforge.net/lists/listinfo/translate-pootle>`_ or in the
   `Pootle channel <https://gitter.im/translate/pootle>`_.
 
-- Found a bug? Report it in our `Bugzilla tracker
+- Found a bug? Report it in our `Issue tracker
   <https://github.com/translate/pootle/issues/>`_. You can also always contact
-  us on IRC. Make sure to read more about :ref:`how to report bugs
+  us on Pootle channel. Make sure to read more about :ref:`how to report bugs
   <contributing#reporting_bugs>`.
 
 - Translate the User Interface into your own language. Pootle is translated
@@ -172,9 +172,8 @@ complete it, you can contribute suggestions that will later be reviewed by the
 language administrators.
 
 If you can't find your language and want to have that added or have concerns of
-any other means, contact us on our `mailing list
-<https://lists.sourceforge.net/lists/listinfo/translate-pootle>`_ or on the
-`Pootle channel <https://gitter.im/translate/pootle>`_.
+any other means, contact us on the `Pootle channel
+<https://gitter.im/translate/pootle>`_.
 
 Although desirable, it's not mandatory to use the official Pootle server to
 translate Pootle itself. In case you feel more comfortable working with files
@@ -183,6 +182,11 @@ and offline tools, just head to the `code repository at GitHub
 latest template and submit it to us by `opening a bug
 <https://github.com/translate/pootle/issues/new>`_ or by sending us a pull
 request.
+
+There are some `addtional localization requirements
+<https://github.com/translate/pootle/wiki/Localizing-Pootle---extras>`_ beyond
+translation, so please review those to ensure that your language is 100%
+translated.
 
 
 .. _contributing#documentation:

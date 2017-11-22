@@ -23,20 +23,20 @@ TRANSLATION_PATHS = OrderedDict(
 
 
 @pytest.fixture
-def pootle_fs_path(settings, tmpdir):
-    settings.POOTLE_FS_PATH = str(tmpdir)
+def pootle_fs_working_path(settings, tmpdir):
+    settings.POOTLE_FS_WORKING_PATH = str(tmpdir)
     return str(tmpdir)
 
 
 @pytest.fixture
-def fs_src(pootle_fs_path):
-    src_path = os.path.join(pootle_fs_path, "__src__")
+def fs_src(pootle_fs_working_path):
+    src_path = os.path.join(pootle_fs_working_path, "__src__")
     os.mkdir(src_path)
     return src_path
 
 
 @pytest.fixture
-def tp0_store(settings, tp0, fs_src):
+def tp0_store(po_directory, settings, tp0, fs_src):
     from pootle_config.utils import ObjectConfig
 
     from .store import _require_store
@@ -45,24 +45,14 @@ def tp0_store(settings, tp0, fs_src):
 
     conf["pootle_fs.fs_type"] = "localfs"
     conf["pootle_fs.fs_url"] = fs_src
-    conf["pootle_fs.translation_paths"] = OrderedDict(TRANSLATION_PATHS)
+    conf["pootle_fs.translation_mappings"] = OrderedDict(TRANSLATION_PATHS)
     return _require_store(
         tp0,
         settings.POOTLE_TRANSLATION_DIRECTORY, 'project0_fs.po')
 
 
 @pytest.fixture
-def tp0():
-    """Require English Project0."""
-    from pootle_translationproject.models import TranslationProject
-
-    return TranslationProject.objects.get(
-        language__code="language0",
-        project__code="project0")
-
-
-@pytest.fixture
-def tp0_store_fs(settings, tp0_store):
+def tp0_store_fs(tp0_store):
     """Require the /en/project0/project0.po store."""
     from pootle_fs.models import StoreFS
 

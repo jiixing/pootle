@@ -144,6 +144,7 @@ quality checks.
 .. code-block:: console
 
     $ mkvirtualenv build-checks-templates
+    (build-checks-templates)$ pip install --upgrade setuptools pip
     (build-checks-templates)$ pip install -r requirements/build.txt
     (build-checks-templates)$ export POOTLE_SETTINGS=~/.pootle/pootle_build.conf
     (build-checks-templates)$ DJANGO_SETTINGS_MODULE=pootle.settings ./setup.py build_checks_templates
@@ -231,6 +232,16 @@ We create a list of contributors using this command:
     $ git log 2.5.0..HEAD --format='%aN, ' | awk '{arr[$0]++} END{for (i in arr){print arr[i], i;}}' | sort -rn | cut -d\  -f2-
 
 
+.. _releasing#cane-caches:
+
+Cane caches
+-----------
+
+Bump the version for each of the apps so the caches are caned after upgrade:
+
+- :file:`apps.py` for each of the apps that have a `version`
+
+
 .. _releasing#up-version-numbers:
 
 Up version numbers
@@ -276,13 +287,14 @@ checkout run:
 .. code-block:: console
 
     $ mkvirtualenv build-pootle-release
-    (build-pootle-release)$ nvm install 0.12  # Use nodejs 0.12
-    (build-pootle-release)$ pip install --upgrade pip
+    (build-pootle-release)$ nvm install stable
+    (build-pootle-release)$ pip install --upgrade setuptools pip
     (build-pootle-release)$ pip install -r requirements/build.txt
+    (build-pootle-release)$ pip install -e .[dev]
     (build-pootle-release)$ export PYTHONPATH="${PYTHONPATH}:`pwd`"
     (build-pootle-release)$ export POOTLE_SETTINGS=~/.pootle/pootle_build.conf
+    (build-pootle-release)$ ./setup.py build_mo        # Build all LINGUAS enabled languages
     (build-pootle-release)$ ./setup.py build_mo --all  # If we are shipping an RC
-    (build-pootle-release)$ make clean
     (build-pootle-release)$ make build
     (build-pootle-release)$ deactivate
     $ unset POOTLE_SETTINGS
@@ -304,9 +316,9 @@ the new release using:
 .. code-block:: console
 
     $ mkvirtualenv test-pootle-release
-    (test-pootle-release)$ pip install --upgrade pip
+    (test-pootle-release)$ pip install --upgrade setuptools pip
     (test-pootle-release)$ pip install dist/Pootle-$version.tar.bz2
-    (test-pootle-release)$ pip install MySQL-python
+    (test-pootle-release)$ pip install mysqlclient
     (test-pootle-release)$ pootle init
 
 
@@ -406,7 +418,8 @@ You can then proceed with other tests such as checking:
        $ ./setup.py --long-description
        $ ./setup.py --classifiers
 
-   The actual long description is taken from :file:`/README.rst`.
+   The actual long description is taken from :file:`/README.rst` with some
+   tweaking for releasing.
 
 Finally clean your test environment:
 
@@ -427,14 +440,45 @@ Tag and branch the release
 --------------------------
 
 You should only tag once you are happy with your release as there are some
-things that we can't undo. You can safely branch for a ``stable/`` branch
-before you tag.
+things that we can't undo.
+
+You can safely branch, if required, for a ``stable/`` branch before you tag.
 
 .. code-block:: console
 
-    $ git checkout -b stable/2.6.0
-    $ git push origin stable/2.6.0
-    $ git tag -a 2.6.0 -m "Tag version 2.6.0"
+    $ git checkout -b stable/2.8.x
+    $ git push origin stable/2.8.x
+
+
+If you branch you will want to update the :file:`README.rst` file so that it
+points correctly to branched versions of badges and documentation.  Review and
+test the actual links created, you don't need to commit everything.
+
+.. code-block:: console
+
+    $ workon build-pootle-release
+    (build-pootle-release)$ ./setup.py update_readme -w
+    (build-pootle-release)$ git diff README.rst
+    (build-pootle-release)$ git commit README.rst -m "Adjust README to branch"
+    (build-pootle-release)$ deactivate
+
+
+Also if you branch you will want to limit requires.io to requirements in the
+branch. To do so check how it was done in `this commit
+<https://github.com/translate/pootle/commit/a94ea7af>`_:
+
+.. code-block:: console
+
+    $ nano .requires.yml
+    $ git add .requires.yml
+    $ git commit -m "Requirements: Limit requires.io to branch requirements"
+
+
+Tag the release:
+
+.. code-block:: console
+
+    $ git tag -a 2.8.0 -m "Tag version 2.8.0"
     $ git push --tags
 
 
@@ -448,8 +492,8 @@ published on Read The Docs.
 
 Use the admin pages to flag a version that should be published.  When we have
 branched the stable release we use the branch rather then the tag i.e.
-``stable/2.5.0`` rather than ``2.5.0`` as that allows any fixes of
-documentation for the ``2.5.0`` release to be immediately available.
+``stable/2.5.x`` rather than ``2.5.0`` as that allows any fixes of
+documentation for the ``2.5`` releases to be immediately available.
 
 Change all references to docs in the Pootle code to point to the branched
 version as apposed to the latest version.
@@ -463,7 +507,7 @@ Publish on PyPI
 ---------------
 
 .. - `Submitting Packages to the Package Index
-  <http://wiki.python.org/moin/CheeseShopTutorial#Submitting_Packages_to_the_Package_Index>`_
+  <https://packaging.python.org/tutorials/distributing-packages/#uploading-your-project-to-pypi>`_
 
 
 .. note:: You need a username and password on `Python Package Index (PyPI)
@@ -471,14 +515,9 @@ Publish on PyPI
    can proceed with this step.
 
    These can be stored in :file:`$HOME/.pypirc` and will contain your username
-   and password. A first run of:
-
-   .. code-block:: console
-
-       $ ./setup.py register
-
-   will create such file. It will also actually publish the meta-data so only
-   do it when you are actually ready.
+   and password. Check `Create a PyPI account
+   <https://packaging.python.org/tutorials/distributing-packages/#create-an-account>`_
+   for more details.
 
 
 Run the following to publish the package on PyPI:
@@ -486,12 +525,9 @@ Run the following to publish the package on PyPI:
 .. code-block:: console
 
     $ workon build-pootle-release
-    (build-pootle-release)$ nvm install 0.12  # Use nodejs 0.12
-    (build-pootle-release)$ export PYTHONPATH="${PYTHONPATH}:`pwd`"
-    (build-pootle-release)$ export POOTLE_SETTINGS=~/.pootle/pootle_build.conf
-    (build-pootle-release)$ make publish-pypi
+    (build-pootle-release)$ pip install --upgrade pyopenssl ndg-httpsclient pyasn1 twine
+    (build-pootle-release)$ twine upload dist/Pootle-*
     (build-pootle-release)$ deactivate
-    $ unset POOTLE_SETTINGS
     $ rmvirtualenv build-pootle-release
 
 
@@ -540,6 +576,10 @@ Let people know that there is a new version:
 
 #. Announce on mailing lists **using plain text** emails using the same text
    (adjusting what needs to be adjusted) used for the :ref:`Github release <releasing#create-github-release>` description:
+
+   .. warning:: This has to be explicitly reviewed and approved by Dwayne so
+      **we don't repeat the same email over and over**.
+
 
    - translate-announce@lists.sourceforge.net
    - translate-pootle@lists.sourceforge.net

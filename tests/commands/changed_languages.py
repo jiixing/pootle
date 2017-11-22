@@ -16,12 +16,32 @@ from pootle.core.models import Revision
 
 @pytest.mark.cmd
 @pytest.mark.django_db
-def test_changed_languages_noargs(capfd, afrikaans_tutorial, french_tutorial):
+def test_changed_languages_noargs(capfd):
     """Get changed languages since last sync."""
+    revision = Revision.get()
+    call_command('changed_languages')
+    out, err = capfd.readouterr()
+    assert out == u'language0,language1,templates\n'
+    assert (
+        ("Will show languages changed between revisions -1 (exclusive) and "
+         "%d (inclusive)"
+         % (revision))
+        in err)
+
+
+@pytest.mark.cmd
+@pytest.mark.django_db
+def test_changed_languages_noargs_nochanges(capfd, project0_nongnu, store0):
+    """Get changed languages since last sync."""
+    unit = store0.units.first()
+    unit.target = "CHANGED"
+    unit.save()
+    store0.sync()
+    revision = Revision.get()
+    out, err = capfd.readouterr()
     call_command('changed_languages')
     out, err = capfd.readouterr()
     assert "(no known changes)" in err
-    revision = Revision.get()
     assert (
         ("Will show languages changed between revisions %d (exclusive) and "
          "%d (inclusive)"
@@ -31,19 +51,22 @@ def test_changed_languages_noargs(capfd, afrikaans_tutorial, french_tutorial):
 
 @pytest.mark.cmd
 @pytest.mark.django_db
-def test_changed_languages_since_revision(capfd, afrikaans_tutorial,
-                                          french_tutorial):
+def test_changed_languages_since_revision(capfd, project0_nongnu, tp0):
     """Changed languages since a given revision"""
     # Everything
-    rev = afrikaans_tutorial.stores.aggregate(
+    for store in tp0.stores.all():
+        store.sync()
+    rev = tp0.stores.aggregate(
         rev=Min('last_sync_revision'))['rev'] - 1
     call_command('changed_languages', '--after-revision=%s' % rev)
     out, err = capfd.readouterr()
-    assert "af,fr" in out
+    assert out == u'language0,language1\n'
+
     # End revisions
-    rev = french_tutorial.stores.aggregate(
-        rev=Min('last_sync_revision'))['rev'] - 1
-    call_command('changed_languages', '--after-revision=%s' % rev)
+    revision = Revision.get()
+    unit = tp0.stores.first().units.first()
+    unit.target = "NEW TARGET"
+    unit.save()
+    call_command('changed_languages', '--after-revision=%s' % revision)
     out, err = capfd.readouterr()
-    assert "af" not in out
-    assert "fr" in out
+    assert out == u'language0\n'

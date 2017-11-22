@@ -18,10 +18,10 @@ export const Project = Backbone.Model.extend({
     code: '',
     fullname: '',
     checkstyle: 'standard',
-    localfiletype: 'po',
     treestyle: 'auto',
     source_language: '',
     ignoredfiles: '',
+    filetypes: [],
     screenshot_search_prefix: '',
     disabled: false,
   },
@@ -40,6 +40,10 @@ export const Project = Backbone.Model.extend({
 
   getPermissionsUrl() {
     return l(['', 'projects', this.get('code'), 'admin', 'permissions', ''].join('/'));
+  },
+
+  getFSUrl() {
+    return l(['', 'admin', 'projects', this.get('code'), 'fs', ''].join('/'));
   },
 
   getFieldChoices(fieldName) {

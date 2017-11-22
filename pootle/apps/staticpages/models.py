@@ -8,15 +8,14 @@
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.urlresolvers import reverse
 from django.db import models
 from django.db.models import Q
 from django.db.models.aggregates import Max
+from django.urls import reverse
 from django.utils.timezone import now
-from django.utils.translation import ugettext_lazy as _
 
 from pootle.core.markup import MarkupField, get_markup_filter_display_name
-from pootle.core.mixins import DirtyFieldsMixin
+from pootle.i18n.gettext import ugettext_lazy as _
 
 from .managers import PageManager
 
@@ -25,7 +24,7 @@ ANN_TYPE = u'announcements'
 ANN_VPATH = ANN_TYPE + u'/'
 
 
-class AbstractPage(DirtyFieldsMixin, models.Model):
+class AbstractPage(models.Model):
 
     active = models.BooleanField(
         _('Active'),
@@ -67,7 +66,7 @@ class AbstractPage(DirtyFieldsMixin, models.Model):
 
     def save(self, **kwargs):
         # Update the `modified_on` timestamp only when specific fields change.
-        if self.has_changes():
+        if self.pk is None or self.has_changes():
             self.modified_on = now()
 
         super(AbstractPage, self).save(**kwargs)
@@ -104,8 +103,9 @@ class AbstractPage(DirtyFieldsMixin, models.Model):
             raise ValidationError(_(u'Virtual path already in use.'))
 
     def has_changes(self):
-        dirty_fields = self.get_dirty_fields()
-        return any(field in dirty_fields for field in ('title', 'body', 'url'))
+        old_page = self.__class__.objects.get(pk=self.pk)
+        return any((getattr(old_page, field) != getattr(self, field))
+                   for field in ('title', 'body', 'url'))
 
 
 class LegalPage(AbstractPage):
@@ -142,8 +142,11 @@ class StaticPage(AbstractPage):
 class Agreement(models.Model):
     """Tracks who agreed a specific legal document and when."""
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL)
-    document = models.ForeignKey(LegalPage)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        db_index=False,
+        on_delete=models.CASCADE)
+    document = models.ForeignKey(LegalPage, on_delete=models.CASCADE)
     agreed_on = models.DateTimeField(
         default=now,
         editable=False,

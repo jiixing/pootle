@@ -1,10 +1,9 @@
-{% load i18n common_tags store_tags cleanhtml cache locale %}
+{% load core i18n common_tags store_tags cleanhtml locale fs_tags %}
 {% get_current_language as LANGUAGE_CODE %}
 {% get_current_language_bidi as LANGUAGE_BIDI %}
-{% cache settings.POOTLE_CACHE_TIMEOUT unit_edit unit.id unit.mtime cantranslate cansuggest canreview altsrcs user.id LANGUAGE_CODE unit.get_terminology %}
 <td colspan="2" rowspan="1" class="translate-full translate-focus{% if unit.isfuzzy %} fuzzy-unit{% endif %}" dir="{% locale_dir %}">
   <div class="translate-lightbox js-translate-lightbox"></div>
-  <div class="translate-container{% if unit.get_active_critical_qualitychecks.exists %} error{% endif %}">
+  <div class="translate-container{% if critical_checks %} error{% endif %}">
     <div class="unit-path">
       <ul>
         <li><span class="content-wrapper">{{ language.name }}</span></li>
@@ -43,11 +42,13 @@
 	      dir="ltr"
 	      class="translate-locations">{{ unit.locations|truncatewords:4 }}</span>
 	{% endif %}
+	{% if project.treestyle == "pootle_fs" %}
+	{% upstream_link_short unit.store.translation_project.project unit.locations %}
+	{% endif %}
       </div>
       {% endif %}
 
       <!-- Terminology suggestions -->
-      {% with unit.get_terminology as terms %}
       {% if terms %}
       <div id="tm" class="sidebar" dir="{% locale_dir %}">
         <span class="sidetitle" lang="{{ LANGUAGE_CODE }}">{% trans "Terminology:" %}</span>
@@ -60,7 +61,6 @@
         {% endfor %}
       </div>
       {% endif %}
-      {% endwith %}
 
       {% if unit.developer_comment %}
       <!-- Developer comments -->
@@ -105,25 +105,20 @@
         <form action="" method="post" name="translate" id="translate">
           <div class="sources">
             <!-- Alternative source language translations -->
-            {% for altunit in altsrcs %}
+            {% for altunit_id, altunit in altsrcs.items %}
             <div class="source-language alternative">
               <div class="translation-text-headers" lang="{{ LANGUAGE_CODE }}" dir="{% locale_dir %}">
-                <div class="language-name">{{ altunit.store.translation_project.language.name }}</div>
+                <div class="language-name">{{ altunit.language_name }}</div>
                 {% if cansuggest or cantranslate %}
                 <div class="translate-toolbar">
-                  <span class="js-mt-{{ altunit.store.translation_project.language.code }}"></span>
-                  <a class="icon-copy js-copyoriginal" data-uid="{{ altunit.id }}"
+                  <span class="js-mt-{{ altunit.language_code }}"></span>
+                  <a class="icon-copy js-copyoriginal"
+                     data-language-code="{{ altunit.language_code }}"
                      title="{% trans 'Copy into translation' %}" accesskey="c"></a>
                 </div>
                 {% endif %}
               </div>
-              <div id="js-unit-{{ altunit.id }}"
-                   class="translate-original{% if unit.hasplural %} translate-plural{% endif %}">
-                {% for i, target, title in altunit|pluralize_target %}
-                <div class="translation-text js-translation-text" lang="{{ altunit.store.translation_project.language.code }}" dir="{{ altunit.store.translation_project.language.direction }}"{% if title %} title="{{ title }}"{% endif %}>{{ target|fancy_highlight }}</div>
-                {% endfor %}
-                <div class="placeholder"></div>
-              </div>
+              <div data-id="{{ altunit_id }}" class="js-mount-editor-alt-src"></div>
             </div>
             {% endfor %}
             <!-- Original -->
@@ -139,18 +134,13 @@
                     </a>
                   </span>
                   <span class="js-mt-{{ source_language.code }}"></span>
-                  <a class="icon-copy js-copyoriginal" data-uid="{{ unit.id }}"
+                  <a class="icon-copy js-copyoriginal"
+                     data-language-code="{{ source_language.code }}"
                      title="{% trans 'Copy into translation' %}" accesskey="c"></a>
                 </div>
                 {% endif %}
               </div>
-              <div id="js-unit-{{ unit.id }}"
-                   class="translate-original{% if unit.hasplural %} translate-plural{% endif %}">
-                {% for i, source, title in unit|pluralize_source %}
-                <div class="translation-text js-translation-text" lang="{{ source_language.code }}" dir="{{ source_language.direction }}"{% if title %} title="{{ title }}"{% endif %}>{{ source|fancy_highlight }}</div>
-                {% endfor %}
-                <div class="placeholder"></div>
-              </div>
+              <div class="js-mount-editor-original-src"></div>
             </div>
           </div>
           <!-- Buttons, resize links, special characters -->
@@ -176,19 +166,45 @@
             <div class="translate-fuzzy-block js-fuzzy-block{% if not has_admin_access and not unit.isfuzzy %} hide{% endif %}"
               lang="{{ LANGUAGE_CODE }}"
               title="{% trans 'Mark this string as needing further work (Ctrl+Space)' %}">
-              {{ form.state }} {{ form.state|label_tag:'' }}
+              {{ form.is_fuzzy }} {{ form.is_fuzzy|label_tag:'' }}
             </div>
           </div>
           <!-- Translation -->
           <div id="orig{{ unit.index }}" class="js-translate-translation translate-translation" lang="{{ LANGUAGE_CODE }}" dir="{% locale_dir %}">
-            {% if unit.submitted_by %}
+            {% if unit.istranslated or unit.isfuzzy %}
+	    {% if unit.change.submitted_by %}
             <div id="target-item-gravatar">
-              {% include 'core/_avatar.html' with user=unit.submitted_by %}
+	      <a href="{% url 'pootle-user-profile' unit.change.submitted_by.username %}"
+		 title="{{ unit.change.submitted_by.display_name|force_escape|force_escape }}">
+		{% avatar unit.change.submitted_by.username unit.change.submitted_by.email_hash 24 %}
+	      </a>
             </div>
+            {% endif %}
             {% endif %}
 
             {% block target_field %}
-            {{ form.target_f }}
+            <div class="js-mount-editor"></div>
+	    <div class="js-auto-match-msg auto-match-msg hide">
+	      {% trans "Showing match from similar translations" %}
+	    </div>
+
+            <script type="text/javascript">
+              PTL.reactEditor.init({
+                initialValues: {{ unit_values|to_js }},
+                isDisabled: {{ form.target_f.field.widget.attrs.disabled|yesno:'true,false' }},
+                currentLocaleCode: '{{ language.code }}',
+                currentLocaleDir: '{{ language.direction }}',
+                unitId: {{ unit.id }},
+                sourceValues: {{ unit.source_f.strings|to_js }},
+                sourceLocaleCode: '{{ source_language.code }}',
+                sourceLocaleDir: '{{ source_language.direction }}',
+                hasPlurals: {{ has_plurals|yesno:'true,false' }},
+                targetNplurals: {{ target_nplurals }},
+                alternativeSources: {{ altsrcs|to_js }},
+                fileType: '{{ filetype }}',
+                suggestions: {{ suggestions_dict|to_js }},
+              });
+            </script>
             {% endblock %}
 
             <div class="extras-bar">
@@ -198,59 +214,31 @@
               {% endblock %}
               <a class="js-toggle-raw"><i class="icon-raw-mode" title="{% trans 'Raw View' %}"></i></a>
             </div>
-            {% if unit.submitted_by and unit.submitted_on %}
+            {% if unit.istranslated or unit.isfuzzy %}
+	    {% if unit.change.submitted_by and unit.change.submitted_on %}
             <div class="unit-meta">
-              <time class="js-relative-date"
-                title="{{ unit.submitted_on|dateformat }}"
-                datetime="{{ unit.submitted_on.isoformat }}">&nbsp;</time>
-              {% with reviewer=unit.reviewed_by %}
+              <time
+                title="{{ unit.change.submitted_on|dateformat }}"
+                datetime="{{ unit.change.submitted_on.isoformat }}">{{ unit.change.submitted_on|relative_datetime_format }}</time>
+              {% with reviewer=accepted_suggestion.reviewer %}
               {% if reviewer %}
               <br>
-              <span>({% blocktrans with profile_url=reviewer.get_absolute_url%}reviewed by <a href="{{ profile_url }}">{{ reviewer }}</a>{% endblocktrans %})</span>
+              <span>({% blocktrans with profile_url=reviewer.get_absolute_url %}reviewed by <a href="{{ profile_url }}">{{ reviewer }}</a>{% endblocktrans %})</span>
               {% endif %}
               {% endwith %}
             </div>
             {% endif %}
-            {% if language.specialchars or language.direction == "rtl" %}
+            {% endif %}
+            {% if special_characters %}
               {% if cantranslate or cansuggest %}
               <div class="editor-specialchars-block" lang="{{ language.code }}">
-                {% if language.direction == "rtl" %}
+                {% for specialchar in special_characters %}
                 <a class="editor-specialchar js-editor-copytext"
-                  title="{% trans 'Insert RLM (Right-To-Left Mark) into the editor' %}"
-                  data-string="&#8207;">RLM</a>
-                <a class="editor-specialchar js-editor-copytext"
-                  title="{% trans 'Insert LRM (Left-To-Right Mark) into the editor' %}"
-                  data-string="&#8206;">LRM</a>
-                <a class="editor-specialchar js-editor-copytext"
-                  title="{% trans 'Insert RLE (Right-To-Left Embedding) into the editor' %}"
-                  data-string="&#8235;">RLE</a>
-                <a class="editor-specialchar js-editor-copytext"
-                  title="{% trans 'Insert LRE (Left-To-Right Embedding) into the editor' %}"
-                  data-string="&#8234;">LRE</a>
-                <a class="editor-specialchar js-editor-copytext"
-                  title="{% trans 'Insert RLO (Right-To-Left Override) into the editor' %}"
-                  data-string="&#8238;">RLO</a>
-                <a class="editor-specialchar js-editor-copytext"
-                  title="{% trans 'Insert LRO (Left-To-Right Override) into the editor' %}"
-                  data-string="&#8237;">LRO</a>
-                <a class="editor-specialchar js-editor-copytext"
-                  title="{% trans 'Insert PDF (Pop Directional Format ) into the editor' %}"
-                  data-string="&#8236;">PDF</a>
-                <a class="editor-specialchar js-editor-copytext"
-                  title="{% trans 'Insert ZWJ (Zero Width Joiner) into the editor' %}"
-                  data-string="&#8205;">ZWJ</a>
-                <a class="editor-specialchar js-editor-copytext"
-                  title="{% trans 'Insert ZWNJ (Zero Width Non Joiner) into the editor' %}"
-                  data-string="&#8204;">ZWNJ</a>
-                {% endif %}
-                {% for specialchar in language.specialchars %}
-                {% if not specialchar.isspace %}
-                <a class="editor-specialchar js-editor-copytext"
-                   data-string="{{ specialchar }}"
-                   title="{% trans 'Insert this symbol into the editor' %}">{{ specialchar }}</a>
-                {% else %}
-                <span class="extraspace"> </span>
-                {% endif %}
+                   title="{% blocktrans trimmed with character_name=specialchar.name character_code=specialchar.hex_code %}
+                   Insert {{ character_name }} (Unicode value {{ character_code }}) into the editor
+                   {% endblocktrans %}"
+                   data-string="&#{{ specialchar.code }};">
+                   {% if specialchar.display.isspace %}&nbsp;{% else %}{{ specialchar.display }}{% endif %}</a>
                 {% endfor %}
               </div>
               {% endif %}
@@ -282,7 +270,6 @@
         </div>
         {% endif %}
         {% endblock %}
-        {% with unit.get_suggestions as suggestions %}
         {% if suggestions %}
         <div id="suggestions">
           <div class="extra-item-title">{% trans 'User suggestions' %}</div>
@@ -293,9 +280,12 @@
             data-sugg-id="{{ sugg.id }}"
             data-suggestor-id="{{ sugg.user.id }}">
             {% if sugg.user %}
-              <div class="extra-item-gravatar">
-                {% include 'core/_avatar.html' with user=sugg.user %}
-              </div>
+            <div class="extra-item-gravatar">
+	      <a href="{% url 'pootle-user-profile' sugg.user.username %}"
+		 title="{{ sugg.user.display_name|force_escape|force_escape }}">
+		{% avatar sugg.user.username sugg.user.email_hash 20 %}
+	      </a>
+            </div>
             {% endif %}
             <div class="suggestion-actions">
               {% if canreview %}
@@ -324,21 +314,13 @@
                 </a>
               {% endif %}
             </div>
-            {% for i, target, diff, title in sugg|pluralize_diff_sugg %}
-            <div class="extra-item-content">
-              <div class="extra-item">
-                <div id="suggdiff-{{sugg.id}}-{{i}}" class="suggestion-translation"
-                  lang="{{ language.code }}" {% if title %} title="{{ title }}"{% endif %}
-                  >{{ diff }}</div>
-              </div>
-            </div>
-            {% endfor %}
+            <div class="js-mnt-suggestion" data-id="{{ sugg.id }}"></div>
             <div class="suggestion-feedback js-mnt-suggestion-feedback-{{ sugg.id }}"></div>
             {% block suggestion_comment %}{% endblock %}
             {% if sugg.creation_time %}
-            <time class="extra-item-meta js-relative-date"
+            <time class="extra-item-meta"
               title="{{ sugg.creation_time|dateformat }}"
-              datetime="{{ sugg.creation_time.isoformat }}">&nbsp;</time>
+              datetime="{{ sugg.creation_time.isoformat }}">{{ sugg.creation_time|relative_datetime_format }}</time>
             {% else %}
             <time class="extra-item-meta">{% trans 'A long time ago' %}</time>
             {% endif%}
@@ -346,9 +328,7 @@
           {% endfor %}
         </div>
         {% endif %}
-        {% endwith %}
       </div>
     </div>
   </div>
 </td>
-{% endcache %}

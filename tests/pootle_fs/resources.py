@@ -8,11 +8,13 @@
 # AUTHORS file for copyright and authorship information.
 
 from fnmatch import fnmatch
+import sys
 
 import pytest
 
 from django.utils.functional import cached_property
 
+from pootle_fs.apps import PootleFSConfig
 from pootle_fs.models import StoreFS
 from pootle_fs.resources import (
     FSProjectResources, FSProjectStateResources)
@@ -29,18 +31,26 @@ def test_project_resources_instance():
 
 
 @pytest.mark.django_db
-def test_project_resources_stores():
-    project = Project.objects.get(code="project0")
+def test_project_resources_stores(project0, language0):
     stores = Store.objects.filter(
-        translation_project__project=project)
-    assert list(FSProjectResources(project).stores) == list(stores)
+        translation_project__project=project0)
+    assert list(FSProjectResources(project0).stores) == list(stores)
     # mark some Stores obsolete - should still show
     store_count = stores.count()
     assert store_count
     for store in stores:
         store.makeobsolete()
-    assert list(FSProjectResources(project).stores) == list(stores)
+    assert list(FSProjectResources(project0).stores) == list(stores)
     assert stores.count() == store_count
+    project0.config["pootle.fs.excluded_languages"] = [language0.code]
+    filtered_stores = stores.exclude(
+        translation_project__language=language0)
+    assert (
+        list(FSProjectResources(project0).stores)
+        != list(stores))
+    assert (
+        list(FSProjectResources(project0).stores)
+        == list(filtered_stores))
 
 
 @pytest.mark.django_db
@@ -186,7 +196,7 @@ def test_fs_state_trackable_store_paths(fs_path_qs, dummyfs_untracked):
 
 
 @pytest.mark.django_db
-def test_fs_state_trackable_tracked(dummyfs):
+def test_fs_state_trackable_tracked(dummyfs, no_complex_po_):
     plugin = dummyfs
     resources = FSProjectStateResources(plugin)
     store_fs = resources.tracked[0]
@@ -203,6 +213,8 @@ def test_fs_state_trackable_tracked(dummyfs):
 
 
 @pytest.mark.django_db
+@pytest.mark.xfail(sys.platform == 'win32',
+                   reason="path mangling broken on windows")
 def test_fs_state_synced(fs_path_qs, dummyfs):
     (qfilter, pootle_path, fs_path) = fs_path_qs
     plugin = dummyfs
@@ -243,6 +255,8 @@ def test_fs_state_synced_staged(dummyfs):
 
 
 @pytest.mark.django_db
+@pytest.mark.xfail(sys.platform == 'win32',
+                   reason="path mangling broken on windows")
 def test_fs_state_unsynced(fs_path_qs, dummyfs):
     (qfilter, pootle_path, fs_path) = fs_path_qs
     plugin = dummyfs
@@ -287,6 +301,8 @@ def test_fs_state_unsynced_staged(dummyfs):
 
 
 @pytest.mark.django_db
+@pytest.mark.xfail(sys.platform == 'win32',
+                   reason="path mangling broken on windows")
 def test_fs_state_tracked(fs_path_qs, dummyfs):
     (qfilter, pootle_path, fs_path) = fs_path_qs
     plugin = dummyfs
@@ -324,6 +340,8 @@ def test_fs_state_tracked_paths(fs_path_qs, dummyfs):
 
 
 @pytest.mark.django_db
+@pytest.mark.xfail(sys.platform == 'win32',
+                   reason="path mangling broken on windows")
 def test_fs_state_pootle_changed(fs_path_qs, dummyfs):
     (qfilter, pootle_path, fs_path) = fs_path_qs
     plugin = dummyfs
@@ -371,3 +389,20 @@ def test_fs_state_found_file_matches(fs_path_qs, dummyfs):
     assert (
         resources.found_file_paths
         == [x[1] for x in resources.found_file_matches])
+
+
+@pytest.mark.django_db
+def test_fs_resources_cache_key(project_fs):
+    plugin = project_fs
+    resources = plugin.state().resources
+    assert resources.ns == "pootle.fs.resources"
+    assert resources.sw_version == PootleFSConfig.version
+    assert (
+        resources.fs_revision
+        == resources.context.fs_revision)
+    assert (
+        resources.sync_revision
+        == resources.context.sync_revision)
+    assert (
+        resources.cache_key
+        == resources.context.cache_key)

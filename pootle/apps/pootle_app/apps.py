@@ -8,8 +8,10 @@
 
 """
 Pootle App Config
-See https://docs.djangoproject.com/en/1.8/ref/applications/
+See https://docs.djangoproject.com/en/1.10/ref/applications/
 """
+
+import importlib
 
 from django.apps import AppConfig
 from django.core import checks
@@ -22,6 +24,9 @@ from pootle.core.utils import deprecation
 class PootleConfig(AppConfig):
     name = "pootle_app"
     verbose_name = "Pootle"
+    version = "0.0.9"
 
     def ready(self):
         checks.register(deprecation.check_deprecated_settings, "settings")
+        importlib.import_module("pootle_app.getters")
+        importlib.import_module("pootle_app.providers")

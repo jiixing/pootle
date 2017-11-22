@@ -6,25 +6,26 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
-from collections import OrderedDict
-
 from django import forms
 from django.conf import settings
-from django.utils.translation import ugettext_lazy as _
 
 from contact_form.forms import ContactForm as OriginalContactForm
 
 from pootle.core.forms import MathCaptchaForm
 from pootle.core.mail import send_mail
+from pootle.i18n.gettext import ugettext_lazy as _
 
 
 class ContactForm(MathCaptchaForm, OriginalContactForm):
 
-    subject = forms.CharField(
+    field_order = ['name', 'email', 'email_subject', 'body', 'captcha_answer',
+                   'captcha_token']
+
+    email_subject = forms.CharField(
         max_length=100,
-        label=_(u'Summary'),
+        label=_(u'Subject'),
         widget=forms.TextInput(
-            attrs={'placeholder': _('Please enter your message summary')}
+            attrs={'placeholder': _('Please enter a message subject')}
         ),
     )
 
@@ -43,15 +44,18 @@ class ContactForm(MathCaptchaForm, OriginalContactForm):
         body_placeholder = _('Please enter your message')
         self.fields['body'].widget.attrs['placeholder'] = body_placeholder
 
-        if self.request.user.is_authenticated():
+        if self.request.user.is_authenticated:
             del self.fields['captcha_answer']
             del self.fields['captcha_token']
 
-    def from_email(self):
-        return u'%s <%s>' % (
-            self.cleaned_data['name'],
-            settings.DEFAULT_FROM_EMAIL,
-        )
+    def get_context(self):
+        """Get context to render the templates for email subject and body."""
+        ctx = super(ContactForm, self).get_context()
+        ctx['server_name'] = settings.POOTLE_TITLE
+        ctx['ip_address'] = (
+            self.request.META.get('HTTP_X_FORWARDED_FOR',
+                                  self.request.META.get('REMOTE_ADDR')))
+        return ctx
 
     def recipient_list(self):
         return [settings.POOTLE_CONTACT_EMAIL]
@@ -67,38 +71,62 @@ class ContactForm(MathCaptchaForm, OriginalContactForm):
         send_mail(fail_silently=fail_silently, **kwargs)
 
 
-# Alters form's field order. Use `self.field_order` when in Django 1.9+
-ContactForm.base_fields = OrderedDict(
-    (f, ContactForm.base_fields[f])
-    for f in ['name', 'email', 'subject', 'body', 'captcha_answer',
-              'captcha_token']
-)
-
-
 class ReportForm(ContactForm):
     """Contact form used to report errors on strings."""
 
-    report_email = forms.EmailField(
-        max_length=254,
-        required=False,
-        widget=forms.HiddenInput(),
+    field_order = ['name', 'email', 'context', 'body', 'captcha_answer',
+                   'captcha_token']
+
+    subject_template_name = 'contact_form/report_form_subject.txt'
+    template_name = 'contact_form/report_form.txt'
+
+    context = forms.CharField(
+        label=_(u'String context'),
+        required=True,
+        disabled=True,
+        widget=forms.Textarea(attrs={'rows': 6}),
     )
 
+    def __init__(self, *args, **kwargs):
+        self.unit = kwargs.pop('unit', None)
+        super(ReportForm, self).__init__(*args, **kwargs)
+
+        self.fields['body'].label = _(u'Question or comment')
+        body_placeholder = _('Please enter your question or comment')
+        self.fields['body'].widget.attrs['placeholder'] = body_placeholder
+
+        del self.fields['email_subject']
+
+    def get_context(self):
+        """Get context to render the templates for email subject and body."""
+        ctx = super(ReportForm, self).get_context()
+
+        unit_pk = None
+        language_code = None
+        project_code = None
+
+        if self.unit:
+            unit_pk = self.unit.pk
+            language_code = self.unit.store.translation_project.language.code
+            project_code = self.unit.store.translation_project.project.code
+
+        ctx.update({
+            'unit': unit_pk,
+            'language': language_code,
+            'project': project_code,
+        })
+        return ctx
+
     def recipient_list(self):
-        # Try to report string error to the report email for the project
-        # (injected in the 'report_email' field with initial values). If the
-        # project doesn't have a report email then fall back to the global
+        # Try to report string error to the report email for the project. If
+        # the project doesn't have a report email then fall back to the global
         # string errors report email.
-        if self.cleaned_data['report_email']:
-            return [self.cleaned_data['report_email']]
+        if self.unit:
+            report_email = (
+                self.unit.store.translation_project.project.report_email)
+            if report_email:
+                return [report_email]
 
         report_email = getattr(settings, 'POOTLE_CONTACT_REPORT_EMAIL',
                                settings.POOTLE_CONTACT_EMAIL)
         return [report_email]
-
-# Alters form's field order. Use `self.field_order` when in Django 1.9+
-ReportForm.base_fields = OrderedDict(
-    (f, ReportForm.base_fields[f])
-    for f in ['name', 'email', 'subject', 'body', 'captcha_answer',
-              'captcha_token', 'report_email']
-)

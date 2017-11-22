@@ -8,14 +8,14 @@
 
 import re
 import urlparse
+from collections import OrderedDict
 
 from django import forms
 from django.contrib.auth import get_user_model
-from django.utils.translation import ugettext_lazy as _
 
+from pootle.i18n.gettext import ugettext_lazy as _
 from pootle_language.models import Language
-from pootle_project.models import RESERVED_PROJECT_CODES, Project
-from pootle_store.filetypes import filetype_choices
+from pootle_project.models import Project
 from pootle_store.models import Store
 
 
@@ -24,6 +24,8 @@ LANGCODE_RE = re.compile("^[a-z]{2,}([_-]([a-z]{2,}|[0-9]{3}))*(@[a-z0-9]+)?$",
 
 
 class LanguageForm(forms.ModelForm):
+
+    specialchars = forms.CharField(strip=False, required=False)
 
     class Meta(object):
         model = Language
@@ -39,6 +41,13 @@ class LanguageForm(forms.ModelForm):
 
         return self.cleaned_data["code"]
 
+    def clean_specialchars(self):
+        """Ensures inputted characters are unique."""
+        chars = self.cleaned_data['specialchars']
+        return u''.join(
+            OrderedDict((char, None) for char in list(chars)).keys()
+        )
+
 
 class ProjectForm(forms.ModelForm):
 
@@ -47,8 +56,8 @@ class ProjectForm(forms.ModelForm):
 
     class Meta(object):
         model = Project
-        fields = ('id', 'code', 'fullname', 'checkstyle', 'localfiletype',
-                  'treestyle', 'source_language', 'ignoredfiles',
+        fields = ('id', 'code', 'fullname', 'checkstyle',
+                  'filetypes', 'treestyle', 'source_language', 'ignoredfiles',
                   'report_email', 'screenshot_search_prefix', 'disabled',)
 
     def __init__(self, *args, **kwargs):
@@ -57,29 +66,32 @@ class ProjectForm(forms.ModelForm):
         queryset = Language.objects.exclude(code='templates')
         self.fields['source_language'].queryset = queryset
 
+        self.fields["filetypes"].initial = [
+            self.fields["filetypes"].queryset.get(name="po")]
+
         if self.instance.id:
-            has_stores = Store.objects.filter(
-                translation_project__project=self.instance
-            ).count
-
-            if has_stores:
-                self.fields['localfiletype'].required = False
-
             if (self.instance.treestyle != 'auto' and
                 self.instance.translationproject_set.count() and
                 self.instance.treestyle == self.instance._detect_treestyle()):
                 self.fields['treestyle'].required = False
 
-    def clean_localfiletype(self):
-        value = self.cleaned_data.get('localfiletype', None)
-        if not value:
-            value = self.instance.localfiletype
-        filetypes = [x[0] for x in filetype_choices]
-        if value not in filetypes:
-            raise forms.ValidationError(
-                "Unrecognised project filetype: %s" % value
-            )
+    def clean_filetypes(self):
+        value = self.cleaned_data.get('filetypes', [])
+        if not self.instance.pk:
+            return value
+        for filetype in self.instance.filetypes.all():
+            if filetype not in value:
+                has_stores = Store.objects.filter(
+                    translation_project__project=self.instance, filetype=filetype)
+                if has_stores.exists():
+                    raise forms.ValidationError(
+                        _("You cannot remove a file type from a Project, "
+                          "if there are files of that file type ('%s')"
+                          % filetype))
         return value
+
+    def clean_fullname(self):
+        return self.cleaned_data['fullname'].strip()
 
     def clean_treestyle(self):
         value = self.cleaned_data.get('treestyle', None)
@@ -88,12 +100,7 @@ class ProjectForm(forms.ModelForm):
         return value
 
     def clean_code(self):
-        value = self.cleaned_data['code']
-        if value in RESERVED_PROJECT_CODES:
-            raise forms.ValidationError(
-                _('"%s" cannot be used as a project code', value)
-            )
-        return value
+        return self.cleaned_data['code'].strip()
 
 
 class UserForm(forms.ModelForm):

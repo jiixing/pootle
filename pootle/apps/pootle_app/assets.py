@@ -6,7 +6,11 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
+import os
+
 from django_assets import Bundle, register
+
+from django.conf import settings
 
 
 # <Webpack>
@@ -33,6 +37,12 @@ js_admin_app = Bundle(
     output='js/admin/app.min.%(version)s.js')
 register('js_admin_app', js_admin_app)
 
+js_fs_app = Bundle(
+    'js/fs/app.bundle.js',
+    output='js/fs/app.min.%(version)s.js')
+register('js_fs_app', js_fs_app)
+
+
 js_user_app = Bundle(
     'js/user/app.bundle.js',
     output='js/user/app.min.%(version)s.js')
@@ -43,18 +53,21 @@ js_editor = Bundle(
     output='js/editor/app.min.%(version)s.js')
 register('js_editor', js_editor)
 
-js_reports = Bundle(
-    'js/reports/app.bundle.js',
-    filters='rjsmin', output='js/reports.min.js')
-register('js_reports', js_reports)
+
+rel_path = os.path.join('js', 'select2_l10n')
+select2_l10n_dir = os.path.join(settings.WORKING_DIR, 'static', rel_path)
+l10n_files = [os.path.join(rel_path, f)
+              for f in os.listdir(select2_l10n_dir)
+              if (os.path.isfile(os.path.join(select2_l10n_dir, f))
+                  and f.endswith('.js'))]
+for l10n_file in l10n_files:
+    lang = l10n_file.split(os.sep)[-1].split('.')[-2]
+    register('select2-l10n-%s' % lang,
+             Bundle(l10n_file,
+                    output='js/select2-l10n-' + lang + '.min.%(version)s.js'))
+
 
 # </Webpack>
-
-
-css_reports = Bundle(
-    'css/reports.css',
-    filters='cssmin', output='css/reports.min.css')
-register('css_reports', css_reports)
 
 css_common = Bundle(
     'css/style.css',
@@ -66,7 +79,6 @@ css_common = Bundle(
     'css/auth.css',
     'css/magnific-popup.css',
     'css/navbar.css',
-    'css/odometer.css',
     'css/popup.css',
     'css/react-select.css',
     'css/tipsy.css',

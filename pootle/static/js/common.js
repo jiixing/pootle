@@ -6,10 +6,9 @@
  * AUTHORS file for copyright and authorship information.
  */
 
-import 'backbone-safesync';
 import $ from 'jquery';
 import 'jquery-magnific-popup';
-import 'jquery-select2';
+import 'select2';
 import 'jquery-tipsy';
 import Spinner from 'spin';
 
@@ -18,12 +17,12 @@ import diff from 'utils/diff';
 
 import agreement from './agreement';
 import auth from './auth';
+import s2 from './s2';
 import browser from './browser';
 import captcha from './captcha';
 import contact from './contact';
 import dropdown from './dropdown';
 import helpers from './helpers';
-import score from './score';
 import search from './search';
 import stats from './stats';
 import configureStore from './store';
@@ -60,12 +59,12 @@ window.PTL = window.PTL || {};
 
 PTL.auth = auth;
 PTL.agreement = agreement;
+PTL.s2 = s2;
 PTL.browser = browser;
 PTL.captcha = captcha;
 PTL.cookie = cookie;
 PTL.contact = contact;
 PTL.dropdown = dropdown;
-PTL.score = score;
 PTL.search = search;
 PTL.stats = stats;
 PTL.utils = utils;
@@ -79,19 +78,13 @@ PTL.common = {
 
   init(opts) {
     PTL.auth.init();
-    PTL.browser.init();
-
-    $(window).load(() => {
-      $('body').removeClass('preload');
-    });
+    PTL.s2.init();
+    PTL.browser.init(opts);
 
     if (opts.hasSidebar) {
       helpers.fixSidebarHeight();
       $(window).on('resize', helpers.fixSidebarHeight);
     }
-
-    helpers.updateRelativeDates();
-    setInterval(helpers.updateRelativeDates, 6e4);
 
     // Tipsy setup
     $(document).tipsy({
@@ -104,8 +97,73 @@ PTL.common = {
     });
     setInterval($.fn.tipsy.revalidate, 1000);
 
-    $('.js-select2').select2({
-      width: 'resolve',
+    $('form.formtable').on('click', '.js-formtable-select-visible', function () {
+      const check = $(this).is(':checked');
+      const $formtable = $(this).parents('form.formtable');
+      $formtable.find('tbody td.row-select input[type="checkbox"]').each(function () {
+        $(this).prop('checked', check);
+      });
+      if (!check) {
+        $formtable.find('input[type="checkbox"].js-formtable-select-all').each(function () {
+          $(this).prop('checked', false);
+        });
+      }
+    });
+
+    $('form.formtable').on('click', '.js-formtable-select-all', function () {
+      const check = $(this).is(':checked');
+      const $formtable = $(this).parents('form.formtable');
+      $formtable.find('tbody td.row-select input[type="checkbox"]').each(function () {
+        $(this).prop('checked', check);
+      });
+      $formtable.find('input[type="checkbox"].js-formtable-select-visible').each(function () {
+        $(this).prop('checked', check);
+      });
+    });
+
+    const paginationSelectors = '.js-pagination-page-no input, .js-pagination-items-per-page input';
+    $('form.formtable').on('change', paginationSelectors, function () {
+      const $formtable = $(this).parents('form.formtable');
+      let submit = true;
+      $formtable.find(paginationSelectors).each(function () {
+        if (!($(this).is(':valid'))) {
+          submit = false;
+        }
+      });
+      if (submit) {
+        $(this).parents('form.formtable').submit();
+      }
+    });
+
+    const updateFormtable = ($formtable) => {
+      $formtable.find('.js-formtable-messages').each(function () {
+        $(this).show();
+        $(this).find('ul.messages').each(function () {
+          $(this).html(['<li>', gettext('Updating data'), '</li>'].join(''));
+        });
+      });
+    };
+
+    $('form.formtable').on('submit', function () {
+      updateFormtable($(this));
+    });
+
+    $('form.formtable').on('click', '.js-pagination-next a', function (e) {
+      const $formtable = $(this).parents('form.formtable');
+      e.preventDefault();
+      $formtable.find('.js-pagination-page-no input').each(function () {
+        $(this).val(parseInt($(this).val(), 10) + 1);
+      });
+      $formtable.submit();
+    });
+
+    $('form.formtable').on('click', '.js-pagination-previous a', function (e) {
+      const $formtable = $(this).parents('form.formtable');
+      e.preventDefault();
+      $formtable.find('.js-pagination-page-no input').each(function () {
+        $(this).val(parseInt($(this).val(), 10) - 1);
+        $formtable.submit();
+      });
     });
 
     // Set CSRF token for XHR requests (jQuery-specific)
@@ -138,12 +196,12 @@ PTL.common = {
       const $sidebar = $('.js-sidebar');
       const openClass = 'sidebar-open';
       const cookieName = 'pootle-browser-sidebar';
-      const cookieData = JSON.parse(cookie(cookieName)) || {};
 
       $sidebar.toggleClass(openClass);
 
-      cookieData.isOpen = $sidebar.hasClass(openClass);
-      cookie(cookieName, JSON.stringify(cookieData), { path: '/' });
+      const isOpen = $sidebar.hasClass(openClass) ? 1 : 0;
+
+      cookie(cookieName, isOpen, { path: '/' });
     });
 
     /* Popups */
@@ -159,36 +217,5 @@ PTL.common = {
       const target = $(this).attr('href') || $(this).data('target');
       $(target).toggle();
     });
-
-    /* Sorts language names within select elements */
-    const ids = ['id_languages', 'id_alt_src_langs', '-language',
-                 '-source_language'];
-
-    $.each(ids, (i, id) => {
-      const $selects = $(`select[id$="${id}"]`);
-
-      $.each($selects, (j, select) => {
-        const $select = $(select);
-        const options = $('option', $select);
-        let selected;
-
-        if (options.length) {
-          if (!$select.is('[multiple]')) {
-            selected = $(':selected', $select);
-          }
-
-          const opsArray = $.makeArray(options);
-          opsArray.sort((a, b) => utils.strCmp($(a).text(), $(b).text()));
-
-          options.remove();
-          $select.append($(opsArray));
-
-          if (!$select.is('[multiple]')) {
-            $select.get(0).selectedIndex = $(opsArray).index(selected);
-          }
-        }
-      });
-    });
   },
-
 };

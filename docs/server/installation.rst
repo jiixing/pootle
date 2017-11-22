@@ -6,10 +6,23 @@ Installation
 These instructions will guide you through installing Pootle and its
 requirements in a virtual environment.
 
+.. figure:: ../_static/asciinema_org_92502.png
+   :alt: Pootle installation video tutorial
+   :align: right
+   :scale: 30%
+   :target: https://asciinema.org/a/92502
+
+   *Pootle installation tutorial (Click to play)*
+
 If you only want to have a sneak peek of Pootle then the default configuration
 and the built-in server will suffice.
 
-For a production deployment we **strongly** recommend that you set up the following:
+Follow the Pootle installation video tutorial, which :ref:`starts after some
+basic setup <installation#video_start>`, to see the installation steps in
+action and expected results.
+
+For a production deployment we **strongly** recommend that you set up the
+following:
 
 - :ref:`Install optional optimization packages<optimization#optional_software>`
 - Use either a :ref:`MySQL <mysql_installation>`
@@ -19,6 +32,13 @@ For a production deployment we **strongly** recommend that you set up the follow
 
 .. note:: Before installing please ensure that you have all the
    :ref:`necessary requirements <requirements>`.
+
+
+.. warning:: It is important to install Pootle into a virtual environment to
+   ensure the correct packages and permissions. It's even more important not to
+   install Pootle as the root user on your system. **Installing or running
+   Pootle as the root user will expose your system to many potential security
+   vulnerabilities**
 
 
 .. _installation#assumptions:
@@ -48,27 +68,34 @@ In order to install Pootle first create a virtual environment. The virtual
 environment allows you to install dependencies independent of your system
 packages.
 
-Please install ``virtualenv`` from your system packages, e.g. on Debian:
+Please install :command:`virtualenv` from your system packages, e.g. on Debian:
 
 .. code-block:: console
 
   $ sudo apt-get install python-virtualenv
 
 
-Otherwise you can install ``virtualenv`` using :command:`pip`:
+Otherwise you can install :command:`virtualenv` using :command:`pip`:
 
 .. code-block:: console
 
   $ sudo pip install virtualenv
 
 
+.. _installation#video_start:
+
 Now create a virtual environment on your location of choice by issuing the
-``virtualenv`` command:
+:command:`virtualenv` command:
 
 .. code-block:: console
 
   $ cd ~/dev/pootle
   $ virtualenv env
+
+
+.. note:: for versions of :command:`virtualenv` prior to 1.10, you may need to
+    call :command:`virtualenv` with the ``--setuptools`` option, to ensure the
+    correct environment.
 
 
 To activate the virtual environment run the :command:`activate` script:
@@ -77,14 +104,15 @@ To activate the virtual environment run the :command:`activate` script:
 
   $ source env/bin/activate
 
+
 Once activated the virtual environment name will be prepended to the shell prompt.
 
 Lastly, we want to make sure that we are using the latest version of
-:command:`pip`:
+:command:`pip` and :command:`setuptools`:
 
 .. code-block:: console
 
-   (env) $ pip install --upgrade pip
+   (env) $ pip install --upgrade pip setuptools
 
 
 .. _installation#installing-pootle:
@@ -94,20 +122,28 @@ Installing Pootle
 
 Use :command:`pip` to install Pootle into the virtual environment:
 
-.. code-block:: console
+.. highlight:: console
+.. parsed-literal::
 
-  (env) $ pip install --pre Pootle
+  (env) $ pip install |--process-dependency-links --pre| Pootle
 
 
 This will also fetch and install Pootle's dependencies.
 
+.. note:: pip requires :ref:`--pre <pip:install_--pre>` to install pre-release
+   versions of Pootle, i.e. alpha, beta and rc versions. You may require
+   :ref:`--process-dependency-links <pip:--process-dependency-links>` if Pootle
+   depends on unreleased versions of third-party software.
+
 To verify that everything installed correctly, you should be able to access the
 :command:`pootle` command line tool within your environment.
 
-.. code-block:: console
+
+.. highlight:: console
+.. parsed-literal::
 
   (env) $ pootle --version
-  Pootle 2.8.0b1 (Django 1.8.13, Translate Toolkit 1.13.0)
+  Pootle |release| (Django |django_ver|, Translate Toolkit |ttk_ver|)
 
 
 .. _installation#initializing-the-configuration:

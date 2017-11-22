@@ -11,8 +11,15 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys
+from __future__ import print_function
+
 import os
+import re
+import sys
+
+from django import __version__ as dj_version_actual
+from pootle.core.utils import version as pootle_version
+from translate.__version__ import sver as ttk_version_actual
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -55,7 +62,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Pootle'
-copyright = u'2004-2016'
+copyright = u'2004-2017'
 author = u'Pootle contributors'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -63,8 +70,7 @@ author = u'Pootle contributors'
 # built documents.
 #
 # The short X.Y version.
-from pootle.core.utils.version import get_docs_version
-version = get_docs_version()
+version = pootle_version.get_docs_version()
 # The full version, including alpha/beta/rc tags.
 from pootle import __version__
 release = __version__
@@ -138,12 +144,12 @@ if build_icons_inc:
     with open(icons_inc_file_name, "w") as icons_txt_file:
         for icon_image in os.listdir(icons_dir):
             icon_name = icon_image[:icon_image.rfind(".")]
-            print >>icons_txt_file, ".. |icon:" + icon_name + "| " + \
-                                    "image:: /" + icons_dir + "/" + icon_image
-            print >>icons_txt_file, "                      :alt: " + \
-                                    icon_name.replace("-", " ").replace("_", " ") + \
-                                    " icon"
-            print >>icons_txt_file
+            print(".. |icon:" + icon_name + "| " + \
+                  "image:: /" + icons_dir + "/" + icon_image, file=icons_txt_file)
+            print("                      :alt: " + \
+                  icon_name.replace("-", " ").replace("_", " ") + \
+                  " icon", file=icons_txt_file)
+            print(file=icons_txt_file)
 
 # Files to include at the end of every .rst file
 rst_epilog = """
@@ -183,7 +189,7 @@ html_logo = '_static/pootle_logo.png'
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-html_favicon = '../pootle/static/favicon.ico'
+html_favicon = '../pootle/static/favicon/favicon.ico'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -411,8 +417,10 @@ django_ver = ".".join(map(str, DJANGO_MINIMUM_REQUIRED_VERSION[:2]))
 intersphinx_mapping = {
     'python': ('https://docs.python.org/2.7', None),
     'django': ('https://docs.djangoproject.com/en/%s' % django_ver,
-               'https://docs.djangoproject.com/en/%s/_objects' % django_ver),
+               'https://docs.djangoproject.com/en/%s/_objects/' % django_ver),
     'toolkit': ('http://docs.translatehouse.org/projects/translate-toolkit/en/latest/', None),
+    'virtualenvwrapper': ('https://virtualenvwrapper.readthedocs.io/en/latest/', None),
+    'pip': ('https://pip.pypa.io/en/stable/', None),
 }
 
 
@@ -425,3 +433,27 @@ extlinks = {
     'wiki': ('http://translate.sourceforge.net/wiki/%s', ''),
     'wp': ('https://en.wikipedia.org/wiki/%s', ''),
 }
+
+
+# -- Dependency versions ----
+
+install_options = set()
+requirements_dir = '../requirements'
+for requirement in os.listdir(requirements_dir):
+    with open(os.path.join(requirements_dir, requirement)) as req:
+        for line in req.readlines():
+            if re.match(r'^\s*-e\s+', line):
+                install_options.add("--process-dependency-links")
+                break
+if pootle_version.is_prerelease():
+    install_options.add("--pre")
+if install_options:
+    install_options_string = " ".join(install_options)
+else:
+    install_options_string = "\\"
+
+rst_prolog = """
+.. |django_ver| replace:: %s
+.. |ttk_ver| replace:: %s
+.. |--process-dependency-links --pre| replace:: %s
+""" % (dj_version_actual, ttk_version_actual, install_options_string)

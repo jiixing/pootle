@@ -13,11 +13,31 @@ import pytest
 from django import forms
 from django.http import Http404
 
-from pytest_pootle.factories import UserFactory
+from pytest_pootle.factories import LanguageDBFactory, UserFactory
 from pytest_pootle.utils import create_api_request
 
-from pootle.core.views import APIView
 from accounts.models import User
+from pootle.core.delegate import panels
+from pootle.core.plugin import provider
+from pootle.core.views import APIView
+from pootle.core.views.browse import PootleBrowseView
+from pootle.core.views.display import StatsDisplay
+from pootle.core.views.panels import Panel
+from pootle.core.views.widgets import TableSelectMultiple
+
+
+def _test_stats_display(obj):
+    stats = StatsDisplay(obj)
+    assert stats.context == obj
+    stat_data = obj.data_tool.get_stats()
+    assert stats.stat_data == stat_data.copy()
+    stats.add_children_info(stat_data)
+    if stat_data.get("last_submission"):
+        stat_data["last_submission"]["msg"] = (
+            stats.get_action_message(
+                stat_data["last_submission"]))
+    StatsDisplay(obj).localize_stats(stat_data)
+    assert stat_data == stats.stats
 
 
 class UserAPIView(APIView):
@@ -50,6 +70,14 @@ class UserSettingsForm(forms.ModelForm):
 class WriteableUserSettingsAPIView(APIView):
     model = User
     edit_form_class = UserSettingsForm
+
+
+class UserM2MAPIView(APIView):
+    model = User
+    restrict_to_methods = ('get', 'delete',)
+    page_size = 10
+    fields = ('username', 'alt_src_langs',)
+    m2m = ('alt_src_langs', )
 
 
 def test_apiview_invalid_method(rf):
@@ -318,12 +346,11 @@ def test_apiview_search(rf):
 
 
 @pytest.mark.django_db
-def test_view_gathered_context_data(rf, member):
+def test_view_gathered_context_data(rf, member, no_context_data):
 
-    from pootle.core.views import PootleDetailView
+    from pootle.core.views.base import PootleDetailView
     from pootle_project.models import Project
     from pootle.core.delegate import context_data
-    from pootle.core.plugin import provider
 
     class DummyView(PootleDetailView):
 
@@ -360,4 +387,375 @@ def test_view_gathered_context_data(rf, member):
     assert isinstance(response.context_data.pop("view"), DummyView)
     assert sorted(response.context_data.items()) == [
         ("foo", "bar"), ("foo2", "bar2")]
-    context_data.receivers = []
+
+
+@pytest.mark.django_db
+def test_apiview_get_single_m2m(rf):
+    """Tests retrieving a single object with an m2m field using the API."""
+    view = UserM2MAPIView.as_view()
+    user = UserFactory.create(username='foo')
+
+    request = create_api_request(rf)
+    response = view(request, id=user.id)
+    response_data = json.loads(response.content)
+    assert response_data["alt_src_langs"] == []
+
+    user.alt_src_langs.add(LanguageDBFactory(code="alt1"))
+    user.alt_src_langs.add(LanguageDBFactory(code="alt2"))
+    request = create_api_request(rf)
+    response = view(request, id=user.id)
+    response_data = json.loads(response.content)
+    assert response_data["alt_src_langs"]
+    assert (
+        response_data["alt_src_langs"]
+        == list(str(l) for l in user.alt_src_langs.values_list("pk", flat=True)))
+
+
+@pytest.mark.django_db
+def test_apiview_get_multi_m2m(rf):
+    """Tests several objects with m2m fields using the API."""
+    view = UserM2MAPIView.as_view()
+    user0 = UserFactory.create(username='foo0')
+    user1 = UserFactory.create(username='foo1')
+
+    request = create_api_request(rf)
+    response = view(request)
+    response_data = json.loads(response.content)
+
+    for model in [x for x in response_data["models"]
+                  if x['username'] in ['foo0', 'foo1']]:
+        assert model['alt_src_langs'] == []
+
+    user0.alt_src_langs.add(LanguageDBFactory(code="alt1"))
+    user0.alt_src_langs.add(LanguageDBFactory(code="alt2"))
+    user1.alt_src_langs.add(LanguageDBFactory(code="alt3"))
+    user1.alt_src_langs.add(LanguageDBFactory(code="alt4"))
+
+    request = create_api_request(rf)
+    response = view(request)
+    response_data = json.loads(response.content)
+
+    for model in response_data["models"]:
+        user = User.objects.get(username=model["username"])
+        if user in [user0, user1]:
+            assert model["alt_src_langs"]
+        assert (
+            model["alt_src_langs"]
+            == list(
+                str(l) for l
+                in user.alt_src_langs.values_list("pk", flat=True)))
+
+
+@pytest.mark.django_db
+def test_widget_table_select_multiple_dict():
+    choices = (
+        ("foo", dict(id="foo", title="Foo")),
+        ("bar", dict(id="bar", title="Bar")),
+        ("baz", dict(id="baz", title="Baz")))
+    widget = TableSelectMultiple(item_attrs=["id"], choices=choices)
+    rendered = widget.render("a-field", None)
+    for i, (name, choice) in enumerate(choices):
+        assert (
+            ('<td class="row-select"><input name="a-field" '
+             'type="checkbox" value="%s" /></td>'
+             % name)
+            in rendered)
+        assert ('<td>%s</td>' % choice["title"]) not in rendered
+    widget = TableSelectMultiple(item_attrs=["id"], choices=choices)
+    rendered = widget.render("a-field", choices[0])
+    for i, (name, choice) in enumerate(choices):
+        checked = ""
+        if i == 0:
+            checked = ' checked="checked"'
+        assert (
+            ('<td class="row-select"><input%s name="a-field" '
+             'type="checkbox" value="%s" /></td>'
+             % (checked, name))
+            in rendered)
+        assert ('<td>%s</td>' % choice["title"]) not in rendered
+    widget = TableSelectMultiple(item_attrs=["id", "title"], choices=choices)
+    rendered = widget.render("a-field", choices[0])
+    for i, (name, choice) in enumerate(choices):
+        checked = ""
+        if i == 0:
+            checked = ' checked="checked"'
+        assert (
+            ('<td class="row-select"><input%s name="a-field" '
+             'type="checkbox" value="%s" /></td>'
+             % (checked, name))
+            in rendered)
+        assert ('<td class="field-title">%s</td>' % choice["title"]) in rendered
+
+
+@pytest.mark.django_db
+def test_widget_table_select_multiple_objects():
+    choices = (
+        ("foo", dict(id="foo", title="Foo")),
+        ("bar", dict(id="bar", title="Bar")),
+        ("baz", dict(id="baz", title="Baz")))
+
+    class Dummy(object):
+
+        def __init__(self, **kwargs):
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+
+    object_choices = tuple(
+        (name, Dummy(**choice)) for name, choice in choices)
+    widget = TableSelectMultiple(item_attrs=["id"], choices=object_choices)
+    rendered = widget.render("a-field", None)
+    for i, (name, choice) in enumerate(choices):
+        assert (
+            ('<td class="row-select"><input name="a-field" '
+             'type="checkbox" value="%s" /></td>'
+             % name)
+            in rendered)
+        assert ('<td>%s</td>' % choice["title"]) not in rendered
+    widget = TableSelectMultiple(item_attrs=["id"], choices=object_choices)
+    rendered = widget.render("a-field", choices[0])
+    for i, (name, choice) in enumerate(choices):
+        checked = ""
+        if i == 0:
+            checked = ' checked="checked"'
+        assert (
+            ('<td class="row-select"><input%s name="a-field" '
+             'type="checkbox" value="%s" /></td>'
+             % (checked, name))
+            in rendered)
+        assert ('<td>%s</td>' % choice["title"]) not in rendered
+    widget = TableSelectMultiple(item_attrs=["id", "title"], choices=object_choices)
+    rendered = widget.render("a-field", choices[0])
+    for i, (name, choice) in enumerate(choices):
+        checked = ""
+        if i == 0:
+            checked = ' checked="checked"'
+        assert (
+            ('<td class="row-select"><input%s name="a-field" '
+             'type="checkbox" value="%s" /></td>'
+             % (checked, name))
+            in rendered)
+        assert ('<td class="field-title">%s</td>' % choice["title"]) in rendered
+
+
+@pytest.mark.django_db
+def test_widget_table_select_multiple_callable():
+    choices = (
+        ("foo", dict(id="foo", title="Foo")),
+        ("bar", dict(id="bar", title="Bar")),
+        ("baz", dict(id="baz", title="Baz")))
+
+    def _get_id(attr):
+        return "xx%s" % attr["id"]
+
+    def _get_title(attr):
+        return "xx%s" % attr["title"]
+
+    widget = TableSelectMultiple(item_attrs=[_get_id], choices=choices)
+    rendered = widget.render("a-field", None)
+    for i, (name, choice) in enumerate(choices):
+        assert (
+            ('<td class="row-select"><input name="a-field" '
+             'type="checkbox" value="%s" /></td>'
+             % name)
+            in rendered)
+        assert ('<td class="field-get-id">xx%s</td>' % choice["id"]) in rendered
+        assert (
+            ('<td class="field-get-title">xx%s</td>' % choice["title"])
+            not in rendered)
+    widget = TableSelectMultiple(item_attrs=[_get_id], choices=choices)
+    rendered = widget.render("a-field", choices[0])
+    for i, (name, choice) in enumerate(choices):
+        checked = ""
+        if i == 0:
+            checked = ' checked="checked"'
+        assert (
+            ('<td class="row-select"><input%s name="a-field" '
+             'type="checkbox" value="%s" /></td>'
+             % (checked, name))
+            in rendered)
+        assert ('<td class="field-get-id">xx%s</td>' % choice["id"]) in rendered
+        assert (
+            ('<td class="field-get-title">xx%s</td>' % choice["title"])
+            not in rendered)
+    widget = TableSelectMultiple(item_attrs=[_get_id, _get_title], choices=choices)
+    rendered = widget.render("a-field", choices[0])
+    for i, (name, choice) in enumerate(choices):
+        checked = ""
+        if i == 0:
+            checked = ' checked="checked"'
+        assert (
+            ('<td class="row-select"><input%s name="a-field" '
+             'type="checkbox" value="%s" /></td>'
+             % (checked, name))
+            in rendered)
+        assert ('<td class="field-get-id">xx%s</td>' % choice["id"]) in rendered
+        assert (
+            ('<td class="field-get-title">xx%s</td>' % choice["title"])
+            in rendered)
+
+
+@pytest.mark.django_db
+def test_widget_table_select_multiple_object_methods():
+    choices = (
+        ("foo", dict(id="foo", title="Foo")),
+        ("bar", dict(id="bar", title="Bar")),
+        ("baz", dict(id="baz", title="Baz")))
+
+    class Dummy(object):
+
+        def get_id(self):
+            return self.kwargs["id"]
+
+        def get_title(self):
+            return self.kwargs["title"]
+
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+            for k in kwargs.keys():
+                setattr(self, k, getattr(self, "get_%s" % k))
+
+    object_choices = tuple(
+        (name, Dummy(**choice)) for name, choice in choices)
+    widget = TableSelectMultiple(item_attrs=["id"], choices=object_choices)
+    rendered = widget.render("a-field", None)
+    for i, (name, choice) in enumerate(choices):
+        assert (
+            ('<td class="row-select"><input name="a-field" '
+             'type="checkbox" value="%s" /></td>'
+             % name)
+            in rendered)
+        assert ('<td>%s</td>' % choice["title"]) not in rendered
+    widget = TableSelectMultiple(item_attrs=["id"], choices=object_choices)
+    rendered = widget.render("a-field", choices[0])
+    for i, (name, choice) in enumerate(choices):
+        checked = ""
+        if i == 0:
+            checked = ' checked="checked"'
+        assert (
+            ('<td class="row-select"><input%s name="a-field" '
+             'type="checkbox" value="%s" /></td>'
+             % (checked, name))
+            in rendered)
+        assert ('<td>%s</td>' % choice["title"]) not in rendered
+    widget = TableSelectMultiple(item_attrs=["id", "title"], choices=object_choices)
+    rendered = widget.render("a-field", choices[0])
+    for i, (name, choice) in enumerate(choices):
+        checked = ""
+        if i == 0:
+            checked = ' checked="checked"'
+        assert (
+            ('<td class="row-select"><input%s name="a-field" '
+             'type="checkbox" value="%s" /></td>'
+             % (checked, name))
+            in rendered)
+        assert ('<td class="field-title">%s</td>' % choice["title"]) in rendered
+
+
+@pytest.mark.django_db
+def test_widget_table_select_id_attr():
+    choices = (
+        ("foo", dict(id="foo", title="Foo")),
+        ("bar", dict(id="bar", title="Bar")),
+        ("baz", dict(id="baz", title="Baz")))
+    widget = TableSelectMultiple(item_attrs=["id"], choices=choices)
+    rendered = widget.render("a-field", None, attrs=dict(id="special-id"))
+    for i, (name, choice) in enumerate(choices):
+        assert (
+            ('<td class="row-select"><input id="special-id_%s" name="a-field" '
+             'type="checkbox" value="%s" /></td>'
+             % (i, name))
+            in rendered)
+
+
+@pytest.mark.django_db
+def test_display_stats(tp0, subdir0, language0, store0):
+    _test_stats_display(tp0)
+    _test_stats_display(subdir0)
+    _test_stats_display(language0)
+    _test_stats_display(store0)
+
+
+@pytest.mark.django_db
+def test_display_stats_action_message(tp0):
+    action = dict(
+        profile_url="/profile/url",
+        unit_source="Some unit source",
+        unit_url="/unit/url",
+        displayname="Some user",
+        check_name="some-check",
+        checks_url="/checks/url",
+        check_display_name="Some check")
+    stats = StatsDisplay(tp0)
+
+    for i in [2, 3, 4, 6, 7, 8, 9]:
+        _action = action.copy()
+        _action["type"] = i
+        message = stats.get_action_message(_action)
+        assert (
+            ("<a href='%s' class='user-name'>%s</a>"
+             % (action["profile_url"], action["displayname"]))
+            in message)
+        if i != 4:
+            assert (
+                ("<a href='%s'>%s</a>"
+                 % (action["unit_url"], action["unit_source"]))
+                in message)
+        if i in [6, 7]:
+            assert (
+                ("<a href='%s'>%s</a>"
+                 % (action["checks_url"], action["check_display_name"]))
+                in message)
+
+    for i in [1, 5]:
+        for _i in [0, 1, 2, 3, 4, 5]:
+            _action = action.copy()
+            _action["type"] = i
+            _action["translation_action_type"] = _i
+            message = stats.get_action_message(_action)
+            assert (
+                ("<a href='%s' class='user-name'>%s</a>"
+                 % (action["profile_url"], action["displayname"]))
+                in message)
+            assert (
+                ("<a href='%s'>%s</a>"
+                 % (action["unit_url"], action["unit_source"]))
+                in message)
+
+
+@pytest.mark.django_db
+def test_browse_view_panels():
+
+    class FooBrowseView(PootleBrowseView):
+        panel_names = ["foo_panel"]
+
+    class FooPanel(Panel):
+
+        @property
+        def content(self):
+            return "__FOO__"
+
+    @provider(panels, sender=FooBrowseView)
+    def foo_panel_provider(**kwargs_):
+        return dict(foo_panel=FooPanel)
+
+    view = FooBrowseView()
+    assert list(view.panels) == ["__FOO__"]
+
+    class BarBrowseView(PootleBrowseView):
+        panel_names = ["foo_panel", "bar_panel"]
+
+    class BarPanel(Panel):
+
+        @property
+        def content(self):
+            return "__BAR__"
+
+    @provider(panels, sender=PootleBrowseView)
+    def bar_panel_provider(**kwargs_):
+        return dict(bar_panel=BarPanel)
+
+    # foo_panel is only registered for FooBrowseView
+    # bar_panel is registered for PootleBrowseView
+    # only bar_panel is included
+    view = BarBrowseView()
+    assert list(view.panels) == ["__BAR__"]

@@ -9,8 +9,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 
-import UserEvent from 'components/UserEvent';
 import { User } from 'models/user';
+import { q, qAll } from 'utils/dom';
 
 import UserProfileEdit from './components/UserProfileEdit';
 
@@ -22,7 +22,7 @@ PTL.user = {
 
   init(opts) {
     if (opts.userData !== undefined) {
-      const editButton = document.querySelector('.js-user-profile-edit');
+      const editButton = q('.js-user-profile-edit');
 
       const user = new User(opts.userData, { urlRoot: l('/xhr/users/') });
       const props = {
@@ -33,8 +33,7 @@ PTL.user = {
 
       // FIXME: let's make the whole profile page a component, so a lot of the
       // boilerplate here is rendered redundant
-      const popupBtns = document.querySelectorAll('.js-popup-tweet');
-      [...popupBtns].map((btn) => {
+      qAll('.js-popup-tweet').map((btn) => {
         btn.addEventListener('click', (e) => {
           e.preventDefault();
 
@@ -48,23 +47,5 @@ PTL.user = {
         return true;
       });
     }
-
-    const lastActivity = document.querySelector('.js-last-action');
-    const data = opts.lastEvent;
-    const props = {
-      checkName: data.check_name,
-      checkDisplayName: data.check_display_name,
-      displayName: data.displayname,
-      email: data.email,
-      displayDatetime: data.display_datetime,
-      isoDatetime: data.iso_datetime,
-      type: data.type,
-      translationActionType: data.translation_action_type,
-      unitSource: data.unit_source,
-      unitUrl: data.unit_url,
-      username: data.username,
-    };
-    ReactDOM.render(<UserEvent {...props} />, lastActivity);
   },
-
 };

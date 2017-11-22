@@ -32,65 +32,45 @@ def _require_language(code, fullname, plurals=2, plural_equation='(n != 1)'):
     return language
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def english():
     """Require the English language."""
     from pootle_language.models import Language
+
     return Language.objects.get(code="en")
 
 
 @pytest.fixture
 def templates():
     """Require the special Templates language."""
-    return _require_language("templates", "Templates")
+    from pootle_language.models import Language
+
+    return Language.objects.get(code="templates")
 
 
 @pytest.fixture
-def afrikaans(english):
+def afrikaans():
     """Require the Afrikaans language."""
     return _require_language('af', 'Afrikaans')
 
 
 @pytest.fixture
-def arabic(english):
-    """Require the Arabic language."""
-    return _require_language('ar', 'Arabic')
-
-
-@pytest.fixture
-def french(english):
-    """Require the French language."""
-    return _require_language('fr', 'French')
-
-
-@pytest.fixture
-def spanish(english):
-    """Require the Spanish language."""
-    return _require_language('es', 'Spanish')
-
-
-@pytest.fixture
-def italian(english):
+def italian():
     """Require the Italian language."""
     return _require_language('it', 'Italian')
 
 
 @pytest.fixture
-def russian(english):
-    """Require the Russian language."""
-    return _require_language('ru', 'Russian')
+def language0():
+    """language0 Language"""
+    from pootle_language.models import Language
 
-
-# due to issues with tests not having a clean slate ie:
-# (https://github.com/translate/pootle/issues/3898)
-# please do not use the klingon fixtures 8)
-@pytest.fixture
-def klingon(english):
-    """Require the Klingon language."""
-    return _require_language('kl', 'Klingon')
+    return Language.objects.get(code="language0")
 
 
 @pytest.fixture
-def klingon_vpw(english):
-    """Require the Klingon language (VPW dialect)."""
-    return _require_language('kl_VPW', 'Klingon vegan peace warriors')
+def language1():
+    """language1 Language"""
+    from pootle_language.models import Language
+
+    return Language.objects.get(code="language1")

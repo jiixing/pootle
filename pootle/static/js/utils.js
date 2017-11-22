@@ -8,11 +8,15 @@
 
 import $ from 'jquery';
 
-import 'jquery-select2';
+import 'select2';
 
+import { qAll } from 'utils/dom';
 
-const escapeRE = /<[^<]*?>|\r\n|[\r\n\t&<>]/gm;
-const whitespaceRE = /^ +| +$|[\r\n\t] +| {2,}/gm;
+import {
+  highlightPunctuation, highlightEscapes, highlightHtml,
+  highlightSymbols, nl2br,
+} from './editor/utils';
+import { raw2sym } from './editor/utils/font';
 
 
 /* Gets current URL's hash */
@@ -51,10 +55,13 @@ export function getParsedHash(hash) {
 
 
 /* Updates current URL's hash */
-export function updateHashPart(part, newVal, removeArray) {
+export function updateHashPart(part, newVal, removeArray, hash) {
   const r = /([^&;=]+)=?([^&;]*)/g;
   const params = [];
-  const h = getHash();
+  let h = hash;
+  if (h === undefined) {
+    h = getHash();
+  }
   let ok = false;
   let e = r.exec(h);
 
@@ -94,95 +101,70 @@ export function strCmp(a, b) {
 }
 
 
-/* Cleans '\n' escape sequences and adds '\t' sequences */
-export function cleanEscape(s) {
-  return s.replace(/\\t/g, '\t').replace(/\\n/g, '');
+export function highlightRO(text) {
+  return (
+    nl2br(
+      highlightEscapes(
+        highlightHtml(
+          raw2sym(
+            // FIXME: CRLF => LF replacement happens here because highlighting
+            // currently happens via many DOM sources, and this ensures the less
+            // error-prone behavior. This won't be needed when the entire editor
+            // is managed as a component.
+            text.replace(/\r\n/g, '\n')
+          )
+        )
+      )
+    )
+  );
 }
 
 
-/* Fancy escapes to highlight parts of the text such as HTML tags */
-export function fancyEscape(text) {
-  function replace(match) {
-    const escapeHl = '<span class="highlight-escape">%s</span>';
-    const htmlHl = '<span class="highlight-html">&lt;%s&gt;</span>';
-    const submap = {
-      '\r\n': `${escapeHl.replace(/%s/, '\\r\\n')}<br/>\n`,
-      '\r': `${escapeHl.replace(/%s/, '\\r')}<br/>\n`,
-      '\n': `${escapeHl.replace(/%s/, '\\n')}<br/>\n`,
-      '\t': escapeHl.replace(/%s/, '\\t'),
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-    };
+export function highlightRW(text) {
+  return (
+    highlightSymbols(
+      nl2br(
+        highlightPunctuation(
+          highlightEscapes(
+            highlightHtml(
+              raw2sym(
+                // FIXME: CRLF => LF replacement happens here because highlighting
+                // currently happens via many DOM sources, and this ensures the less
+                // error-prone behavior. This won't be needed when the entire editor
+                // is managed as a component.
+                text.replace(/\r\n/g, '\n')
+              )
+            , 'js-editor-copytext')
+          , 'js-editor-copytext')
+        , 'js-editor-copytext')
+      )
+    , 'js-editor-copytext')
+  );
+}
 
-    let replaced = submap[match];
 
-    if (replaced === undefined) {
-      replaced = htmlHl.replace(
-            /%s/,
-            fancyEscape(match.slice(1, match.length - 1))
-        );
+function highlightNodes(selector, highlightFn) {
+  qAll(selector).forEach(
+    (translationTextNode) => {
+      const dataString = translationTextNode.dataset.string;
+      const textValue = (
+        dataString ? JSON.parse(`"${dataString}"`) :
+        translationTextNode.textContent
+      );
+      // eslint-disable-next-line no-param-reassign
+      translationTextNode.innerHTML = highlightFn(textValue);
     }
-
-    return replaced;
-  }
-
-  return text.replace(escapeRE, replace);
+  );
 }
 
 
-/* Highlight spaces to make them easily visible */
-function fancySpaces(text) {
-  function replace(match) {
-    const spaceHl = '<span class="translation-space"> </span>';
-
-    return Array(match.length + 1).join(spaceHl);
-  }
-
-  return text.replace(whitespaceRE, replace);
+export function highlightRONodes(selector) {
+  return highlightNodes(selector, highlightRO);
 }
 
 
-/* Fancy highlight: fancy spaces + fancy escape */
-export function fancyHl(text) {
-  return fancySpaces(fancyEscape(text));
-}
-
-
-/* Returns a string representing a relative datetime */
-export function relativeDate(date) {
-  const delta = Date.now() - date;
-  const seconds = Math.round(Math.abs(delta) / 1000);
-  const minutes = Math.round(seconds / 60);
-  const hours = Math.round(minutes / 60);
-  const days = Math.round(hours / 24);
-  const weeks = Math.round(days / 7);
-  const years = Math.round(days / 365);
-  let fmt;
-  let count;
-
-  if (years > 0) {
-    fmt = ngettext('A year ago', '%s years ago', years);
-    count = [years];
-  } else if (weeks > 0) {
-    fmt = ngettext('A week ago', '%s weeks ago', weeks);
-    count = [weeks];
-  } else if (days > 0) {
-    fmt = ngettext('Yesterday', '%s days ago', days);
-    count = [days];
-  } else if (hours > 0) {
-    fmt = ngettext('An hour ago', '%s hours ago', hours);
-    count = [hours];
-  } else if (minutes > 0) {
-    fmt = ngettext('A minute ago', '%s minutes ago', minutes);
-    count = [minutes];
-  }
-
-  if (fmt) {
-    return interpolate(fmt, count);
-  }
-
-  return gettext('A few seconds ago');
+export function highlightRWNodes(selector) {
+  return highlightNodes(selector, highlightRW);
 }
 
 
@@ -197,11 +179,17 @@ export function makeSelectableInput(selector, options, onChange, onSelecting) {
   if (!$el.length) {
     return;
   }
-
-  $el.select2(options);
-
+  $el.select2(options).on('select2:unselecting', function () {
+    $(this).data('state', 'unselected');
+  }).on('select2:open', function () {
+    if ($(this).data('state') === 'unselected') {
+      $(this).removeData('state');
+      $(this).select2('close');
+    }
+  });
   $el.on('change', onChange);
   $el.on('select2-selecting', onSelecting);
+  $('.select2-selection__rendered').removeAttr('title');
 }
 
 
@@ -228,14 +216,14 @@ export function blinkClass($elem, className, n, delay) {
 
 export default {
   blinkClass,
-  cleanEscape,
   executeFunctionByName,
-  fancyEscape,
-  fancyHl,
+  highlightRO,
+  highlightRW,
+  highlightRONodes,
+  highlightRWNodes,
   getHash,
   getParsedHash,
   makeSelectableInput,
-  relativeDate,
   strCmp,
   updateHashPart,
 };

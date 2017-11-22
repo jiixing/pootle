@@ -10,14 +10,13 @@ import pytest
 
 from django.utils import timezone
 
-from pytest_pootle.factories import SubmissionFactory
 from pytest_pootle.utils import create_store
 
 from pootle_app.models.permissions import check_permission
 from pootle_statistics.models import (Submission, SubmissionFields,
                                       SubmissionTypes)
+from pootle_store.constants import UNTRANSLATED
 from pootle_store.models import Suggestion, Unit
-from pootle_store.util import TRANSLATED, UNTRANSLATED
 
 
 def _create_comment_submission(unit, user, creation_time, comment):
@@ -26,9 +25,8 @@ def _create_comment_submission(unit, user, creation_time, comment):
         translation_project=unit.store.translation_project,
         submitter=user,
         unit=unit,
-        store=unit.store,
         field=SubmissionFields.COMMENT,
-        type=SubmissionTypes.NORMAL,
+        type=SubmissionTypes.WEB,
         new_value=comment,
     )
     sub.save()
@@ -36,94 +34,36 @@ def _create_comment_submission(unit, user, creation_time, comment):
 
 
 @pytest.mark.django_db
-def test_submission_ordering(en_tutorial_po, member, no_submissions):
+def test_submission_ordering(store0, member):
     """Submissions with same creation_time should order by pk
     """
 
     at_time = timezone.now()
-    unit = en_tutorial_po.units[0]
+    unit = store0.units[0]
+
+    last_sub_pk = unit.submission_set.order_by(
+        "-pk").values_list("pk", flat=True).first() or 0
     _create_comment_submission(unit, member, at_time, "Comment 3")
     _create_comment_submission(unit, member, at_time, "Comment 2")
     _create_comment_submission(unit, member, at_time, "Comment 1")
-    unit = en_tutorial_po.units[0]
+    new_subs = unit.submission_set.filter(pk__gt=last_sub_pk)
 
     # Object manager test
-    assert Submission.objects.count() == 3
-    assert (Submission.objects.first().creation_time
-            == Submission.objects.last().creation_time)
-    assert (Submission.objects.latest().pk
-            > Submission.objects.earliest().pk)
-
-    # Related manager test
-    assert (unit.submission_set.latest().pk
-            > unit.submission_set.earliest().pk)
+    assert new_subs.count() == 3
+    assert (new_subs.first().creation_time
+            == new_subs.last().creation_time)
+    assert (new_subs.latest().pk
+            > new_subs.earliest().pk)
 
     # Passing field_name test
-    assert (unit.submission_set.earliest("new_value").new_value
+    assert (new_subs.earliest("new_value").new_value
             == "Comment 1")
-    assert (unit.submission_set.latest("new_value").new_value
+    assert (new_subs.latest("new_value").new_value
             == "Comment 3")
-    assert (unit.submission_set.earliest("pk").new_value
+    assert (new_subs.earliest("pk").new_value
             == "Comment 3")
-    assert (unit.submission_set.latest("pk").new_value
+    assert (new_subs.latest("pk").new_value
             == "Comment 1")
-
-
-def test_max_similarity():
-    """Tests that the maximum similarity is properly returned."""
-    submission = SubmissionFactory.build(
-        similarity=0,
-        mt_similarity=0,
-    )
-    assert submission.max_similarity == 0
-
-    submission = SubmissionFactory.build(
-        similarity=0.5,
-        mt_similarity=0.6,
-    )
-    assert submission.max_similarity == 0.6
-
-    submission = SubmissionFactory.build(
-        similarity=0.5,
-        mt_similarity=None,
-    )
-    assert submission.max_similarity == 0.5
-
-    submission = SubmissionFactory.build(
-        similarity=None,
-        mt_similarity=None,
-    )
-    assert submission.max_similarity == 0
-
-
-def test_needs_scorelog():
-    """Tests if the submission needs to be logged or not."""
-    # Changing the STATE from UNTRANSLATED won't record any logs
-    submission = SubmissionFactory.build(
-        field=SubmissionFields.STATE,
-        type=SubmissionTypes.NORMAL,
-        old_value=UNTRANSLATED,
-        new_value=TRANSLATED,
-    )
-    assert not submission.needs_scorelog()
-
-    # Changing other fields (or even STATE, in a different direction) should
-    # need to record a score log
-    submission = SubmissionFactory.build(
-        field=SubmissionFields.STATE,
-        type=SubmissionTypes.NORMAL,
-        old_value=TRANSLATED,
-        new_value=UNTRANSLATED,
-    )
-    assert submission.needs_scorelog()
-
-    submission = SubmissionFactory.build(
-        field=SubmissionFields.TARGET,
-        type=SubmissionTypes.SUGG_ADD,
-        old_value=u'',
-        new_value=u'',
-    )
-    assert submission.needs_scorelog()
 
 
 @pytest.mark.django_db
@@ -136,11 +76,11 @@ def test_update_submission_ordering():
     store = create_store(
         unit.store.pootle_path,
         "0",
-        [(unit.source_f, "Translation for " + unit.source_f)]
+        [(unit.source_f, "Translation for " + unit.source_f, False)]
     )
     unit.store.update(store)
     submission_field = Submission.objects.filter(unit=unit).latest().field
-    assert submission_field == SubmissionFields.TARGET
+    assert submission_field == SubmissionFields.STATE
 
 
 @pytest.mark.django_db
@@ -152,22 +92,16 @@ def test_new_translation_submission_ordering(client, request_users, settings):
         client.login(
             username=user.username,
             password=request_users["password"])
-
     url = '/xhr/units/%d/' % unit.id
-
     response = client.post(
         url,
-        {
-            'state': False,
-            'target_f_0': "Translation for " + unit.source_f,
-        },
-        HTTP_X_REQUESTED_WITH='XMLHttpRequest'
-    )
-
+        {'is_fuzzy': "0",
+         'target_f_0': "Translation for " + unit.source_f},
+        HTTP_X_REQUESTED_WITH='XMLHttpRequest')
     if check_permission('translate', response.wsgi_request):
         assert response.status_code == 200
         submission_field = Submission.objects.filter(unit=unit).latest().field
-        assert submission_field == SubmissionFields.TARGET
+        assert submission_field == SubmissionFields.STATE
     else:
         assert response.status_code == 403
 
@@ -176,13 +110,15 @@ def test_new_translation_submission_ordering(client, request_users, settings):
 def test_accept_sugg_submission_ordering(client, request_users, settings):
     """Tests suggestion can be accepted with a comment."""
     settings.POOTLE_CAPTCHA_ENABLED = False
-    unit = Unit.objects.filter(suggestion__state='pending',
+    unit = Unit.objects.filter(suggestion__state__name='pending',
                                state=UNTRANSLATED)[0]
     unit.markfuzzy()
     unit.target = "Fuzzy Translation for " + unit.source_f
     unit.save()
-    sugg = Suggestion.objects.filter(unit=unit, state='pending')[0]
+    sugg = Suggestion.objects.filter(unit=unit, state__name='pending')[0]
     user = request_users["user"]
+    last_sub_pk = unit.submission_set.order_by(
+        "-pk").values_list("pk", flat=True).first() or 0
     if user.username != "nobody":
         client.login(
             username=user.username,
@@ -193,10 +129,14 @@ def test_accept_sugg_submission_ordering(client, request_users, settings):
         url,
         HTTP_X_REQUESTED_WITH='XMLHttpRequest'
     )
-
+    new_subs = unit.submission_set.filter(pk__gt=last_sub_pk)
     if check_permission('review', response.wsgi_request):
         assert response.status_code == 200
-        submission_field = Submission.objects.filter(unit=unit).latest().field
-        assert submission_field == SubmissionFields.TARGET
+        assert new_subs.count() == 2
+        target_sub = new_subs.order_by("pk").first()
+        assert target_sub.field == SubmissionFields.TARGET
+        state_sub = new_subs.order_by("pk").last()
+        assert state_sub.field == SubmissionFields.STATE
     else:
-        assert response.status_code == 403
+        assert response.status_code == 404
+        assert new_subs.count() == 0

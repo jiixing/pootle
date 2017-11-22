@@ -10,8 +10,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.utils.encoding import force_text
 
-from .delegate import (
-    config_should_not_be_appended, config_should_not_be_set)
+from .delegate import config_should_not_be_appended, config_should_not_be_set
 from .exceptions import ConfigurationError
 
 
@@ -21,8 +20,8 @@ class ConfigQuerySet(models.QuerySet):
         super(ConfigQuerySet, self).__init__(*args, **kwargs)
         self.query_model = None
 
-    def _clone(self, klass=None, setup=None, **kwargs):
-        clone = super(ConfigQuerySet, self)._clone(klass, setup, **kwargs)
+    def _clone(self, **kwargs):
+        clone = super(ConfigQuerySet, self)._clone(**kwargs)
         clone.query_model = self.query_model
         return clone
 
@@ -30,7 +29,7 @@ class ConfigQuerySet(models.QuerySet):
     def base_qs(self):
         qs = self.__class__(self.model)
         qs.query_model = self.query_model
-        return qs
+        return qs.select_related("content_type")
 
     def append_config(self, key, value="", model=None):
         model = self.get_query_model(model)

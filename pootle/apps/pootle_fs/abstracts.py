@@ -11,7 +11,8 @@ from django.utils.functional import cached_property
 
 from pootle.core.exceptions import MissingPluginError, NotConfiguredError
 from pootle_project.models import Project
-from pootle_store.models import FILE_WINS, POOTLE_WINS, Store
+from pootle_store.constants import POOTLE_WINS, SOURCE_WINS
+from pootle_store.models import Store
 
 from .delegate import fs_file
 from .managers import StoreFSManager, validate_store_fs
@@ -20,7 +21,7 @@ from .utils import FSPlugin
 
 class AbstractStoreFS(models.Model):
     project = models.ForeignKey(
-        Project, related_name='store_fs')
+        Project, related_name='store_fs', on_delete=models.CASCADE)
     pootle_path = models.CharField(max_length=255, blank=False)
     path = models.CharField(max_length=255, blank=False)
     store = models.ForeignKey(
@@ -36,7 +37,7 @@ class AbstractStoreFS(models.Model):
         default=0,
         choices=[(0, ""),
                  (POOTLE_WINS, "pootle"),
-                 (FILE_WINS, "fs")])
+                 (SOURCE_WINS, "fs")])
 
     objects = StoreFSManager()
 
@@ -53,8 +54,9 @@ class AbstractStoreFS(models.Model):
     @cached_property
     def file(self):
         if self.plugin:
-            return fs_file.get(
-                self.plugin.__class__)(self)
+            file_adapter = fs_file.get(self.plugin.__class__)
+            if file_adapter:
+                return file_adapter(self)
 
     def save(self, *args, **kwargs):
         validated = validate_store_fs(

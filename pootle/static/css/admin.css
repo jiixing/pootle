@@ -22,7 +22,7 @@ div#depchecks ul#optimal
 {
     font-style: italic;
     background-color: inherit;
-    color: #4B4740;
+    color: #4b4740;
 }
 
 div#depchecks ul li
@@ -65,7 +65,8 @@ html[dir="rtl"] .staticpages-edit
     height: 30em;
 }
 
-.staticpages td {
+.staticpages td
+{
     width: 1%;
 }
 
@@ -206,9 +207,8 @@ html[dir="rtl"] td.pootle_path
 .admin-buttons-block input
 {
     display: inline;
-    margin-bottom: 1em;
-    margin-left: .25em;
-    margin-right: .25em;
+    margin-left: 0.25em;
+    margin-right: 0.25em;
 }
 
 
@@ -437,7 +437,7 @@ html[dir="rtl"] .admin-content .item-delete input
 
 .search-results caption
 {
-    padding: 0 0 1em 0;
+    padding: 0 0 1em;
 }
 
 .search-results tr
@@ -447,13 +447,13 @@ html[dir="rtl"] .admin-content .item-delete input
 
 .search-results tr:nth-child(2n+1)
 {
-    background-color: #F5FBFD;
+    background-color: #f5fbfd;
     color: #000;
 }
 
 .search-results tr:hover
 {
-    background-color: #E2F4F8;
+    background-color: #e2f4f8;
 }
 
 .search-results tr.is-disabled

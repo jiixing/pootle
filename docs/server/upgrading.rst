@@ -12,9 +12,8 @@ current release.
 Stop your running Pootle
 ------------------------
 
-You may want to stop your running Pootle while you upgrade to prevent updates
-to your data during the migration process. If you have RQ workers running you
-may want to stop those also.
+Stop your running Pootle while you upgrade to prevent updates to your data
+during the migration process. If you have RQ workers running stop those also.
 
 
 .. _upgrading#system-backup:
@@ -34,7 +33,7 @@ Backup your system
 Migrate your database
 ---------------------
 
-If you are currently using SQLite for your database you will need to 
+If you are currently using SQLite for your database you will need to
 :doc:`migrate to either MySQL (InnoDB) or PostgreSQL <database_migration>`
 before you upgrade.
 
@@ -70,20 +69,26 @@ You should check that you have all of the necessary :ref:`Pootle requirements
 Activate virtualenv
 -------------------
 
-These instructions assume that you are using ``virtualenv`` and you have
-activated a virtual environment named ``env``.
-
-
-.. _upgrading#update-pip:
-
-Update pip
-----------
-
-You should now upgrade Pip to the latest version:
+These instructions assume that you are using :command:`virtualenv` and you have
+activated a virtual environment named ``env`` as follows:
 
 .. code-block:: console
 
-   (env) $ pip install --upgrade pip
+   $ source env/bin/activate
+   (env) $
+
+
+.. _upgrading#update-pip-setuptools:
+
+Update pip and setuptools
+-------------------------
+
+You should now upgrade :command:`pip` and :command:`setuptools` to the latest
+version:
+
+.. code-block:: console
+
+   (env) $ pip install --upgrade pip setuptools
 
 
 .. _upgrading#upgrading-2.6:
@@ -128,9 +133,10 @@ Upgrading from version 2.6.x or later
 
 Upgrade to the latest Pootle version:
 
-.. code-block:: console
+.. highlight:: console
+.. parsed-literal::
 
-   (env) $ pip install --pre --upgrade Pootle
+   (env) $ pip install |--process-dependency-links --pre| --upgrade Pootle
 
 
 .. _upgrading#check-settings:
@@ -139,7 +145,7 @@ Update and check your settings
 ------------------------------
 
 You should now update your custom Pootle settings to add, remove or adjust any
-settings that have changed. You may want to view the latest 
+settings that have changed. You may want to view the latest
 :ref:`available settings <settings#available>`.
 
 You can check to see if there are any issues with your configuration
@@ -179,40 +185,85 @@ In a production environment you may want to :ref:`run RQ workers as services
 See here for :ref:`further information about RQ jobs in Pootle <rq>`.
 
 
+.. _upgrading#review-database:
+
+Review your database configuration
+----------------------------------
+
+Review the :doc:`MySQL <mysql_installation>` or :doc:`PostgreSQL
+<postgresql_installation>` installation instructions for any changes that you
+need to make to your database.
+
+If you run MySQL you will almost certainly need to make sure you have
+:ref:`Time zone definition files <django:mysql-time-zone-definitions>` loaded
+into the database.
+
+
+
 .. _upgrading#schema-migration:
 
 Migrate your database schema
 ----------------------------
 
 Once you have updated your settings you can perform the database schema and
-data upgrade by running. This needs to be done in a few steps:
+data upgrade by running. This is done as follows:
 
 .. code-block:: console
 
-   (env) $ pootle migrate accounts 0002 --fake
-   (env) $ pootle migrate pootle_translationproject 0002 --fake
-   (env) $ pootle migrate
+   (env) $ pootle migrate --fake-initial
+
+You will also need to update the stats data held in Pootle
+
+.. code-block:: console
+
+   (env) $ pootle update_data
 
 
-.. _upgrading#refresh-stats:
+.. _upgrading#refresh-checks:
 
-Refreshing checks and stats
----------------------------
+Refreshing checks
+-----------------
 
-You must now update the translation checks and populate the Redis cache with
-statistical data. You will need to have an :ref:`RQ worker running 
-<installation#running-rqworker>` to complete this.
+You must now update the translation checks. You will need to have an
+:ref:`RQ worker running <installation#running-rqworker>` to complete this.
 
 .. code-block:: console
 
    (env) $ pootle calculate_checks
-   (env) $ pootle refresh_stats
 
 This command will dispatch jobs to the RQ worker and may take some time.
 
-If you wish to run :djadmin:`calculate_checks` and :djadmin:`refresh_stats` in
-the foreground without using the RQ worker you can use the :option:`--no-rq`
-option.
+If you wish to run :djadmin:`calculate_checks` in the foreground without using
+the RQ worker you can use the :option:`--no-rq` option.
+
+
+
+.. _upgrading#refresh-scores:
+
+Refreshing scores
+-----------------
+
+If you are upgrading from a version prior to 2.8rc6, you will need to update
+user scores using :djadmin:`refresh_scores`.
+
+.. code-block:: console
+
+   (env) $ pootle refresh_scores --reset
+   (env) $ pootle refresh_scores
+
+
+.. _upgrading#drop-cached-snippets:
+
+Drop cached snippets
+--------------------
+
+Redis might have cached HTML snippets referring to outdated static assets. In
+order for Pootle to return references to the newest assets these cached
+snippets must go away:
+
+.. code-block:: console
+
+   (env) $ pootle flush_cache --django-cache
 
 
 .. _upgrading#setup-users:
@@ -224,7 +275,7 @@ Any accounts that do not have an email address registered will not be able to
 log in. You can set the email for a user using the :djadmin:`update_user_email`
 command.
 
-For example to set the email for user ``admin`` to ``admin@example.com``: 
+For example to set the email for user ``admin`` to ``admin@example.com``:
 
 .. code-block:: console
 

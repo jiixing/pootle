@@ -9,9 +9,9 @@
 from django.db.models import Max
 from django.utils.functional import cached_property
 
+from pootle_store.constants import SIMPLY_SORTED
 from pootle_store.models import Unit
 from pootle_store.unit.filters import UnitSearchFilter, UnitTextSearch
-from pootle_store.views import SIMPLY_SORTED
 
 
 class DBSearchBackend(object):
@@ -114,15 +114,12 @@ class DBSearchBackend(object):
         category = kwargs['category']
         checks = kwargs['checks']
         exact = 'exact' in kwargs['soptions']
+        case = 'case' in kwargs['soptions']
         modified_since = kwargs['modified-since']
         month = kwargs['month']
         search = kwargs['search']
         sfields = kwargs['sfields']
         user = kwargs['user']
-        vfolder = kwargs["vfolder"]
-
-        if vfolder is not None:
-            qs = qs.filter(vfolders=vfolder)
 
         if self.unit_filter:
             qs = UnitSearchFilter().filter(
@@ -131,16 +128,16 @@ class DBSearchBackend(object):
 
             if modified_since is not None:
                 qs = qs.filter(
-                    submitted_on__gt=modified_since).distinct()
+                    change__submitted_on__gt=modified_since).distinct()
 
             if month is not None:
                 qs = qs.filter(
-                    submitted_on__gte=month[0],
-                    submitted_on__lte=month[1]).distinct()
+                    change__submitted_on__gte=month[0],
+                    change__submitted_on__lte=month[1]).distinct()
 
         if sfields and search:
             qs = UnitTextSearch(qs).search(
-                search, sfields, exact=exact)
+                search, sfields, exact=exact, case=case)
         return qs
 
     @cached_property
@@ -151,7 +148,7 @@ class DBSearchBackend(object):
         total = self.results.count()
         start = self.offset
 
-        if start > total:
+        if start > (total + len(self.previous_uids)):
             return total, total, total, self.results.none()
 
         find_unit = (
@@ -163,6 +160,25 @@ class DBSearchBackend(object):
             self.previous_uids
             and self.offset)
 
+        if not find_unit and find_next_slice:
+            # if both previous_uids and offset are set then try to ensure
+            # that the results we are returning start from the end of previous
+            # result set
+            _start = start = max(self.offset - len(self.previous_uids), 0)
+            end = min(self.offset + (2 * self.chunk_size), total)
+            uid_list = self.results[start:end].values_list("pk", flat=True)
+            offset = 0
+            for i, uid in enumerate(uid_list):
+                if uid in self.previous_uids:
+                    start = _start + i + 1
+                    offset = i + 1
+            start = start or 0
+            end = min(start + (2 * self.chunk_size), total)
+            return (
+                total,
+                start,
+                end,
+                uid_list[offset:offset + (2 * self.chunk_size)])
         if find_unit:
             # find the uid in the Store
             uid_list = list(self.results.values_list("pk", flat=True))
@@ -171,18 +187,12 @@ class DBSearchBackend(object):
                 start = (
                     int(unit_index / (2 * self.chunk_size))
                     * (2 * self.chunk_size))
-        elif find_next_slice:
-            # if both previous_uids and offset are set then try to ensure
-            # that the results we are returning start from the end of previous
-            # result set
-            _start = start = max(self.offset - len(self.previous_uids), 0)
-            end = max(self.offset + (2 * self.chunk_size), total)
-            uid_list = self.results[start:end].values_list("pk", flat=True)
-            for i, uid in enumerate(uid_list):
-                if uid in self.previous_uids:
-                    start = _start + i + 1
         if self.chunk_size is None:
             return total, 0, total, self.results
         start = start or 0
         end = min(start + (2 * self.chunk_size), total)
-        return total, start, end, self.results[start:end]
+        return (
+            total,
+            start,
+            end,
+            list(self.results[start:end].values_list("pk", flat=True)))

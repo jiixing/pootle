@@ -8,19 +8,28 @@
 
 from itertools import groupby
 
-from django.conf import settings
-from django.core.urlresolvers import resolve
 from django.db.models import Max
+from django.urls import resolve
 
 from pootle.core.dateparse import parse_datetime
 from pootle.core.url_helpers import split_pootle_path
-from pootle_misc.checks import get_category_id
+from pootle_checks.utils import get_category_id
+from pootle_misc.util import get_date_interval
+from pootle_store.constants import ALLOWED_SORTS, SIMPLY_SORTED
 from pootle_store.models import Unit
 from pootle_store.unit.filters import UnitSearchFilter, UnitTextSearch
 from pootle_store.unit.results import GroupedResults, StoreResults
-from pootle_store.views import ALLOWED_SORTS, SIMPLY_SORTED
-from virtualfolder.helpers import extract_vfolder_from_path
-from virtualfolder.models import VirtualFolderTreeItem
+
+
+def get_max_and_order_fields(sort_by):
+    if sort_by[0] == '-':
+        max_field = sort_by[1:]
+        sort_order = '-sort_by_field'
+    else:
+        max_field = sort_by
+        sort_order = 'sort_by_field'
+
+    return max_field, sort_order
 
 
 def calculate_search_results(kwargs, user):
@@ -30,11 +39,13 @@ def calculate_search_results(kwargs, user):
     offset = kwargs.get("offset", 0)
     limit = kwargs.get("count", 9)
     modified_since = kwargs.get("modified-since")
+    month = kwargs.get("month")
     search = kwargs.get("search")
     sfields = kwargs.get("sfields")
     soptions = kwargs.get("soptions", [])
     sort = kwargs.get("sort", None)
-    language_code, project_code, dir_path, filename = (
+    vfolder = kwargs.get("vfolder", None)
+    language_code, project_code, dir_path_, filename = (
         split_pootle_path(kwargs["pootle_path"]))
     uids = [
         int(x)
@@ -45,18 +56,23 @@ def calculate_search_results(kwargs, user):
 
     if modified_since:
         modified_since = parse_datetime(modified_since)
+    if month:
+        month = get_date_interval(month)
 
-    vfolder = None
-    if 'virtualfolder' in settings.INSTALLED_APPS:
-        vfolder, pootle_path = extract_vfolder_from_path(
-            pootle_path,
-            vfti=VirtualFolderTreeItem.objects.select_related(
-                "directory", "vfolder"))
+    path_kwargs = {
+        k: v
+        for k, v
+        in resolve(pootle_path).kwargs.items()
+        if k in [
+            "language_code",
+            "project_code",
+            "dir_path",
+            "filename"]}
     qs = (
-        Unit.objects.get_translatable(user=user, **resolve(pootle_path).kwargs)
+        Unit.objects.get_translatable(user=user, **path_kwargs)
                     .order_by("store", "index"))
     if vfolder is not None:
-        qs = qs.filter(vfolders=vfolder)
+        qs = qs.filter(store__vfolders=vfolder)
     # if "filter" is present in request vars...
     if unit_filter:
         # filter the results accordingly
@@ -68,7 +84,11 @@ def calculate_search_results(kwargs, user):
             category=get_category_id(category))
         # filter by modified
         if modified_since:
-            qs = qs.filter(submitted_on__gt=modified_since).distinct()
+            qs = qs.filter(change__submitted_on__gt=modified_since).distinct()
+        if month is not None:
+            qs = qs.filter(
+                change__submitted_on__gte=month[0],
+                change__submitted_on__lte=month[1]).distinct()
         # sort results
         if unit_filter in ["my-suggestions", "user-suggestions"]:
             sort_on = "suggestions"
@@ -82,12 +102,7 @@ def calculate_search_results(kwargs, user):
             if sort_on in SIMPLY_SORTED:
                 qs = qs.order_by(sort_by, "store__pootle_path", "index")
             else:
-                if sort_by[0] == '-':
-                    max_field = sort_by[1:]
-                    sort_order = '-sort_by_field'
-                else:
-                    max_field = sort_by
-                    sort_order = 'sort_by_field'
+                max_field, sort_order = get_max_and_order_fields(sort_by)
                 qs = (
                     qs.annotate(sort_by_field=Max(max_field))
                       .order_by(sort_order, "store__pootle_path", "index"))

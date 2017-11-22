@@ -8,17 +8,22 @@
 
 from itertools import groupby
 
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 
 from pootle.core.url_helpers import split_pootle_path
 from pootle.i18n.gettext import language_dir
-from pootle_store.models import FUZZY
+from pootle_store.constants import FUZZY
+from pootle_store.models import Unit
 from pootle_store.templatetags.store_tags import (
     pluralize_source, pluralize_target)
 from pootle_store.unit.proxy import UnitProxy
 
 
 class UnitResult(UnitProxy):
+
+    @property
+    def filetype(self):
+        return self.unit["store__filetype__name"]
 
     @property
     def nplurals(self):
@@ -79,6 +84,7 @@ class StoreResults(object):
             unit = UnitResult(unit)
             if meta is None:
                 meta = {
+                    'filetype': unit.filetype,
                     'source_lang': unit.source_lang,
                     'source_dir': unit.source_dir,
                     'target_lang': unit.target_lang,
@@ -107,6 +113,7 @@ class GroupedResults(object):
         "source_f",
         "target_f",
         "state",
+        "store__filetype__name",
         "store__pootle_path",
         "store__translation_project__project__code",
         "store__translation_project__project__source_language__code",
@@ -114,14 +121,20 @@ class GroupedResults(object):
         "store__translation_project__language__code",
         "store__translation_project__language__nplurals"]
 
-    def __init__(self, units_qs):
-        self.units_qs = units_qs
+    def __init__(self, units):
+        self.units = units
 
     @property
     def data(self):
         unit_groups = []
+        units = {
+            unit["id"]: unit
+            for unit
+            in Unit.objects.filter(
+                pk__in=self.units).values(*self.select_fields)}
+        units = [units[pk] for pk in self.units]
         units_by_path = groupby(
-            self.units_qs.values(*self.select_fields),
+            units,
             lambda x: x["store__pootle_path"])
         for pootle_path, units in units_by_path:
             unit_groups.append({pootle_path: StoreResults(units).data})

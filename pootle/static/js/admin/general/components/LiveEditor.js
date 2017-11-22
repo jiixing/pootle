@@ -10,6 +10,7 @@ import React from 'react';
 import _ from 'underscore';
 
 import { outerHeight } from 'utils/dimensions';
+import { q, qAll } from 'utils/dom';
 import fetch from 'utils/fetch';
 
 import ContentEditor from './ContentEditor';
@@ -61,14 +62,13 @@ export const LiveEditor = React.createClass({
 
   getContentHeight() {
     const topHeight = (
-      outerHeight(document.querySelector('#navbar')) +
-      outerHeight(document.querySelector('#header-meta')) +
-      outerHeight(document.querySelector('#header-tabs'))
+      outerHeight(q('#navbar')) +
+      outerHeight(q('#header-meta')) +
+      outerHeight(q('#header-tabs'))
     );
-    const footerHeight = outerHeight(document.querySelector('#footer'));
+    const footerHeight = outerHeight(q('#footer'));
 
-    const formFieldNodes = document.querySelectorAll('.js-staticpage-non-content');
-    const formFields = Array.prototype.slice.call(formFieldNodes, 0);
+    const formFields = qAll('.js-staticpage-non-content');
     const fieldsHeight = (
       formFields.reduce((total, fieldEl) => total + outerHeight(fieldEl), 0)
     );
@@ -96,6 +96,7 @@ export const LiveEditor = React.createClass({
   loadRemotePreview() {
     fetch({
       url: '/xhr/preview/',
+      method: 'POST',
       body: {
         text: this.state.value,
       },
@@ -111,11 +112,15 @@ export const LiveEditor = React.createClass({
 
   render() {
     const { renderedValue, value } = this.state;
-    const contentHeight = Math.max(100, this.getContentHeight());
+    const minimumHeight = 300;
+    const maximumHeight = 10000;
+    const contentHeight = (
+        Math.min(maximumHeight, Math.max(minimumHeight, this.getContentHeight()))
+    );
     const contentStyle = {
       height: contentHeight,
-      minHeight: contentHeight,  // Required for Firefox
-      maxHeight: contentHeight,  // Required for Firefox
+      minHeight: minimumHeight,  // Required for Firefox
+      maxHeight: maximumHeight,  // Required for Firefox
     };
 
     return (

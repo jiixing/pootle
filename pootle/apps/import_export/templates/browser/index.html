@@ -6,10 +6,17 @@
 <div class="sidebar-group">
   {% if display_download %}
   <p class="sidebar-action">
+    {% if upload_form %}
     <a href="{% url 'pootle-export' %}?path={{ pootle_path }}"
       title="{% trans 'Download translation files for offline translation' %}">
       <i class="icon-download"></i> <span>{% trans 'Download for offline translation' %}</span>
     </a>
+    {% else %}
+    <a href="{% url 'pootle-export' %}?path={{ pootle_path }}"
+      title="{% trans 'Download translation files for backup' %}">
+      <i class="icon-download"></i> <span>{% trans 'Download for backup' %}</span>
+    </a>
+    {% endif %}
   </p>
   {% endif %}
 
@@ -24,16 +31,30 @@
   <form action="" method="post" enctype="multipart/form-data"
     id="js-upload-form" class="upload-form">
     {% csrf_token %}
-    {% for field in upload_form %}
-      {{ field }}
-    {% endfor %}
-    <input type="submit" />
+    <div class="hide">{{ upload_form.file }}</div>
+    <span {% if not has_admin_access %}class="hide"{% endif %}>
+    {% blocktrans with user=upload_form.user_id trimmed %}
+      Upload as {{ user }}
+    {% endblocktrans %}
+    </span>
+    <div class="hide"><input type="submit" /></div>
   </form>
   {# Dirty hack: Upload form is hidden, so render errors out of it so they get displayed. #}
   {% for field in upload_form %}
     <div>{{ field.errors }}</div>
   {% endfor %}
   {% endif %}
+</div>
+{% endif %}
+
+{% if has_offline_tm %}
+<div class="sidebar-group">
+  <p class="sidebar-action">
+    <a href="{% url 'pootle-offline-tm-tp' language.code project.code %}"
+      title="{% trans 'Download offline TM for the translation project' %}">
+      <i class="icon-download"></i> <span>{% trans 'Download offline TM' %}</span>
+    </a>
+  </p>
 </div>
 {% endif %}
 

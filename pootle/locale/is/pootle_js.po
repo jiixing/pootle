@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pootle 2.7.0\n"
 "Report-Msgid-Bugs-To: https://github.com/translate/pootle/issues/new\n"
-"POT-Creation-Date: 2016-05-24 11:00+0100\n"
-"PO-Revision-Date: 2015-08-25 20:47+0000\n"
+"POT-Creation-Date: 2017-06-13 15:55+0100\n"
+"PO-Revision-Date: 2017-02-08 08:15+0000\n"
 "Last-Translator: Sveinn í Felli <sv1@fellsnet.is>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: is\n"
@@ -18,7 +18,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n%10!=1 || n%100==11);\n"
 "X-Generator: Pootle 2.5.1-rc1\n"
-"X-POOTLE-MTIME: 1440535664.000000\n"
+"X-POOTLE-MTIME: 1486541706.000000\n"
 
 #: static/js/admin/components/AdminController.js:136
 msgid "Saved successfully."
@@ -47,16 +47,16 @@ msgstr "Hætta við"
 #, python-format
 msgid "%(count)s language matches your query."
 msgid_plural "%(count)s languages match your query."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "%(count)s tungumál samsvarar fyrirspurn þinni."
+msgstr[1] "%(count)s tungumál samsvara fyrirspurn þinni."
 
 #: static/js/admin/components/Language/LanguageController.js:63
 #, python-format
 msgid "There is %(count)s language."
 msgid_plural ""
 "There are %(count)s languages. Below are the most recently added ones."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Það er %(count)s tungumál."
+msgstr[1] "Það eru %(count)s tungumál."
 
 #: static/js/admin/components/Language/LanguageController.js:79
 msgid "Search Languages"
@@ -74,6 +74,8 @@ msgstr "Breyta tungumáli"
 msgid ""
 "Use the search form to find the language, then click on a language to edit."
 msgstr ""
+"Notaðu leitarformið til að finna tungumálið, smelltu síðan á heiti "
+"tungumálsins til að breyta."
 
 #: static/js/admin/components/Language/LanguageForm.js:54
 #: static/js/admin/components/Project/ProjectForm.js:56
@@ -100,21 +102,20 @@ msgid "Plural Equation"
 msgstr "Fleirtölujafna"
 
 #: static/js/admin/components/Language/LanguageForm.js:97
-#: static/js/admin/components/Project/ProjectForm.js:143
+#: static/js/admin/components/Project/ProjectForm.js:144
 #: static/js/admin/components/User/UserForm.js:156
 #: static/js/user/components/UserProfileForm.js:132
 msgid "Save"
 msgstr "Vista"
 
 #: static/js/admin/components/Language/LanguageForm.js:101
-#: static/js/admin/components/Project/ProjectForm.js:147
+#: static/js/admin/components/Project/ProjectForm.js:148
 msgid "Overview"
 msgstr "Yfirlit"
 
 #: static/js/admin/components/Language/LanguageForm.js:102
-#: static/js/admin/components/Project/ProjectForm.js:149
-msgid "Permissions"
-msgstr "Heimildir"
+msgid "Team"
+msgstr "Teymi"
 
 #: static/js/admin/components/Project/ProjectAdd.js:28
 #: static/js/admin/components/Project/ProjectEdit.js:33
@@ -125,16 +126,16 @@ msgstr "Bæta við verkefni"
 #, python-format
 msgid "%(count)s project matches your query."
 msgid_plural "%(count)s projects match your query."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "%(count)s verkefni samsvarar fyrirspurn þinni."
+msgstr[1] "%(count)s verkefni samsvara fyrirspurn þinni."
 
 #: static/js/admin/components/Project/ProjectController.js:63
 #, python-format
 msgid "There is %(count)s project."
 msgid_plural ""
 "There are %(count)s projects. Below are the most recently added ones."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Það er %(count)s verkefni."
+msgstr[1] "Það eru %(count)s verkefni."
 
 #: static/js/admin/components/Project/ProjectController.js:79
 msgid "Search Projects"
@@ -152,42 +153,52 @@ msgstr "Breyta verkefni"
 msgid ""
 "Use the search form to find the project, then click on a project to edit."
 msgstr ""
+"Notaðu leitarformið til að finna verkefnið, smelltu síðan á heiti "
+"verkefnisins til að breyta."
 
 #: static/js/admin/components/Project/ProjectForm.js:73
 msgid "Quality Checks"
 msgstr "Gæðaprófanir"
 
-#: static/js/admin/components/Project/ProjectForm.js:83
-msgid "File Type"
-msgstr "Skráartegund"
+#: static/js/admin/components/Project/ProjectForm.js:84
+msgid "File types"
+msgstr "Skráategundir"
 
-#: static/js/admin/components/Project/ProjectForm.js:93
+#: static/js/admin/components/Project/ProjectForm.js:94
 msgid "Project Tree Style"
 msgstr "Greinastíll verkefnis"
 
-#: static/js/admin/components/Project/ProjectForm.js:103
+#: static/js/admin/components/Project/ProjectForm.js:104
 msgid "Source Language"
 msgstr "Upprunatungumál"
 
-#: static/js/admin/components/Project/ProjectForm.js:110
+#: static/js/admin/components/Project/ProjectForm.js:111
 msgid "Ignore Files"
 msgstr "Hunsa skrár"
 
-#: static/js/admin/components/Project/ProjectForm.js:118
+#: static/js/admin/components/Project/ProjectForm.js:119
 msgid "String Errors Contact"
-msgstr ""
+msgstr "Tengiliður vegna villna í textastrengjum"
 
-#: static/js/admin/components/Project/ProjectForm.js:125
+#: static/js/admin/components/Project/ProjectForm.js:126
 msgid "Screenshot Search Prefix"
-msgstr ""
+msgstr "Leitarforskeyti skjámyndar"
 
-#: static/js/admin/components/Project/ProjectForm.js:133
+#: static/js/admin/components/Project/ProjectForm.js:134
 msgid "Disabled"
 msgstr "Óvirkt"
 
-#: static/js/admin/components/Project/ProjectForm.js:148
+#: static/js/admin/components/Project/ProjectForm.js:149
 msgid "Languages"
 msgstr "Tungumál"
+
+#: static/js/admin/components/Project/ProjectForm.js:150
+msgid "Permissions"
+msgstr "Heimildir"
+
+#: static/js/admin/components/Project/ProjectForm.js:152
+msgid "Filesystems"
+msgstr "Skráakerfi"
 
 #: static/js/admin/components/Search.js:68
 msgid "Load More"
@@ -206,16 +217,17 @@ msgstr "Bæta við notanda"
 #, python-format
 msgid "%(count)s user matches your query."
 msgid_plural "%(count)s users match your query."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "%(count)s notandi samsvarar fyrirspurn þinni."
+msgstr[1] "%(count)s notendur samsvara fyrirspurn þinni."
 
 #: static/js/admin/components/User/UserController.js:63
 #, python-format
 msgid "There is %(count)s user."
 msgid_plural ""
 "There are %(count)s users. Below are the most recently added ones."
-msgstr[0] ""
+msgstr[0] "Það er %(count)s notandi."
 msgstr[1] ""
+"Það eru %(count)s notendur. Fyrir neðan eru þeir sem síðast var bætt við."
 
 #: static/js/admin/components/User/UserController.js:79
 msgid "Search Users"
@@ -223,7 +235,7 @@ msgstr "Leita að notendum"
 
 #: static/js/admin/components/User/UserController.js:80
 msgid "Find user by name, email, properties"
-msgstr ""
+msgstr "Finndu notanda eftir nafni, tölvupóstfangi, eiginleikum"
 
 #: static/js/admin/components/User/UserEdit.js:28
 msgid "Edit User"
@@ -232,12 +244,17 @@ msgstr "Breyta notanda"
 #: static/js/admin/components/User/UserEdit.js:38
 msgid "Use the search form to find the user, then click on a user to edit."
 msgstr ""
+"Notaðu leitarformið til að finna notandann, smelltu síðan á nafn notandans "
+"til að breyta."
 
 #: static/js/admin/components/User/UserForm.js:47
 msgid ""
 "Note: when deleting a user their contributions to the site, e.g. comments, "
 "suggestions and translations, are attributed to the anonymous user (nobody)."
 msgstr ""
+"Athugaðu: þegar notanda er eytt verða öll framlög hans á þessum vef, þ.e.a."
+"s. athugasemdir, tillögur og þýðingar, merkt sem frá nafnlausum notanda "
+"(nobody)."
 
 #: static/js/admin/components/User/UserForm.js:63
 #: static/js/auth/components/SignInForm.js:95
@@ -250,9 +267,9 @@ msgid "Active"
 msgstr "Virkt"
 
 #: static/js/admin/components/User/UserForm.js:81
-#: static/js/auth/components/SignInForm.js:103
-#: static/js/auth/components/SignUpForm.js:99
-#: static/js/auth/components/SocialVerification.js:100
+#: static/js/auth/components/SignInForm.js:104
+#: static/js/auth/components/SignUpForm.js:101
+#: static/js/auth/components/SocialVerification.js:99
 #: static/js/auth/components/PasswordResetForm.js:117
 msgid "Password"
 msgstr "Lykilorð"
@@ -262,7 +279,7 @@ msgid "Set a new password"
 msgstr "Stilla nýtt lykilorð"
 
 #: static/js/admin/components/User/UserForm.js:98
-#: static/js/auth/components/SignUpForm.js:91
+#: static/js/auth/components/SignUpForm.js:92
 msgid "Email"
 msgstr "Tölvupóstfang"
 
@@ -286,7 +303,7 @@ msgstr "LinkedIn"
 
 #: static/js/admin/components/User/UserForm.js:127
 msgid "LinkedIn profile URL"
-msgstr ""
+msgstr "Slóð á LinkedIn notandasnið"
 
 #: static/js/admin/components/User/UserForm.js:133
 #: static/js/user/components/UserProfileForm.js:109
@@ -314,39 +331,38 @@ msgstr "Opinberar upplýsingar"
 msgid "Settings"
 msgstr "Stillingar"
 
-#: static/js/admin/components/User/UserForm.js:162
-msgid "Statistics"
-msgstr "Tölfræði"
-
-#: static/js/admin/components/User/UserForm.js:163
-msgid "Reports"
-msgstr "Skýrslur"
-
 #: static/js/admin/general/components/ContentPreview.js:32
 msgid "Preview will be displayed here."
-msgstr ""
+msgstr "Forskoðun mun birtast hér."
 
-#: static/js/auth/components/AccountActivation.js:32
-#: static/js/auth/components/RequestPasswordResetSent.js:44
+#: static/js/auth/components/AccountActivation.js:33
 #, python-format, javascript-format
-msgid "We have sent an email containing the special link to <span>%s</span>"
+msgid ""
+"We have sent an email containing the special link to <span>%s</span>. Please "
+"check your spam folder if you do not see the email."
 msgstr ""
+"Við höfum sent sérstakan tengil til <span>%s</span>. Endilega skoðaðu í "
+"ruslpóstmöppuna þína ef þú sérð ekki tölvupóstinn."
 
-#: static/js/auth/components/AccountActivation.js:37
+#: static/js/auth/components/AccountActivation.js:41
 msgid ""
 "We have sent an email containing the special link to the address used to "
-"register this account."
+"register this account. Please check your spam folder if you do not see the "
+"email."
 msgstr ""
+"Við höfum sent sérstakan tengil á tölvupóstfangið sem var notað til að skrá "
+"þennan aðgang. Endilega skoðaðu í ruslpóstmöppuna þína ef þú sérð ekki "
+"tölvupóstinn."
 
-#: static/js/auth/components/AccountActivation.js:42
+#: static/js/auth/components/AccountActivation.js:47
 msgid "Your account needs activation."
 msgstr "Virkja þarf aðganginn þinn."
 
-#: static/js/auth/components/AccountActivation.js:44
+#: static/js/auth/components/AccountActivation.js:49
 msgid "Please follow that link to continue the account creation."
-msgstr ""
+msgstr "Fylgdu þessum tengli til að halda áfram með að stofna aðganginn."
 
-#: static/js/auth/components/AccountActivation.js:59
+#: static/js/auth/components/AccountActivation.js:64
 #: static/js/auth/components/AccountInactive.js:35
 #: static/js/auth/components/EmailConfirmation.js:34
 msgid "Close"
@@ -355,6 +371,7 @@ msgstr "Loka"
 #: static/js/auth/components/AccountInactive.js:29
 msgid "Your account is inactive because an administrator deactivated it."
 msgstr ""
+"Aðgangurinn þinn er óvirkur vegna þess að stjórnandi gerði hann óvirkan."
 
 #: static/js/auth/components/AuthWindow.js:27
 msgid "Contact Us"
@@ -362,13 +379,16 @@ msgstr "Hafðu samband við okkur"
 
 #: static/js/auth/components/EmailConfirmation.js:28
 msgid "This email confirmation link expired or is invalid."
-msgstr ""
+msgstr "Tengill til staðfestingar með tölvupósti er útrunninn eða ógildur."
 
 #: static/js/auth/components/PasswordResetForm.js:81
 msgid ""
 "The password reset link was invalid, possibly because it has already been "
 "used. Please request a new password reset."
 msgstr ""
+"Tengill fyrir að endurstilla lykilorð var ógildur, líklega vegna þess að "
+"þegar er búið að nota hann. Vinsamlega náðu þér í aðra beiðni um "
+"endurstillingu á lykilorði."
 
 #: static/js/auth/components/PasswordResetForm.js:89
 msgid "Reset Password"
@@ -379,7 +399,7 @@ msgid "Password changed, signing in..."
 msgstr "Lykilorði breytt, skrái inn..."
 
 #: static/js/auth/components/PasswordResetForm.js:125
-#: static/js/auth/components/SignUpForm.js:107
+#: static/js/auth/components/SignUpForm.js:110
 msgid "Repeat Password"
 msgstr "Endurtaka lykilorð"
 
@@ -390,6 +410,7 @@ msgstr "Stilla nýtt lykilorð"
 #: static/js/auth/components/PasswordResetForm.js:143
 msgid "After changing your password you will sign in automatically."
 msgstr ""
+"Eftir að lykilorðinu hefur verið breytt verðurðu sjálfvirkt skráð/ur inn."
 
 #: static/js/auth/components/RequestPasswordResetProgress.js:24
 #, python-format, javascript-format
@@ -398,13 +419,15 @@ msgstr "Sendi tölvupóst til %s..."
 
 #: static/js/auth/components/RequestPasswordResetSent.js:48
 msgid "Please follow that link to continue the password reset procedure."
-msgstr ""
+msgstr "Fylgdu þessum tengli til að halda áfram með að endurstilla lykilorðið."
 
 #: static/js/auth/components/RequestPasswordResetSent.js:51
 msgid ""
 "Didn't receive an email? Check if it was accidentally filtered out as spam, "
 "or try requesting another copy of the email."
 msgstr ""
+"Fékkstu ekki tölvupóstinn? Athugaðu hvort hann hafi verið síaður út sem "
+"ruslpóstur, eða prófaðu að biðja aftur um sendinguna."
 
 #: static/js/auth/components/RequestPasswordResetSent.js:67
 msgid "Resend Email"
@@ -415,47 +438,48 @@ msgstr "Endursenda tölvupóst"
 msgid "Sign up as a new user"
 msgstr "Skrá inn sem nýr notandi"
 
-#: static/js/auth/components/SignInForm.js:111
-#: static/js/auth/components/SocialVerification.js:108
+#: static/js/auth/components/SignInForm.js:113
+#: static/js/auth/components/SocialVerification.js:107
 msgid "I forgot my password"
 msgstr "Ég gleymdi lykilorðinu mínu"
 
-#: static/js/auth/components/SignInForm.js:122
-#: static/js/auth/components/SocialVerification.js:119
+#: static/js/auth/components/SignInForm.js:124
+#: static/js/auth/components/SocialVerification.js:118
 #: static/js/auth/containers/Auth.js:83
 msgid "Sign In"
 msgstr "Skrá inn"
 
 #: static/js/auth/components/SignInPanel.js:47
-#: static/js/auth/components/SocialVerification.js:73
+#: static/js/auth/components/SocialVerification.js:74
 msgid "Signed in. Redirecting..."
 msgstr "Skráður inn. Endurbeini..."
 
 #: static/js/auth/components/SignInPanel.js:60
 msgid "Social Services"
-msgstr ""
+msgstr "Samfélagsmiðlar"
 
 #: static/js/auth/components/SignInPanel.js:63
 msgid "Login / Password"
 msgstr "Innskráning / Lykilorð"
 
-#: static/js/auth/components/SignUpForm.js:121
+#: static/js/auth/components/SignUpForm.js:125
 #: static/js/auth/containers/Auth.js:96
 msgid "Sign Up"
 msgstr "Skrá sig"
 
-#: static/js/auth/components/SignUpForm.js:126
+#: static/js/auth/components/SignUpForm.js:130
 msgid "Sign in as an existing user"
 msgstr "Skrá inn sem þegar skráður notandi"
 
 #: static/js/auth/components/SocialAuthError.js:30
 #, python-format, javascript-format
 msgid "An error occurred while attempting to sign in via %s."
-msgstr ""
+msgstr "Óvænt villa kom upp þegar reynt var að skrá inn með %s."
 
 #: static/js/auth/components/SocialAuthError.js:35
 msgid "An error occurred while attempting to sign in via your social account."
 msgstr ""
+"Óvænt villa kom upp þegar reynt var að skrá inn með aðgangi á samfélagsmiðli."
 
 #: static/js/auth/components/SocialAuthError.js:52
 msgid "Try again"
@@ -470,7 +494,7 @@ msgstr "Skrá inn með %s"
 msgid ""
 "Signing in with an external service for the first time will automatically "
 "create an account for you."
-msgstr ""
+msgstr "Fyrsta innskráning með ytri þjónustu mun búa til aðgang fyrir þig."
 
 #: static/js/auth/containers/Auth.js:83
 msgid "Sign In With..."
@@ -486,7 +510,7 @@ msgstr "Virkjun aðgangs"
 
 #: static/js/auth/containers/Auth.js:108
 msgid "Email Confirmation"
-msgstr ""
+msgstr "Staðfesting í tölvupósti"
 
 #: static/js/auth/containers/Auth.js:114 static/js/auth/containers/Auth.js:120
 #: static/js/auth/containers/Auth.js:126
@@ -499,25 +523,50 @@ msgstr "Úbbs..."
 
 #: static/js/auth/containers/Auth.js:138
 msgid "Social Verification"
-msgstr ""
+msgstr "Sannvottun á samfélagsmiðli"
 
-#: static/js/browser/components/VisibilityToggle.js:51
-#, fuzzy
+#: static/js/browser/components/Stats.js:54
+msgid "More..."
+msgstr "Meira..."
+
+#: static/js/browser/components/Stats.js:67
+msgid "Contributors, 30 Days"
+msgstr "Þátttakendur, 30 dagar"
+
+#: static/js/browser/components/TopContributorsTable.js:23
+#, python-format
+msgid "#%(position)s"
+msgstr "#%(position)s"
+
+#: static/js/browser/components/VisibilityToggle.js:46
 msgid "Show disabled"
-msgstr "óvirkt"
+msgstr "Birta óvirkt"
 
-#: static/js/browser/components/VisibilityToggle.js:52
-#, fuzzy
+#: static/js/browser/components/VisibilityToggle.js:47
 msgid "Hide disabled"
-msgstr "óvirkt"
+msgstr "Fela óvirkt"
 
-#: static/js/editor/app.js:294 static/js/editor/app.js:606
+#: static/js/browser.js:267
+msgid "All Languages"
+msgstr "Öll tungumál"
+
+#: static/js/browser.js:273
+msgid "All Projects"
+msgstr "Öll verkefni"
+
+#: static/js/common.js:142
+msgid "Updating data"
+msgstr "Uppfæri gögn"
+
+#: static/js/editor/app.js:339 static/js/editor/app.js:658
 msgid ""
 "You have unsaved changes in this string. Navigating away will discard those "
 "changes."
 msgstr ""
+"Þú ert með óvistaðar breytingar í þessum streng. Ef þú heldur áfram mun "
+"þessum breytingum verða hent."
 
-#: static/js/editor/app.js:325
+#: static/js/editor/app.js:384
 msgid ""
 "Go to the next string (Ctrl+.)<br/><br/>Also:<br/>Next page: Ctrl+Shift+.<br/"
 ">Last page: Ctrl+Shift+End"
@@ -525,142 +574,155 @@ msgstr ""
 "Fara á næsta streng (Ctrl+.)<br/><br/>Einnig:<br/>Næsta síða: Ctrl+Shift+."
 "<br/>Síðasta síða: Ctrl+Shift+End"
 
-#: static/js/editor/app.js:331
+#: static/js/editor/app.js:390
 msgid ""
-"Go to the previous string (Ctrl+,)<br/><br/>Also:</br>Previous page: Ctrl"
+"Go to the previous string (Ctrl+,)<br/><br/>Also:<br/>Previous page: Ctrl"
 "+Shift+,<br/>First page: Ctrl+Shift+Home"
 msgstr ""
-"Fara á fyrri streng (Ctrl+,)<br/><br/>Einnig:</br>Fyrri síða: Ctrl+Shift+,"
+"Fara á fyrri streng (Ctrl+,)<br/><br/>Einnig:<br/>Fyrri síða: Ctrl+Shift+,"
 "<br/>Fyrsta síða: Ctrl+Shift+Home"
 
-#: static/js/editor/app.js:452
+#. Translators: '%s' is a username
+#: static/js/editor/app.js:515
 #, python-format, javascript-format
 msgid "%s's pending suggestions"
 msgstr "%s ókláraðar uppástungur"
 
-#: static/js/editor/app.js:455
+#. Translators: '%s' is a username
+#: static/js/editor/app.js:518
 #, python-format, javascript-format
 msgid "%s's accepted suggestions"
 msgstr "%s viðurkenndar uppástungur"
 
-#: static/js/editor/app.js:458
+#. Translators: '%s' is a username
+#: static/js/editor/app.js:521
 #, python-format, javascript-format
 msgid "%s's rejected suggestions"
 msgstr "%s uppástungum sem hefur verið hafnað"
 
-#: static/js/editor/app.js:461
+#. Translators: '%s' is a username
+#: static/js/editor/app.js:524
 #, python-format, javascript-format
 msgid "%s's submissions"
 msgstr "%s uppástungur"
 
-#: static/js/editor/app.js:465
+#. Translators: '%s' is a username, meaning "submissions by %s,
+#. that were overwritten"
+#: static/js/editor/app.js:528
 #, python-format, javascript-format
 msgid "%s's overwritten submissions"
 msgstr "%s yfirskrifaðar uppástungur"
 
-#: static/js/editor/app.js:1057
+#: static/js/editor/app.js:1069
 msgid "Error while connecting to the server"
 msgstr "Villa við að tengjast þjóni"
 
-#: static/js/editor/app.js:1061
+#: static/js/editor/app.js:1074
 msgid "Not found"
 msgstr "Fannst ekki"
 
-#: static/js/editor/app.js:1063
+#: static/js/editor/app.js:1076
 msgid "Server error"
 msgstr "Villa frá þjóni"
 
-#: static/js/editor/app.js:1065
+#: static/js/editor/app.js:1078
 msgid "The server seems down. Try again later."
 msgstr "Þjónninn virðist vera niðri. Vinsamlega reyndu síðar."
 
-#: static/js/editor/app.js:1074
+#: static/js/editor/app.js:1087
 msgid "This string no longer exists."
-msgstr ""
+msgstr "Þessi strengur er ekki lengur til staðar."
 
-#: static/js/editor/app.js:1075
+#: static/js/editor/app.js:1088
 msgid "Go back to browsing"
 msgstr "Fara aftur í vafur"
 
-#: static/js/editor/app.js:1077
+#: static/js/editor/app.js:1090
 msgid "Reload page"
 msgstr "Endurlesa síðu"
 
-#: static/js/editor/app.js:1816 static/js/editor/app.js:598
-msgid "No results."
-msgstr "Engar niðurstöður."
+#: static/js/editor/app.js:2188
+msgid "some anonymous user"
+msgstr "einhver nafnlaus notandi"
 
-#: static/js/editor/app.js:2211 static/js/editor/app.js:2164
+#: static/js/editor/app.js:2190
+msgid "someone"
+msgstr "einhver"
+
+#: static/js/editor/app.js:2208 static/js/editor/app.js:2262
 msgid "Similar translations"
 msgstr "Svipaðar þýðingar"
 
-#: static/js/editor/components/SuggestionFeedbackForm.js:81
+#: static/js/editor/components/EditorPluralFormHeader.js:26
+#: static/js/editor/components/UnitSource.js:52
+#, python-format
+msgid "Plural form %(index)s"
+msgstr "Fleirtöluform %(index)s"
+
+#: static/js/editor/components/SuggestionFeedbackForm.js:93
 msgid "Edit the suggestion before accepting, if necessary"
-msgstr ""
-
-#: static/js/editor/components/SuggestionFeedbackForm.js:92
-msgid "Provide optional comment (will be publicly visible)"
-msgstr ""
-
-#: static/js/editor/components/SuggestionFeedbackForm.js:103
-msgid "Accept"
-msgstr ""
+msgstr "Breyttu tillögunni áður en þú samþykkir hana, ef þess er þörf"
 
 #: static/js/editor/components/SuggestionFeedbackForm.js:107
+msgid "Provide optional comment (will be publicly visible)"
+msgstr "Settu inn athugasemd ef þú vilt (verður öllum sýnileg)"
+
+#: static/js/editor/components/SuggestionFeedbackForm.js:119
+msgid "Accept"
+msgstr "Samþykkja"
+
+#: static/js/editor/components/SuggestionFeedbackForm.js:123
 msgid "Reject"
-msgstr ""
+msgstr "Hafna"
 
-#: static/js/shared/components/FormSelectInput.js:32
-msgid "Select..."
-msgstr "Velja..."
+#: static/js/editor/components/UploadTimeSince.js:35
+#, python-format
+msgid "%(timeSince)s via file upload"
+msgstr "%(timeSince)s með innsendri skrá"
 
-#: static/js/shared/components/FormSelectInput.js:33
-msgid "No results found"
-msgstr "Engar niðurstöður fundust"
-
-#: static/js/shared/components/FormSelectInput.js:34
-msgid "Clear value"
-msgstr "Hreinsa gildi"
-
-#: static/js/shared/components/FormSelectInput.js:35
+#: static/js/shared/components/FormSelectInput.js:39
 msgid "Clear all"
 msgstr "Hreinsa allt"
 
-#: static/js/shared/components/FormSelectInput.js:36
+#: static/js/shared/components/FormSelectInput.js:40
+msgid "Clear value"
+msgstr "Hreinsa gildi"
+
+#: static/js/shared/components/FormSelectInput.js:41
+msgid "No results found"
+msgstr "Engar niðurstöður fundust"
+
+#: static/js/shared/components/FormSelectInput.js:43
+msgid "Select..."
+msgstr "Velja..."
+
+#: static/js/shared/components/FormSelectInput.js:44
 msgid "Type to search"
 msgstr "Skrifaðu til að leita..."
 
-#: static/js/shared/models/project.js:58
+#: static/js/shared/models/project.js:62
 msgid "disabled"
 msgstr "óvirkt"
 
-#: static/js/stats.js:59
-#, fuzzy
+#: static/js/stats.js:30
 msgid "Congratulations! You have completed this task!"
-msgstr "Til hamingju, þú hefur farið í gegnum alla strengina."
+msgstr "Til hamingju, þú hefur lokið þessu verki!"
 
-#: static/js/stats.js:405
-#, python-format, javascript-format
-msgid "%s second"
-msgid_plural "%s seconds"
-msgstr[0] "%s sekúnda"
-msgstr[1] "%s sekúndur"
-
-#: static/js/stats.js:442
+#: static/js/stats.js:127
 msgid "Collapse details"
-msgstr "Fela smáatriði"
+msgstr "Loka smáatriðum"
 
-#: static/js/stats.js:442
+#: static/js/stats.js:127
 msgid "Expand details"
 msgstr "Birta smáatriði"
 
 #: static/js/user/components/UserProfileEdit.js:95
 msgid "Edit My Public Profile"
-msgstr ""
+msgstr "Breyta opinberri notandasíðu minni"
 
 #: static/js/user/components/UserProfileEdit.js:102
 msgid "My Public Profile"
-msgstr ""
+msgstr "Opinber notandasíða mín"
 
 #: static/js/user/components/UserProfileEdit.js:117
 msgid "Discard changes."
@@ -684,6 +746,8 @@ msgid ""
 "To set or change your avatar for your email address (%(email)s), please go "
 "to gravatar.com."
 msgstr ""
+"Þú getur stillt kennimyndina fyrir tölvupóstfangið (%(email)s) á gravatar."
+"com."
 
 #: static/js/user/components/UserProfileForm.js:75
 msgid "Your Full Name"
@@ -691,7 +755,7 @@ msgstr "Fullt nafn þitt"
 
 #: static/js/user/components/UserProfileForm.js:83
 msgid "Avatar"
-msgstr "Notandatákn"
+msgstr "Auðkennismynd"
 
 #: static/js/user/components/UserProfileForm.js:94
 msgid "Your Twitter username"
@@ -699,116 +763,66 @@ msgstr "Twitter notandanafnið þitt"
 
 #: static/js/user/components/UserProfileForm.js:103
 msgid "Your LinkedIn profile URL"
-msgstr ""
+msgstr "LinkedIn notandasniðið mitt"
 
 #: static/js/user/components/UserProfileForm.js:111
 msgid "Your Personal website/blog URL"
-msgstr ""
+msgstr "Slóð á þitt eigið vefsvæði/blogg"
 
 #: static/js/user/components/UserProfileForm.js:120
 msgid ""
 "Why are you part of our translation project? Describe yourself, inspire "
 "others!"
 msgstr ""
-
-# Not sure this is correct. The singular translation should be used when the number ends with 1 (except if it's ending with 11) as can be seen in the plural form definition for Icelandic. I'm just not sure that the %s will be replaced in the singular form since it's not defined in the msg_id.
-#: static/js/utils.js:165
-#, javascript-format
-msgid "A year ago"
-msgid_plural "%s years ago"
-msgstr[0] "Fyrir %s ári"
-msgstr[1] "Fyrir %s árum"
-
-# Not sure this is correct. The singular translation should be used when the number ends with 1 (except if it's ending with 11) as can be seen in the plural form definition for Icelandic. I'm just not sure that the %s will be replaced in the singular form since it's not defined in the msg_id.
-#: static/js/utils.js:168
-#, javascript-format
-msgid "A week ago"
-msgid_plural "%s weeks ago"
-msgstr[0] "Fyrir %s viku"
-msgstr[1] "Fyrir %s vikum"
-
-# Not sure this is correct. The singular translation should be used when the number ends with 1 (except if it's ending with 11) as can be seen in the plural form definition for Icelandic. I'm just not sure that the %s will be replaced in the singular form since it's not defined in the msg_id.
-#: static/js/utils.js:171
-#, javascript-format
-msgid "Yesterday"
-msgid_plural "%s days ago"
-msgstr[0] "Fyrir %s degi"
-msgstr[1] "Fyrir %s dögum"
-
-# Not sure this is correct. The singular translation should be used when the number ends with 1 (except if it's ending with 11) as can be seen in the plural form definition for Icelandic. I'm just not sure that the %s will be replaced in the singular form since it's not defined in the msg_id.
-#: static/js/utils.js:174
-#, javascript-format
-msgid "An hour ago"
-msgid_plural "%s hours ago"
-msgstr[0] "Fyrir %s klukkustund"
-msgstr[1] "Fyrir %s klukkustundum"
-
-# Not sure this is correct. The singular translation should be used when the number ends with 1 (except if it's ending with 11) as can be seen in the plural form definition for Icelandic. I'm just not sure that the %s will be replaced in the singular form since it's not defined in the msg_id.
-#: static/js/utils.js:177
-#, javascript-format
-msgid "A minute ago"
-msgid_plural "%s minutes ago"
-msgstr[0] "Fyrir %s mínútu"
-msgstr[1] "Fyrir %s mínútum"
-
-#: static/js/utils.js:185
-msgid "A few seconds ago"
-msgstr "Fyrir nokkrum sekúndum"
+"Hvers vegna tekur þú þátt í þessu þýðingarverkefni? Lýstu sjálf/um þér, "
+"vertu hvatning fyrir aðra!"
 
 #: static/js/auth/components/RequestPasswordResetForm.js:96
 msgid "Email Address"
-msgstr ""
+msgstr "Tölvupóstfang"
 
 #: static/js/auth/components/RequestPasswordResetForm.js:97
 msgid ""
 "Enter your email address, and we will send you a message with the special "
 "link to reset your password."
 msgstr ""
+"Sláðu inn netfangið sem þú skráðir þig með, við munum senda tengil á það sem "
+"þú getur notað til að breyta lykilorðinu þínu."
 
 #: static/js/auth/components/RequestPasswordResetForm.js:108
 msgid "No, thanks"
-msgstr ""
+msgstr "Nei, takk"
 
 #: static/js/auth/components/RequestPasswordResetForm.js:116
-#, fuzzy
 msgid "Send Email"
-msgstr "Endursenda tölvupóst"
+msgstr "Senda tölvupóst"
+
+#: static/js/auth/components/RequestPasswordResetSent.js:44
+#, python-format
+msgid "We have sent an email containing the special link to <span>%s</span>"
+msgstr ""
+"Við erum búin að senda tölvupóst með sérstökum tengli til <span>%s</span>"
 
 #: static/js/auth/components/SignInForm.js:85
 msgid "Creating new user accounts is prohibited."
-msgstr ""
+msgstr "Bannað er að búa til nýja notendaaðganga."
 
 #: static/js/auth/components/SocialVerification.js:81
 #, python-format
 msgid ""
-"We found a user with <span>%s</span> email in our system. Please provide the "
-"password to finish the sign in procedure. This is a one-off procedure, which "
-"will establish a link between your Pootle and %s accounts."
+"We found a user with <span>%(email)s</span> email in our system. Please "
+"provide the password to finish the sign in procedure. This is a one-off "
+"procedure, which will establish a link between your Pootle and %(provider)s "
+"accounts."
 msgstr ""
+"Við fundum notanda með tölvupóstfangið <span>%(email)s</span> á kerfinu "
+"okkar. Gefðu upp lykilorðið til að ljúka innskráningarferlinu. Það er eins-"
+"skiptis aðgerð, sem mun koma á sambandi milli Pootle-þjónsins og aðganga "
+"%(provider)s."
 
-#: static/js/browser.js:229
-msgid "All Languages"
-msgstr "Öll tungumál"
-
-#: static/js/browser.js:232
-msgid "All Projects"
-msgstr "Öll verkefni"
-
-#: static/js/browser.js:236
-msgid "Entire Project"
-msgstr "Allt verkefnið"
-
-#: static/js/editor/app.js:2144
-msgid "some anonymous user"
-msgstr "einhver nafnlaus notandi"
-
-#: static/js/editor/app.js:2146
-msgid "someone"
-msgstr "einhver"
-
-#: static/js/shared/components/UserEvent.js:78
-msgid "uploaded file"
-msgstr ""
+#: static/js/editor/app.js:650
+msgid "No results."
+msgstr "Engar niðurstöður."
 
 #: templates/admin/xhr_language_user_activity.html:6
 msgid "Project / Language"
@@ -816,7 +830,7 @@ msgstr "Verkefni / Tungumál"
 
 #: templates/admin/xhr_language_user_activity.html:7
 msgid "Suggested"
-msgstr ""
+msgstr "Stungið uppá"
 
 #: templates/admin/xhr_language_user_activity.html:8
 msgid "Translated"
@@ -828,7 +842,7 @@ msgstr "Yfirfarið"
 
 #: templates/admin/xhr_language_user_activity.html:10
 msgid "Score Change"
-msgstr ""
+msgstr "Breyting á skori"
 
 #: templates/admin/xhr_language_user_activity.html:20
 #: templates/admin/xhr_language_user_activity.html:24
@@ -838,91 +852,19 @@ msgstr ""
 #: templates/admin/xhr_language_user_activity.html:51
 #: templates/admin/xhr_language_user_activity.html:55
 #: templates/admin/xhr_language_user_activity.html:59
-#, fuzzy, python-format
+#, python-format
 msgid "%s word"
 msgid_plural "%s words"
-msgstr[0] "orð"
-msgstr[1] "orð"
+msgstr[0] "%s orð"
+msgstr[1] "%s orð"
 
 #: templates/admin/xhr_language_user_activity.html:69
 msgid "No activity recorded in a given period"
-msgstr ""
+msgstr "Engin virkni skráð á uppgefnu tímabili"
 
 #: templates/admin/xhr_language_user_activity.html:72
 msgid "Please select a valid user."
-msgstr ""
-
-#: templates/admin/xhr_paid_tasks_report.html:3
-msgid "Registered Tasks"
-msgstr ""
-
-#: templates/admin/xhr_paid_tasks_report.html:7
-msgid "Datetime"
-msgstr "DagsetningTími"
-
-#: templates/admin/xhr_paid_tasks_report.html:8
-msgid "Comment"
-msgstr "Athugasemd"
-
-#: templates/admin/xhr_paid_tasks_report.html:9
-#: templates/admin/xhr_summary_report.html:7
-msgid "Action"
-msgstr "Aðgerð"
-
-#: templates/admin/xhr_paid_tasks_report.html:10
-#: templates/admin/xhr_summary_report.html:8
-msgid "Amount"
-msgstr "Magn"
-
-#: templates/admin/xhr_paid_tasks_report.html:11
-#: templates/admin/xhr_summary_report.html:9
-msgid "Rate"
-msgstr ""
-
-#: templates/admin/xhr_paid_tasks_report.html:12
-#: templates/admin/xhr_summary_report.html:10
-msgid "Subtotal"
-msgstr ""
-
-#: templates/admin/xhr_paid_tasks_report.html:21
-#: templates/admin/xhr_summary_report.html:28
-msgid "hour"
-msgid_plural "hours"
-msgstr[0] ""
-msgstr[1] ""
-
-#: templates/admin/xhr_paid_tasks_report.html:24
-#: templates/admin/xhr_summary_report.html:18
-#: templates/admin/xhr_summary_report.html:31
-msgid "word"
-msgid_plural "words"
-msgstr[0] "orð"
-msgstr[1] "orð"
-
-#: templates/admin/xhr_paid_tasks_report.html:36
-msgid "Remove task"
-msgstr ""
-
-#: templates/admin/xhr_paid_tasks_report.html:41
-msgid "Comment on it"
-msgstr ""
-
-#: templates/admin/xhr_summary_report.html:2
-msgid "Summary"
-msgstr "Samantekt"
-
-#: templates/admin/xhr_summary_report.html:6
-msgid "Period"
-msgstr "Tímabil"
-
-#: templates/admin/xhr_summary_report.html:36
-msgid "(registered tasks)"
-msgstr ""
-
-#: templates/admin/xhr_summary_report.html:44
-#, python-format
-msgid "Total (%(currency)s)"
-msgstr "Samtals (%(currency)s)"
+msgstr "Veldu einhvern gildan notanda."
 
 #: templates/editor/units/xhr_edit_ctx.html:4
 msgid "More"
@@ -940,34 +882,215 @@ msgstr "Minna"
 msgid "Show"
 msgstr "Sýna"
 
-#: templates/editor/units/xhr_tm.html:15
-#, fuzzy, python-format
-msgid ""
-"Translated by %(fullname)s in &ldquo;<span title=\"%(path)s\">%(project)s</"
-"span>&rdquo; project %(time_ago)s"
-msgstr ""
-"Þýtt af %(fullname)s í &ldquo;<span title=\"%(path)s\">%(project)s</"
-"span>&rdquo; verkefninu"
-
-#: templates/editor/units/xhr_tm.html:18
+#: templates/editor/units/xhr_tm.html:17
 #, python-format
 msgid ""
-"Translated by %(fullname)s in &ldquo;<span title=\"%(path)s\">%(project)s</"
-"span>&rdquo; project"
+"Translated by %(fullname)s in “<span title=\"%(path)s\">%(project)s</span>” "
+"project %(time_ago)s"
 msgstr ""
-"Þýtt af %(fullname)s í &ldquo;<span title=\"%(path)s\">%(project)s</"
-"span>&rdquo; verkefninu"
+"Þýtt af %(fullname)s í “<span title=\"%(path)s\">%(project)s</span>” "
+"verkefninu fyrir %(time_ago)s síðan"
 
-#~ msgid "Unknown error"
-#~ msgstr "Óþekkt villa"
+#: templates/editor/units/xhr_tm.html:20
+#, python-format
+msgid ""
+"Translated by %(fullname)s in “<span title=\"%(path)s\">%(project)s</span>” "
+"project"
+msgstr ""
+"Þýtt af %(fullname)s í “<span title=\"%(path)s\">%(project)s</span>” "
+"verkefninu"
+
+#~ msgid "+%(score)s"
+#~ msgstr "+%(score)s"
+
+#~ msgid "Entire Project"
+#~ msgstr "Allt verkefnið"
+
+#~ msgid "Registered Tasks"
+#~ msgstr "Skráð verk"
+
+#~ msgid "Datetime"
+#~ msgstr "DagsetningTími"
+
+#~ msgid "Comment"
+#~ msgstr "Athugasemd"
+
+#~ msgid "Action"
+#~ msgstr "Aðgerð"
+
+#~ msgid "Amount"
+#~ msgstr "Magn"
+
+#~ msgid "Rate"
+#~ msgstr "Stig"
+
+#~ msgid "Subtotal"
+#~ msgstr "Millisamtala"
+
+#~ msgid "%s hour"
+#~ msgid_plural "%s hours"
+#~ msgstr[0] "%s klukkustund"
+#~ msgstr[1] "%s klukkustundir"
+
+#~ msgid "Remove task"
+#~ msgstr "Fjarlægja verk"
+
+#~ msgid "Comment on it"
+#~ msgstr "Gerðu athugasemd við það"
+
+#~ msgid "Summary"
+#~ msgstr "Samantekt"
+
+#~ msgid "Period"
+#~ msgstr "Tímabil"
+
+#~ msgid "(registered tasks)"
+#~ msgstr "(skráð verk)"
+
+#~ msgid "Total (%(currency)s)"
+#~ msgstr "Samtals (%(currency)s)"
 
 #, fuzzy
-#~ msgid "accepted suggestion for ${sourceString}"
+#~ msgid "%(user)s removed translation for %(sourceString)s"
+#~ msgstr "%s uppástungum sem hefur verið hafnað"
+
+#, fuzzy
+#~ msgid "%(user)s accepted suggestion for %(sourceString)s"
 #~ msgstr "%s viðurkenndar uppástungur"
 
 #, fuzzy
-#~ msgid "rejected suggestion for ${sourceString}"
+#~ msgid "%(user)s muted %(check)s for %(sourceString)s"
+#~ msgstr "%s viðurkenndar uppástungur"
+
+#, fuzzy
+#~ msgid "%(user)s unmuted %(check)s for %(sourceString)s"
+#~ msgstr "%s viðurkenndar uppástungur"
+
+#, fuzzy
+#~ msgid "%(user)s added suggestion for %(sourceString)s"
+#~ msgstr "%s viðurkenndar uppástungur"
+
+#, fuzzy
+#~ msgid "%(user)s rejected suggestion for %(sourceString)s"
 #~ msgstr "%s uppástungum sem hefur verið hafnað"
+
+#, fuzzy
+#~ msgid "%(user)s translated %(sourceString)s"
+#~ msgstr "%s uppástungum sem hefur verið hafnað"
+
+#, fuzzy
+#~ msgid "%(user)s edited %(sourceString)s"
+#~ msgstr "%s viðurkenndar uppástungur"
+
+#, fuzzy
+#~ msgid "%(user)s pre-translated %(sourceString)s"
+#~ msgstr "%s uppástungum sem hefur verið hafnað"
+
+#, fuzzy
+#~ msgid "%(user)s reviewed %(sourceString)s"
+#~ msgstr "%s viðurkenndar uppástungur"
+
+#, fuzzy
+#~ msgid "%(user)s marked as needs work %(sourceString)s"
+#~ msgstr "%s viðurkenndar uppástungur"
+
+# Not sure this is correct. The singular translation should be used when the number ends with 1 (except if it's ending with 11) as can be seen in the plural form definition for Icelandic. I'm just not sure that the %s will be replaced in the singular form since it's not defined in the msg_id.
+#, fuzzy
+#~ msgid "A year ago"
+#~ msgstr "Fyrir %s ári"
+
+# Not sure this is correct. The singular translation should be used when the number ends with 1 (except if it's ending with 11) as can be seen in the plural form definition for Icelandic. I'm just not sure that the %s will be replaced in the singular form since it's not defined in the msg_id.
+#, fuzzy
+#~ msgid "%(count)s year ago"
+#~ msgid_plural "%(count)s years ago"
+#~ msgstr[0] "Fyrir %s ári"
+#~ msgstr[1] "Fyrir %s árum"
+
+# Not sure this is correct. The singular translation should be used when the number ends with 1 (except if it's ending with 11) as can be seen in the plural form definition for Icelandic. I'm just not sure that the %s will be replaced in the singular form since it's not defined in the msg_id.
+#, fuzzy
+#~ msgid "A month ago"
+#~ msgstr "Fyrir %s mínútu"
+
+# Not sure this is correct. The singular translation should be used when the number ends with 1 (except if it's ending with 11) as can be seen in the plural form definition for Icelandic. I'm just not sure that the %s will be replaced in the singular form since it's not defined in the msg_id.
+#, fuzzy
+#~ msgid "%(count)s month ago"
+#~ msgid_plural "%(count)s months ago"
+#~ msgstr[0] "Fyrir %s mínútu"
+#~ msgstr[1] "Fyrir %s mínútu"
+
+# Not sure this is correct. The singular translation should be used when the number ends with 1 (except if it's ending with 11) as can be seen in the plural form definition for Icelandic. I'm just not sure that the %s will be replaced in the singular form since it's not defined in the msg_id.
+#, fuzzy
+#~ msgid "A week ago"
+#~ msgstr "Fyrir %s viku"
+
+# Not sure this is correct. The singular translation should be used when the number ends with 1 (except if it's ending with 11) as can be seen in the plural form definition for Icelandic. I'm just not sure that the %s will be replaced in the singular form since it's not defined in the msg_id.
+#, fuzzy
+#~ msgid "%(count)s week ago"
+#~ msgid_plural "%(count)s weeks ago"
+#~ msgstr[0] "Fyrir %s viku"
+#~ msgstr[1] "Fyrir %s vikum"
+
+# Not sure this is correct. The singular translation should be used when the number ends with 1 (except if it's ending with 11) as can be seen in the plural form definition for Icelandic. I'm just not sure that the %s will be replaced in the singular form since it's not defined in the msg_id.
+#, fuzzy
+#~ msgid "Yesterday"
+#~ msgstr "Fyrir %s degi"
+
+# Not sure this is correct. The singular translation should be used when the number ends with 1 (except if it's ending with 11) as can be seen in the plural form definition for Icelandic. I'm just not sure that the %s will be replaced in the singular form since it's not defined in the msg_id.
+#, fuzzy
+#~ msgid "%(count)s day ago"
+#~ msgid_plural "%(count)s days ago"
+#~ msgstr[0] "Fyrir %s ári"
+#~ msgstr[1] "Fyrir %s árum"
+
+# Not sure this is correct. The singular translation should be used when the number ends with 1 (except if it's ending with 11) as can be seen in the plural form definition for Icelandic. I'm just not sure that the %s will be replaced in the singular form since it's not defined in the msg_id.
+#, fuzzy
+#~ msgid "An hour ago"
+#~ msgstr "Fyrir %s klukkustund"
+
+# Not sure this is correct. The singular translation should be used when the number ends with 1 (except if it's ending with 11) as can be seen in the plural form definition for Icelandic. I'm just not sure that the %s will be replaced in the singular form since it's not defined in the msg_id.
+#, fuzzy
+#~ msgid "%(count)s hour ago"
+#~ msgid_plural "%(count)s hours ago"
+#~ msgstr[0] "Fyrir %s klukkustund"
+#~ msgstr[1] "Fyrir %s klukkustundum"
+
+# Not sure this is correct. The singular translation should be used when the number ends with 1 (except if it's ending with 11) as can be seen in the plural form definition for Icelandic. I'm just not sure that the %s will be replaced in the singular form since it's not defined in the msg_id.
+#, fuzzy
+#~ msgid "A minute ago"
+#~ msgstr "Fyrir %s mínútu"
+
+# Not sure this is correct. The singular translation should be used when the number ends with 1 (except if it's ending with 11) as can be seen in the plural form definition for Icelandic. I'm just not sure that the %s will be replaced in the singular form since it's not defined in the msg_id.
+#, fuzzy
+#~ msgid "%(count)s minute ago"
+#~ msgid_plural "%(count)s minutes ago"
+#~ msgstr[0] "Fyrir %s mínútu"
+#~ msgstr[1] "Fyrir %s mínútum"
+
+#~ msgid "A few seconds ago"
+#~ msgstr "Fyrir nokkrum sekúndum"
+
+#~ msgid "Statistics"
+#~ msgstr "Tölfræði"
+
+#~ msgid "Reports"
+#~ msgstr "Skýrslur"
+
+#, fuzzy
+#~ msgid "Nov"
+#~ msgstr "Nei"
+
+#~ msgid "%s second"
+#~ msgid_plural "%s seconds"
+#~ msgstr[0] "%s sekúnda"
+#~ msgstr[1] "%s sekúndur"
+
+#~ msgid "word"
+#~ msgid_plural "words"
+#~ msgstr[0] "orð"
+#~ msgstr[1] "orð"
+
+#~ msgid "Unknown error"
+#~ msgstr "Óþekkt villa"
 
 #~ msgid "Are you sure you want to continue?"
 #~ msgstr "Viltu örugglega halda áfram?"

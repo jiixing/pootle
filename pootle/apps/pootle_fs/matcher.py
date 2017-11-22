@@ -31,17 +31,26 @@ class FSPathMatcher(object):
             self.project.__class__,
             instance=self.project)
 
+    @cached_property
+    def excluded_languages(self):
+        excluded = self.project.config.get(
+            "pootle.fs.excluded_languages")
+        return [
+            self.lang_mapper.get_upstream_code(code) or code
+            for code
+            in excluded or []]
+
     @lru_cache(maxsize=None)
     def get_finder(self, fs_path=None):
-        ext = self.project.localfiletype
-        template_ext = self.project.get_template_filetype()
         path_filters = []
         if fs_path:
             path_filters.append(fs_path)
         return self.context.finder_class(
-            self.translation_path,
-            extensions=[ext, template_ext],
-            path_filters=path_filters)
+            self.translation_mapping,
+            extensions=self.project.filetype_tool.valid_extensions,
+            path_filters=path_filters,
+            exclude_languages=self.excluded_languages,
+            fs_hash=self.context.latest_hash)
 
     @property
     def project(self):
@@ -52,11 +61,12 @@ class FSPathMatcher(object):
         return self.context.project.local_fs_path
 
     @property
-    def translation_path(self):
+    def translation_mapping(self):
         return os.path.join(
             self.project.local_fs_path,
-            self.context.project.config[
-                "pootle_fs.translation_paths"]["default"].lstrip("/"))
+            os.path.join(
+                *self.context.project.config[
+                    "pootle_fs.translation_mappings"]["default"].split("/")))
 
     def make_pootle_path(self, **matched):
         language_code = matched.get("language_code")
@@ -92,7 +102,7 @@ class FSPathMatcher(object):
 
     def matches(self, fs_path, pootle_path):
         missing_langs = []
-        for file_path, matched in self.get_finder(fs_path).find():
+        for file_path, matched in self.get_finder(fs_path).found:
             if matched["language_code"] in missing_langs:
                 continue
             language = self.get_language(matched["language_code"])
@@ -106,8 +116,8 @@ class FSPathMatcher(object):
                 yield matched_pootle_path, self.relative_path(file_path)
         if missing_langs:
             logger.warning(
-                "Could not import files for languages: %s"
-                % (", ".join(sorted(missing_langs))))
+                "Could not import files for languages: %s",
+                (", ".join(sorted(missing_langs))))
 
     def reverse_match(self, pootle_path):
         lang_code, __, dir_path, filename = split_pootle_path(pootle_path)

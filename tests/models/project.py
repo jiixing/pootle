@@ -10,15 +10,132 @@ import os
 
 import pytest
 
+from django.core.exceptions import ValidationError
+
 from pytest_pootle.factories import UserFactory
 from pytest_pootle.fixtures.models.permission_set import _require_permission_set
 from pytest_pootle.utils import items_equal
 
-from pootle_project.models import Project
+from pootle_format.models import Format
+from pootle_project.models import Project, RESERVED_PROJECT_CODES
 
 
 @pytest.mark.django_db
-def test_no_root_view_permissions(nobody, default, admin, view,
+def test_create_project_good(english):
+    """Tests projects are created with valid arguments only."""
+
+    proj = Project(code="hello", fullname="world", source_language=english)
+    proj.save()
+    proj.delete()
+
+    code_with_padding = "  hello  "
+    fullname_with_padding = "  world  "
+
+    proj = Project(code=code_with_padding, fullname="world",
+                   source_language=english)
+    proj.save()
+    assert proj.code == code_with_padding.strip()
+    proj.delete()
+
+    proj = Project(code="hello", fullname=fullname_with_padding,
+                   source_language=english)
+    proj.save()
+    assert proj.fullname == fullname_with_padding.strip()
+    proj.delete()
+
+    proj = Project(code=code_with_padding, fullname=fullname_with_padding,
+                   source_language=english)
+    proj.save()
+    assert proj.code == code_with_padding.strip()
+    assert proj.fullname == fullname_with_padding.strip()
+    proj.delete()
+
+
+@pytest.mark.django_db
+def test_create_project_bad(english):
+    """Tests projects are not created with bad arguments."""
+
+    with pytest.raises(ValidationError):
+        Project().save()
+
+    with pytest.raises(ValidationError):
+        Project(code="hello").save()
+
+    with pytest.raises(ValidationError):
+        Project(fullname="world").save()
+
+    with pytest.raises(ValidationError):
+        Project(source_language=english).save()
+
+    with pytest.raises(ValidationError):
+        Project(code="hello", fullname="world").save()
+
+    with pytest.raises(ValidationError):
+        Project(code="hello", source_language=english).save()
+
+    with pytest.raises(ValidationError):
+        Project(fullname="world", source_language=english).save()
+
+    with pytest.raises(ValidationError):
+        Project(code="", fullname="world", source_language=english).save()
+
+    with pytest.raises(ValidationError):
+        Project(code="hello", fullname="", source_language=english).save()
+
+    with pytest.raises(ValidationError):
+        Project(code="  ", fullname="world", source_language=english).save()
+
+    with pytest.raises(ValidationError):
+        Project(code="hello", fullname="  ", source_language=english).save()
+
+
+@pytest.mark.parametrize('reserved_code', RESERVED_PROJECT_CODES)
+@pytest.mark.django_db
+def test_create_project_reserved_code(english, reserved_code):
+    """Tests projects are not created with reserved project codes."""
+
+    with pytest.raises(ValidationError):
+        Project(
+            code=reserved_code,
+            fullname="whatever",
+            source_language=english
+        ).save()
+
+    reserved_code_with_padding = "  %s  " % reserved_code
+    with pytest.raises(ValidationError):
+        Project(
+            code=reserved_code_with_padding,
+            fullname="whatever",
+            source_language=english
+        ).save()
+
+
+@pytest.mark.django_db
+def test_project_save_no_code(project0):
+    """Test that an existing project can't be removed its code."""
+    project0.code = ""
+    with pytest.raises(ValidationError):
+        project0.save()
+
+
+@pytest.mark.django_db
+def test_project_save_wrong_checker(project0):
+    """Test that an existing project can't be removed its code."""
+    project0.checkstyle = "foobar"
+    with pytest.raises(ValidationError):
+        project0.save()
+
+
+@pytest.mark.django_db
+def test_project_save_no_fullname(project0):
+    """Test that an existing project can't be removed its fullname."""
+    project0.fullname = ""
+    with pytest.raises(ValidationError):
+        project0.save()
+
+
+@pytest.mark.django_db
+def test_no_root_view_permissions(po_directory, nobody, default, admin, view,
                                   no_permission_sets, no_projects,
                                   project_foo, project_bar):
     """Tests user-accessible projects when there are no permissions set at
@@ -55,7 +172,7 @@ def test_no_root_view_permissions(nobody, default, admin, view,
 
 
 @pytest.mark.django_db
-def test_root_view_permissions(nobody, default, admin, view,
+def test_root_view_permissions(po_directory, nobody, default, admin, view,
                                no_projects, no_permission_sets,
                                project_foo, project_bar, root):
     """Tests user-accessible projects with view permissions at the root."""
@@ -99,8 +216,8 @@ def test_root_view_permissions(nobody, default, admin, view,
 
 
 @pytest.mark.django_db
-def test_no_root_hide_permissions(nobody, default, admin, hide, view,
-                                  no_projects, no_permission_sets,
+def test_no_root_hide_permissions(po_directory, nobody, default, admin, hide,
+                                  view, no_projects, no_permission_sets,
                                   project_foo, project_bar, root):
     """Tests user-accessible projects when there are no `hide` permissions
     set at the root.
@@ -148,8 +265,8 @@ def test_no_root_hide_permissions(nobody, default, admin, hide, view,
 
 
 @pytest.mark.django_db
-def test_root_hide_permissions(nobody, default, admin, hide, view,
-                               no_permission_sets, no_projects,
+def test_root_hide_permissions(po_directory, nobody, default, admin, hide,
+                               view, no_permission_sets, no_projects,
                                project_foo, project_bar, root):
     """Tests user-accessible projects when there are `hide` permissions
     set at the root.
@@ -196,8 +313,9 @@ def test_root_hide_permissions(nobody, default, admin, hide, view,
 def test_project_create_with_none_treestyle(english, templates, settings):
     project = Project.objects.create(
         code="foo",
+        fullname="bar",
         source_language=english,
-        treestyle="none")
+        treestyle='pootle_fs')
     assert not os.path.exists(
         os.path.join(
             settings.POOTLE_TRANSLATION_DIRECTORY,
@@ -207,3 +325,40 @@ def test_project_create_with_none_treestyle(english, templates, settings):
         os.path.join(
             settings.POOTLE_TRANSLATION_DIRECTORY,
             project.code))
+
+
+@pytest.mark.django_db
+def test_file_belongs_to_project(english, templates, settings):
+    project = Project.objects.get(code="project0")
+
+    # ensure the project has po and only po
+    assert (
+        list(project.filetypes.values_list("extension__name", flat=True))
+        == ["po"])
+
+    # po/pot matches, ts doesnt
+    assert project.file_belongs_to_project("foo.po")
+    assert project.file_belongs_to_project("foo.pot")
+    assert not project.file_belongs_to_project("foo.ts")
+    # if match_templates is False, only po matches
+    assert project.file_belongs_to_project("foo.po", match_templates=False)
+    assert not project.file_belongs_to_project("foo.pot", match_templates=False)
+    assert not project.file_belongs_to_project("foo.ts", match_templates=False)
+
+    # lets add ts
+    ts = Format.objects.get(name="ts")
+    project.filetypes.add(ts)
+
+    # now ts/po/pot all match
+    assert project.file_belongs_to_project("foo.po")
+    assert project.file_belongs_to_project("foo.pot")
+    assert project.file_belongs_to_project("foo.ts")
+
+    # and remove po...
+    po = Format.objects.get(name="po")
+    project.filetypes.remove(po)
+
+    # only ts matches
+    assert project.file_belongs_to_project("foo.ts")
+    assert not project.file_belongs_to_project("foo.po")
+    assert not project.file_belongs_to_project("foo.pot")

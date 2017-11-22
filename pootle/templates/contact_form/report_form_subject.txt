@@ -1,1 +1,1 @@
-Unit #{{ unit.id }} ({{ language }})
+[{{ server_name }}] Unit #{{ unit }} ({{ language }}/{{ project }})

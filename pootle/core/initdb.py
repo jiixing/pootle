@@ -13,9 +13,13 @@ from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 from django.utils.translation import ugettext_noop as _
 
+from pootle.core.contextmanagers import bulk_operations, keep_data
 from pootle.core.models import Revision
+from pootle.core.signals import update_revisions
 from pootle_app.models import Directory
 from pootle_app.models.permissions import PermissionSet, get_pootle_permission
+from pootle_data.models import TPChecksData, TPData
+from pootle_format.models import Format
 from pootle_language.models import Language
 from pootle_project.models import Project
 from staticpages.models import StaticPage as Announcement
@@ -27,10 +31,16 @@ logger = logging.getLogger(__name__)
 class InitDB(object):
 
     def init_db(self, create_projects=True):
+        with keep_data(signals=(update_revisions, )):
+            with bulk_operations(models=(TPData, TPChecksData)):
+                self._init_db(create_projects)
+
+    def _init_db(self, create_projects=True):
         """Populate the database with default initial data.
 
         This creates the default database to get a working Pootle installation.
         """
+        self.create_formats()
         self.create_revision()
         self.create_essential_users()
         self.create_root_directories()
@@ -43,16 +53,21 @@ class InitDB(object):
             self.create_default_projects()
         self.create_default_languages()
 
+    def create_formats(self):
+        from pootle.core.delegate import formats
+
+        formats.get().initialize()
+
     def _create_object(self, model_klass, **criteria):
         instance, created = model_klass.objects.get_or_create(**criteria)
         if created:
             logger.debug(
-                "Created %s: '%s'"
-                % (instance.__class__.__name__, instance))
+                "Created %s: '%s'",
+                instance.__class__.__name__, instance)
         else:
             logger.debug(
-                "%s already exists - skipping: '%s'"
-                % (instance.__class__.__name__, instance))
+                "%s already exists - skipping: '%s'",
+                instance.__class__.__name__, instance)
         return instance, created
 
     def _create_pootle_user(self, **criteria):
@@ -66,7 +81,7 @@ class InitDB(object):
         permission_set, created = self._create_object(PermissionSet,
                                                       **criteria)
         if created:
-            permission_set.positive_permissions = permissions
+            permission_set.positive_permissions.set(permissions)
             permission_set.save()
         return permission_set
 
@@ -103,15 +118,6 @@ class InitDB(object):
         }
         self._create_pootle_user(**criteria)
 
-        # The system user represents a system, and is used to
-        # associate updates done by bulk commands as update_stores.
-        criteria = {
-            'username': u"system",
-            'full_name': u"system user",
-            'is_active': True,
-        }
-        self._create_pootle_user(**criteria)
-
     def create_pootle_permissions(self):
         """Create Pootle's directory level permissions."""
 
@@ -120,7 +126,7 @@ class InitDB(object):
             'model': "directory",
         }
 
-        pootle_content_type, created = self._create_object(ContentType, **args)
+        pootle_content_type = self._create_object(ContentType, **args)[0]
         pootle_content_type.save()
 
         # Create the permissions.
@@ -204,12 +210,12 @@ class InitDB(object):
             'nplurals': 2,
             'pluralequation': "(n != 1)",
         }
-        en, created = self._create_object(Language, **criteria)
+        en = self._create_object(Language, **criteria)[0]
         return en
 
     def create_root_directories(self):
         """Create the root Directory items."""
-        root, created = self._create_object(Directory, **dict(name=""))
+        root = self._create_object(Directory, **dict(name=""))[0]
         self._create_object(Directory, **dict(name="projects", parent=root))
 
     def create_template_languages(self):
@@ -234,7 +240,9 @@ class InitDB(object):
             'source_language': self.require_english(),
             'checkstyle': "terminology",
         }
-        self._create_object(Project, **criteria)
+        po = Format.objects.get(name="po")
+        terminology = self._create_object(Project, **criteria)[0]
+        terminology.filetypes.add(po)
 
     def create_default_projects(self):
         """Create the default projects that we host.
@@ -242,30 +250,29 @@ class InitDB(object):
         You might want to add your projects here, although you can also add
         things through the web interface later.
         """
-        from pootle_project.models import Project
-
         en = self.require_english()
+        po = Format.objects.get(name="po")
 
         criteria = {
             'code': u"tutorial",
             'source_language': en,
             'fullname': u"Tutorial",
             'checkstyle': "standard",
-            'localfiletype': "po",
             'treestyle': "auto",
         }
-        tutorial, created = self._create_object(Project, **criteria)
+        tutorial = self._create_object(Project, **criteria)[0]
+        tutorial.filetypes.add(po)
 
         criteria = {
             'active': True,
             'title': "Project instructions",
             'body': (
-                '<div dir="ltr" lang="en">Tutorial project where users can '
-                'play with Pootle and learn more about translation and '
-                'localisation.<br />For more help on localisation, visit the '
-                '<a href="http://docs.translatehouse.org/projects/'
-                'localization-guide/en/latest/guide/start.html">localisation '
-                'guide</a>.</div>'),
+                'Tutorial project where users can play with Pootle and learn '
+                'more about translation and localisation.\n'
+                '\n'
+                'For more help on localisation, visit the [localization '
+                'guide](http://docs.translatehouse.org/projects/'
+                'localization-guide/en/latest/guide/start.html).'),
             'virtual_path': "announcements/projects/"+tutorial.code,
         }
         self._create_object(Announcement, **criteria)
@@ -274,22 +281,14 @@ class InitDB(object):
         """Create the default languages."""
         from translate.lang import data, factory
 
-        from pootle_language.models import Language
-
         # import languages from toolkit
         for code in data.languages.keys():
-            try:
-                tk_lang = factory.getlanguage(code)
-                criteria = {
-                    'code': code,
-                    'fullname': tk_lang.fullname,
-                    'nplurals': tk_lang.nplurals,
-                    'pluralequation': tk_lang.pluralequation,
-                }
-                try:
-                    criteria['specialchars'] = tk_lang.specialchars
-                except AttributeError:
-                    pass
-                self._create_object(Language, **criteria)
-            except:
-                pass
+            ttk_lang = factory.getlanguage(code)
+            criteria = {
+                'code': code,
+                'fullname': ttk_lang.fullname,
+                'nplurals': ttk_lang.nplurals,
+                'pluralequation': ttk_lang.pluralequation}
+            if hasattr(ttk_lang, "specialchars"):
+                criteria['specialchars'] = ttk_lang.specialchars
+            self._create_object(Language, **criteria)

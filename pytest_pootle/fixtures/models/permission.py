@@ -30,7 +30,7 @@ def _require_permission(code, name, content_type):
         'name': name,
         'content_type': content_type,
     }
-    permission, created = Permission.objects.get_or_create(**criteria)
+    permission = Permission.objects.get_or_create(**criteria)[0]
 
     return permission
 
@@ -54,3 +54,11 @@ def administrate(pootle_content_type):
     """Require the `suggest` permission."""
     return _require_permission('administrate', 'Can administrate a TP',
                                pootle_content_type)
+
+
+@pytest.fixture
+def translate():
+    """Require the `translate` permission."""
+    from django.contrib.auth.models import Permission
+
+    return Permission.objects.get(codename="translate")

@@ -7,7 +7,6 @@
 # AUTHORS file for copyright and authorship information.
 
 import os
-import sys
 from hashlib import md5
 
 # This must be run before importing Django.
@@ -19,48 +18,67 @@ from translate.storage import factory
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import dateparse
+from django.utils.encoding import force_bytes
 
 from pootle.core.utils import dateformat
 from pootle_store.models import Unit
+from pootle_translationproject.models import TranslationProject
 
 
 BULK_CHUNK_SIZE = 5000
 
 
-class DBParser(object):
+class BaseParser(object):
 
     def __init__(self, *args, **kwargs):
+        """Initialize the parser."""
         self.stdout = kwargs.pop('stdout')
         self.INDEX_NAME = kwargs.pop('index', None)
-        self.exclude_disabled_projects = not kwargs.pop('disabled_projects')
 
-    def get_units(self, filenames):
+    def get_units(self):
         """Gets the units to import and its total count."""
-        units_qs = Unit.simple_objects \
-            .exclude(target_f__isnull=True) \
-            .exclude(target_f__exact='') \
-            .filter(revision__gt=self.last_indexed_revision) \
-            .select_related(
-                'submitted_by',
-                'store',
-                'store__translation_project__project',
-                'store__translation_project__language'
-            )
+        raise NotImplementedError
+
+    def get_unit_data(self, unit):
+        """Return dict with data to import for a single unit."""
+        raise NotImplementedError
+
+
+class DBParser(BaseParser):
+
+    def __init__(self, *args, **kwargs):
+        super(DBParser, self).__init__(*args, **kwargs)
+
+        self.exclude_disabled_projects = not kwargs.pop('disabled_projects')
+        self.tp_pk = None
+
+    def get_units(self):
+        """Gets the units to import and its total count."""
+        units_qs = (
+            Unit.objects.exclude(target_f__isnull=True)
+                        .exclude(target_f__exact='')
+                        .filter(store__translation_project__pk=self.tp_pk)
+                        .filter(revision__gt=self.last_indexed_revision))
+        units_qs = units_qs.select_related(
+            'change__submitted_by',
+            'store',
+            'store__translation_project__project',
+            'store__translation_project__language')
 
         if self.exclude_disabled_projects:
             units_qs = units_qs.exclude(
                 store__translation_project__project__disabled=True
-            )
+            ).exclude(store__obsolete=True)
 
         units_qs = units_qs.values(
             'id',
             'revision',
             'source_f',
             'target_f',
-            'submitted_on',
-            'submitted_by__username',
-            'submitted_by__full_name',
-            'submitted_by__email',
+            'change__submitted_on',
+            'change__submitted_by__username',
+            'change__submitted_by__full_name',
+            'change__submitted_by__email',
             'store__translation_project__project__fullname',
             'store__pootle_path',
             'store__translation_project__language__code'
@@ -70,14 +88,15 @@ class DBParser(object):
 
     def get_unit_data(self, unit):
         """Return dict with data to import for a single unit."""
-        fullname = (unit['submitted_by__full_name'] or
-                    unit['submitted_by__username'])
+        fullname = (unit['change__submitted_by__full_name'] or
+                    unit['change__submitted_by__username'])
 
         email_md5 = None
-        if unit['submitted_by__email']:
-            email_md5 = md5(unit['submitted_by__email']).hexdigest()
+        if unit['change__submitted_by__email']:
+            email_md5 = md5(
+                force_bytes(unit['change__submitted_by__email'])).hexdigest()
 
-        iso_submitted_on = unit.get('submitted_on', None)
+        iso_submitted_on = unit.get('change__submitted_on', None)
 
         display_submitted_on = None
         if iso_submitted_on:
@@ -92,7 +111,7 @@ class DBParser(object):
             'revision': int(unit['revision']),
             'project': unit['store__translation_project__project__fullname'],
             'path': unit['store__pootle_path'],
-            'username': unit['submitted_by__username'],
+            'username': unit['change__submitted_by__username'],
             'fullname': fullname,
             'email_md5': email_md5,
             'source': unit['source_f'],
@@ -102,27 +121,28 @@ class DBParser(object):
         }
 
 
-class FileParser(object):
+class FileParser(BaseParser):
 
     def __init__(self, *args, **kwargs):
-        self.stdout = kwargs.pop('stdout')
-        self.INDEX_NAME = kwargs.pop('index', None)
+        super(FileParser, self).__init__(*args, **kwargs)
+
         self.target_language = kwargs.pop('language', None)
         self.project = kwargs.pop('project', None)
+        self.filenames = kwargs.pop('filenames')
 
-    def get_units(self, filenames):
+    def get_units(self):
         """Gets the units to import and its total count."""
         units = []
         all_filenames = set()
 
-        for filename in filenames:
+        for filename in self.filenames:
             if not os.path.exists(filename):
                 self.stdout.write("File %s doesn't exist. Skipping it." %
                                   filename)
                 continue
 
             if os.path.isdir(filename):
-                for dirpath, dirs, fnames in os.walk(filename):
+                for dirpath, dirs_, fnames in os.walk(filename):
                     if (os.path.basename(dirpath) in
                         ["CVS", ".svn", "_darcs", ".git", ".hg", ".bzr"]):
 
@@ -242,19 +262,20 @@ class Command(BaseCommand):
         )
 
     def _parse_translations(self, **options):
-        units, total = self.parser.get_units(options['files'])
+        units, total = self.parser.get_units()
 
         if total == 0:
             self.stdout.write("No translations to index")
-            sys.exit()
+            return
 
         self.stdout.write("%s translations to index" % total)
 
         if options['dry_run']:
-            sys.exit()
+            return
 
         self.stdout.write("")
 
+        i = 0
         for i, unit in enumerate(units, start=1):
             if (i % 1000 == 0) or (i == total):
                 percent = "%.1f" % (i * 100.0 / total)
@@ -298,6 +319,7 @@ class Command(BaseCommand):
                 raise CommandError('You must specify a project name with '
                                    '--display-name.')
             self.parser = FileParser(stdout=self.stdout, index=self.INDEX_NAME,
+                                     filenames=options['files'],
                                      language=options['target_language'],
                                      project=options['project'])
         elif not self.is_local_tm:
@@ -352,5 +374,16 @@ class Command(BaseCommand):
         if self.is_local_tm:
             self._set_latest_indexed_revision(**options)
 
-        success, _ = helpers.bulk(self.es,
-                                  self._parse_translations(**options))
+        if isinstance(self.parser, FileParser):
+            helpers.bulk(self.es, self._parse_translations(**options))
+            return
+
+        # If we are parsing from DB.
+        tp_qs = TranslationProject.objects.all()
+
+        if options['disabled_projects']:
+            tp_qs = tp_qs.exclude(project__disabled=True)
+
+        for tp in tp_qs:
+            self.parser.tp_pk = tp.pk
+            helpers.bulk(self.es, self._parse_translations(**options))

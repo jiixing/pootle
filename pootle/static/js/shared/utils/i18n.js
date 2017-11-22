@@ -44,9 +44,66 @@ function formatComponent(str, ctx) {
   return result;
 }
 
+
+/**
+ * Mark a string for localization and optionally replace placeholders with the
+ * components provided in the context argument. This is intended to use in the
+ * context of JSX and React components.
+ *
+ * @param {String} string - The string to internationalize. It accepts a
+ * simplified form of printf-style placeholders, however note these must be
+ * named, so they need to take the explicit `%(key)s` form, not `%s`.
+ * @param {Object} ctx - Components to be injected in the placeholders specified
+ * by the keys.
+ * @return {Array} - An array with the original `string`, and placeholders
+ * replaced by the given components.
+ */
+export function tct(string, ctx = null) {
+  if (!ctx) {
+    return [gettext(string)];
+  }
+  return formatComponent(gettext(string), ctx);
+}
+
+
+/**
+ * Mark a string for localization and optionally replace placeholders with the
+ * values provided in the context argument.
+ *
+ * @param {String} string - The string to internationalize. It accepts a
+ * simplified form of printf-style placeholders, however note these must be
+ * named, so they need to take the explicit `%(key)s` form, not `%s`.
+ * @param {Object} ctx - Values to be injected in the placeholders specified by
+ * the keys. Note these will be coerced to strings.
+ * @return {String} - The original `string` with placeholders replaced by the
+ * given context values.
+ */
 export function t(string, ctx = null) {
   if (!ctx) {
     return gettext(string);
   }
-  return formatComponent(gettext(string), ctx);
+  return interpolate(gettext(string), ctx, true);
+}
+
+
+/**
+ * Mark a plural string for localization and optionally replace placeholders
+ * with the values provided in the context argument.
+ *
+ * @param {String} singular - The singular string to internationalize. It
+ * accepts the same placeholders as `t()`.
+ * @param {String} plural - The plural string to internationalize. It accepts
+ * the same placeholders as `t()`.
+ * @param {Integer} count - The object count which will determine the
+ * translation string o use.
+ * @param {Object} ctx - Values to be injected in the placeholders specified by
+ * the keys. Note these will be coerced to strings.
+ * @return {String} - The translation for `singular` or `plural` (depending on
+ * `count`) with placeholders replaced by the given context values.
+ */
+export function nt(singular, plural, count, ctx = null) {
+  if (!ctx) {
+    return ngettext(singular, plural, count);
+  }
+  return interpolate(ngettext(singular, plural, count), ctx, true);
 }

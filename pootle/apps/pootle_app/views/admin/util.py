@@ -11,9 +11,9 @@ from django.forms.models import modelformset_factory
 from django.forms.utils import ErrorList
 from django.shortcuts import render
 from django.utils.safestring import mark_safe
-from django.utils.translation import ugettext as _
 
 from pootle.core.paginator import paginate
+from pootle.i18n.gettext import ugettext as _
 
 
 def form_set_as_table(formset, link=None, linkfield='code'):
@@ -112,9 +112,10 @@ def form_set_as_table(formset, link=None, linkfield='code'):
         result.append('<tbody>\n')
 
         # Do not display the delete checkbox for the 'add a new entry' form.
-        formset.forms[-1].fields['DELETE'].widget = forms.HiddenInput()
+        if formset.extra_forms:
+            formset.forms[-1].fields['DELETE'].widget = forms.HiddenInput()
 
-        for i, form in enumerate(formset.forms):
+        for form in formset.forms:
             add_errors(result, fields, form)
             add_widgets(result, fields, form, link)
 

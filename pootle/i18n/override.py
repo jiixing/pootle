@@ -13,7 +13,6 @@ import os
 from translate.lang import data
 
 from django.utils import translation
-from django.utils.functional import lazy
 from django.utils.translation import LANGUAGE_SESSION_KEY, trans_real
 
 from pootle.i18n import gettext
@@ -39,24 +38,35 @@ def supported_langs():
     return settings.LANGUAGES
 
 
-def get_lang_from_session(request, supported):
-    if hasattr(request, 'session'):
-        lang_code = request.session.get(LANGUAGE_SESSION_KEY, None)
-        if lang_code and lang_code in supported:
-            return lang_code
+def get_language_supported(lang_code, supported):
+    normalized = data.normalize_code(data.simplify_to_common(lang_code))
+    if normalized in supported:
+        return normalized
+
+    # FIXME: horribly slow way of dealing with languages with @ in them
+    for lang in supported.keys():
+        if normalized == data.normalize_code(lang):
+            return lang
 
     return None
+
+
+def get_lang_from_session(request, supported):
+    if not hasattr(request, 'session'):
+        return None
+    lang_code = request.session.get(LANGUAGE_SESSION_KEY, None)
+    if not lang_code:
+        return None
+    return get_language_supported(lang_code, supported)
 
 
 def get_lang_from_cookie(request, supported):
     """See if the user's browser sent a cookie with a preferred language."""
     from django.conf import settings
     lang_code = request.COOKIES.get(settings.LANGUAGE_COOKIE_NAME)
-
-    if lang_code and lang_code in supported:
-        return lang_code
-
-    return None
+    if not lang_code:
+        return None
+    return get_language_supported(lang_code, supported)
 
 
 def get_lang_from_http_header(request, supported):
@@ -68,20 +78,12 @@ def get_lang_from_http_header(request, supported):
     If nothing is found, return None.
     """
     accept = request.META.get('HTTP_ACCEPT_LANGUAGE', '')
-    for accept_lang, unused in trans_real.parse_accept_lang_header(accept):
+    for accept_lang, __ in trans_real.parse_accept_lang_header(accept):
         if accept_lang == '*':
             return None
-
-        normalized = data.normalize_code(data.simplify_to_common(accept_lang))
-        if normalized in ['en-us', 'en']:
-            return None
-        if normalized in supported:
-            return normalized
-
-        # FIXME: horribly slow way of dealing with languages with @ in them
-        for lang in supported.keys():
-            if normalized == data.normalize_code(lang):
-                return lang
+        supported_lang = get_language_supported(accept_lang, supported)
+        if supported_lang:
+            return supported_lang
     return None
 
 
@@ -99,19 +101,9 @@ def get_language_from_request(request, check_path=False):
         if lang is not None:
             return lang
     from django.conf import settings
-    return settings.LANGUAGE_CODE
-
-
-def override_gettext(real_translation):
-    """Replace Django's translation functions with safe versions."""
-    translation.gettext = real_translation.gettext
-    translation.ugettext = real_translation.ugettext
-    translation.ngettext = real_translation.ngettext
-    translation.ungettext = real_translation.ungettext
-    translation.gettext_lazy = lazy(real_translation.gettext, str)
-    translation.ugettext_lazy = lazy(real_translation.ugettext, unicode)
-    translation.ngettext_lazy = lazy(real_translation.ngettext, str)
-    translation.ungettext_lazy = lazy(real_translation.ungettext, unicode)
+    if settings.LANGUAGE_CODE in supported:
+        return settings.LANGUAGE_CODE
+    return 'en-us'
 
 
 def get_language_bidi():
@@ -130,7 +122,3 @@ def hijack_translation():
 
     # Override django's inadequate bidi detection
     translation.get_language_bidi = get_language_bidi
-
-    # We hijack gettext functions to install the safe variable formatting
-    # override
-    override_gettext(gettext)

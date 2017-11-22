@@ -6,17 +6,16 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
+import os
+
 from django import forms
-from django.conf import settings
-from django.core.urlresolvers import set_script_prefix
 from django.db import connection
 from django.forms.models import BaseModelFormSet
-from django.utils.encoding import force_unicode
-from django.utils.translation import ugettext as _
 
 from django_rq.queues import get_queue
 
 from pootle.core.utils.db import useable_connection
+from pootle.i18n.gettext import ugettext as _
 from pootle_language.models import Language
 from pootle_misc.forms import LiberalModelChoiceField
 from pootle_project.models import Project
@@ -29,11 +28,6 @@ def update_translation_project(tp, initialize_from_templates, response_url):
     """Wraps translation project initializing to allow it to be running
     as RQ job.
     """
-    script_name = (u'/'
-                   if settings.FORCE_SCRIPT_NAME is None
-                   else force_unicode(settings.FORCE_SCRIPT_NAME))
-    set_script_prefix(script_name)
-
     try:
         with useable_connection():
             if initialize_from_templates:
@@ -52,6 +46,7 @@ class TranslationProjectFormSet(BaseModelFormSet):
     def __init__(self, *args, **kwargs):
         self.response_url = kwargs.pop("response_url")
         super(TranslationProjectFormSet, self).__init__(*args, **kwargs)
+        self.queryset = self.queryset.select_related("language", "project")
 
     def save_new(self, form, commit=True):
         return form.save(
@@ -90,6 +85,22 @@ class TranslationProjectForm(forms.ModelForm):
                     translationproject__project_id=project_id))
         self.fields["project"].queryset = self.fields[
             "project"].queryset.filter(pk=project_id)
+
+    def clean(self):
+        if not self.cleaned_data.get("id"):
+            exists_on_disk = (
+                self.cleaned_data["language"].code
+                in os.listdir(self.cleaned_data["project"].get_real_path()))
+            if exists_on_disk:
+                errordict = dict(
+                    lang=self.cleaned_data["language"].code,
+                    path=os.path.join(
+                        self.cleaned_data["project"].get_real_path(),
+                        self.cleaned_data["language"].code))
+                raise forms.ValidationError(
+                    _("Cannot create translation project for language "
+                      "'%(lang)s', path '%(path)s' already exists",
+                      errordict))
 
     def save(self, response_url, commit=True):
         tp = self.instance

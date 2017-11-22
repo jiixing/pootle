@@ -10,6 +10,8 @@ from collections import OrderedDict
 
 import pytest
 
+from django.urls import reverse
+
 from .models import store
 
 
@@ -39,7 +41,7 @@ def ts_directory(po_directory, request, tmpdir, settings):
 
     import pytest_pootle
 
-    from pootle_store.models import fs
+    from pootle_store.abstracts import fs
 
     ts_dir = str(tmpdir.mkdir("ts"))
 
@@ -63,8 +65,12 @@ def ts_directory(po_directory, request, tmpdir, settings):
 
 
 @pytest.fixture
-def en_tutorial_ts(settings, english_tutorial, ts_directory):
+def en_tutorial_ts(english_tutorial, ts_directory):
     """Require the en/tutorial/tutorial.ts store."""
+    from pootle_format.models import Format
+
+    english_tutorial.project.filetypes.add(
+        Format.objects.get(name="ts"))
     return store._require_store(english_tutorial,
                                 ts_directory,
                                 'tutorial.ts')
@@ -78,8 +84,26 @@ def import_tps(request):
     from pootle_translationproject.models import TranslationProject
 
     language_code, project_code = request.param.split('_')
-    try:
-        return TranslationProject.objects.get(language__code=language_code,
-                                              project__code=project_code)
-    except TranslationProject.DoesNotExist:
-        return request.getfuncargvalue(request.param)
+    return TranslationProject.objects.get(
+        language__code=language_code,
+        project__code=project_code)
+
+
+@pytest.fixture
+def exported_tp_view_response(client, request_users, tp0):
+    from import_export.utils import TPTMXExporter
+
+    user = request_users["user"]
+    client.login(
+        username=user.username,
+        password=request_users["password"])
+
+    kwargs = {
+        "project_code": tp0.project.code,
+        "language_code": tp0.language.code,
+        "dir_path": ""}
+    exporter = TPTMXExporter(tp0)
+    exporter.export()
+
+    response = client.get(reverse('pootle-tp-browse', kwargs=kwargs))
+    return response

@@ -14,8 +14,7 @@ from django.utils.lru_cache import lru_cache
 
 DUMMY_RESPONSE_MAP = dict(
     add="added_from_pootle",
-    fetch="fetched_from_fs",
-    merge="staged_for_merge_pootle",
+    resolve="staged_for_merge_fs",
     rm="remove",
     sync="merged_from_pootle")
 
@@ -45,8 +44,8 @@ def _get_dummy_api_plugin():
 
         response_types = [
             "remove", "remove_args",
-            "fetched_from_fs", "fetched_from_fs_args",
-            "added_from_pootle", "added_from_pootle_args",
+            "added_from_fs", "added_from_fs_args",
+            "added_from_pootle", "added_from_pootle_args", "staged_for_merge_fs",
             "staged_for_merge_pootle", "staged_for_merge_pootle_args",
             "merged_from_pootle", "merged_from_pootle_args"]
 
@@ -66,12 +65,8 @@ def _get_dummy_api_plugin():
             self._api_called("add", **kwargs)
             return self.dummy_response
 
-        def fetch(self, **kwargs):
-            self._api_called("fetch", **kwargs)
-            return self.dummy_response
-
-        def merge(self, **kwargs):
-            self._api_called("merge", **kwargs)
+        def resolve(self, **kwargs):
+            self._api_called("resolve", **kwargs)
             return self.dummy_response
 
         def rm(self, **kwargs):
@@ -96,7 +91,7 @@ def dummy_cmd_response():
     DummyResponse, DummyCommandPlugin = _get_dummy_api_plugin()
 
     @provider(fs_plugins, sender=Project, weak=False)
-    def plugins_provider(*args, **kwargs):
+    def plugins_provider_(**kwargs_):
         return dict(dummy_cmd=DummyCommandPlugin)
 
     project = Project.objects.get(code="project0")
@@ -140,7 +135,7 @@ def dummy_cmd_state():
     DummyState, DummyCommandPlugin = _get_dummy_state_plugin()
 
     @provider(fs_plugins, sender=Project, weak=False)
-    def plugins_provider(*args, **kwargs):
+    def plugins_provider_(**kwargs_):
         return dict(dummy_state_cmd=DummyCommandPlugin)
 
     project = Project.objects.get(code="project0")

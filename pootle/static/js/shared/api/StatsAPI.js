@@ -13,17 +13,12 @@ const StatsAPI = {
 
   apiRoot: '/xhr/stats/',
 
-  getStats(path) {
-    return fetch({
-      body: { path },
-      url: this.apiRoot,
-    });
-  },
+  getTopContributors(path, { offset = 0 } = {}) {
+    const body = { path, offset };
 
-  getChecks(path) {
     return fetch({
-      body: { path },
-      url: `${this.apiRoot}checks/`,
+      body,
+      url: `${this.apiRoot}contributors/`,
     });
   },
 

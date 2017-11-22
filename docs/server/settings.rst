@@ -25,13 +25,6 @@ set the :envvar:`POOTLE_SETTINGS` environment variable to specify the path to
 the custom configuration file. The environment variable will take precedence
 over the command-line flag.
 
-If instead of an installation you deployed Pootle straight from the git
-repository, you can either set the :envvar:`POOTLE_SETTINGS` environment
-variable or put a file under the :file:`pootle/settings/` directory. Note that
-the files in this directory are read in alphabetical order, and **creating a
-90-local.conf file is recommended** (files ending in *-local.conf* will be
-ignored by git).
-
 
 .. _settings#available:
 
@@ -65,6 +58,21 @@ This file contains base configuration settings.
   The name of the Pootle server.
 
 
+.. setting:: POOTLE_SQL_MIGRATIONS
+
+``POOTLE_SQL_MIGRATIONS``
+  Default: ``True``
+
+  .. versionadded:: 2.8
+
+  Some migrations have been optimized by using SQL directly and bypassing
+  the Django ORM (Currently only for mysql migrations).
+
+  This could cause problems if, for example, you have developed custom models with
+  foreign keys to Pootle models.
+
+
+
 20-backends.conf
 ^^^^^^^^^^^^^^^^
 
@@ -96,8 +104,8 @@ Backend and caching settings.
 
   .. versionadded:: 2.7
 
-  The directory where Pootle writes event logs to. These are high-level
-  logs of events on store/unit changes and manage.py commands executed
+  The directory where Pootle writes event logs to. These are high-level logs of
+  events on store/unit changes and :command:`pootle` commands executed.
 
 
 30-site.conf
@@ -132,6 +140,49 @@ Site-specific settings.
   .. versionadded:: 2.7
 
   Email address to report errors on strings.
+
+
+.. setting:: POOTLE_EMAIL_FEEDBACK_ENABLED
+
+``POOTLE_EMAIL_FEEDBACK_ENABLED``
+  Default: ``False``
+
+  .. versionadded:: 2.8
+
+  Controls whether emails are sent to suggesters when a reviewer accepts or
+  rejects their suggestions providing some comment for the suggester.
+
+
+.. setting:: POOTLE_CANONICAL_URL
+
+``POOTLE_CANONICAL_URL``
+  Default: ``http://localhost``
+
+  .. versionadded:: 2.8
+
+  Canonical URL, **without trailing slash**, used when deriving the URLs to
+  send out emails. If you use the ``django.contrib.sites`` framework set this
+  to blank string.
+
+
+.. setting:: POOTLE_CUSTOM_LOGO
+
+``POOTLE_CUSTOM_LOGO``
+  Default: ``""``
+
+  .. versionadded:: 2.8
+
+  Custom logo URL - this can be an absolute or relative URL.
+
+
+.. setting:: POOTLE_FAVICONS_PATH
+
+``POOTLE_FAVICONS_PATH``
+  Default: ``"/assets/favicon"``
+
+  .. versionadded:: 2.8
+
+  Customisable favicon path. Should not end with trailing slash.
 
 
 40-apps.conf
@@ -194,22 +245,32 @@ Configuration settings for applications used by Pootle.
 
   Two-tuple defining the markup filter to apply in certain textareas.
 
-  - Accepted values for the first element are ``textile``, ``markdown``,
-    ``restructuredtext`` and None
+  - Acceptable values for the first element are ``markdown`` and ``html``
+    (deprecated).
 
   - The second element should be a dictionary of keyword arguments that
     will be passed to the markup function
 
+  .. versionchanged:: 2.8
+     Support for ``textile``, ``restructuredtext`` and ``html`` formats has
+     been deprecated.
+
   Examples::
 
-    POOTLE_MARKUP_FILTER = (None, {})
+    POOTLE_MARKUP_FILTER = ('markdown', {})
 
-    POOTLE_MARKUP_FILTER = ('markdown', {'safe_mode': 'escape'})
-
-    POOTLE_MARKUP_FILTER = ('restructuredtext', {
-                                'settings_overrides': {
-                                    'report_level': 'quiet',
-                                 }
+    POOTLE_MARKUP_FILTER = ('markdown', {
+                                'clean': {
+                                    'extra_tags': ['div'],
+                                    'extra_attrs': {
+                                        '*': ['style']
+                                        'img': ['alt'],
+                                    },
+                                    'extra_styles': [
+                                        'color',
+                                        'font-weight'
+                                    ],
+                                },
                             })
 
 
@@ -250,30 +311,60 @@ Configuration settings for applications used by Pootle.
   - ``label`` specifying the text that will be displayed next to the mark.
 
 
-.. setting:: POOTLE_SCORE_COEFFICIENTS
+.. setting:: POOTLE_SCORES
 
-``POOTLE_SCORE_COEFFICIENTS``
+``POOTLE_SCORES``
   Default::
 
     {
-        'EDIT': 5.0/7,
-        'REVIEW': 2.0/7,
-        'SUGGEST': 0.2,
-        'ANALYZE': 0.1,
+        'suggestion_add': 0,
+        'suggestion_accept': .1,
+        'suggestion_reject': .1,
+        'comment_updated': .1,
+        'target_updated': .3,
+        'state_translated': .6,
+        'state_fuzzy': .1,
+        'state_unfuzzy': .1,
     }
 
-  .. versionadded:: 2.7.3
+  .. versionadded:: 2.8
+
+  The default score is based on the wordcount of the source text.  The values
+  of the various parameters are used as a multiplier to arrive at the score
+  atributed to the translators and reviewers.
+
+  Thus::
+
+    score = source wordcount * multiplier
+
+  When a translator translates a 10 word string they would get a score using
+  the ``state_translated`` multiplier of 0.6. ::
+
+    6 = 10 words * 0.6
 
   Parameters:
 
-  - ``EDIT`` - coefficient to calculate an user score change for
-    edit actions.
-  - ``REVIEW`` - coefficient to calculate an user score change for
-    review actions.
-  - ``SUGGEST`` - coefficient to calculate an user score change for
-    new suggestions.
-  - ``ANALYZE`` - coefficient to calculate an user score change for
-    rejecting suggestions and penalty for the rejected suggestion.
+  - ``suggestion_*`` - scoring for the events of adding a new suggestions,
+    accepting or rejecting existing suggestions.  By default adding a
+    suggestion gives no score, to prevent users from gaming the system.
+  - ``comment_*`` - making changes to the string comment.
+  - ``target_*`` - adjusting the existing translation.
+  - ``state_*`` - changing the state of the string, this includes translation
+    and fuzzy setting.
+
+
+.. setting:: POOTLE_FS_WORKING_PATH
+
+``POOTLE_FS_WORKING_PATH``
+  Default: ``working_path('.pootle_fs/tmp/')``
+
+  .. versionadded:: 2.8
+
+  The directory that Pootle FS uses to store temporary data for handling the
+  projects.
+
+  .. warning:: This directory can potentially get very large, so you need to
+     place it somewhere with plenty of room.
 
 
 60-translation.conf
@@ -293,16 +384,25 @@ Translation environment configuration settings.
   the trailing slash.
 
 
+.. setting:: AMAGAMA_SOURCE_LANGUAGES
+
+``AMAGAMA_SOURCE_LANGUAGES``
+  Default: ``('en', 'en_US', 'en-US')``
+
+  List of available source languages in amaGama server pointed to by
+  ``AMAGAMA_URL``.
+
+
 .. setting:: POOTLE_SYNC_FILE_MODE
 
 ``POOTLE_SYNC_FILE_MODE``
-  Default: ``0644``
+  Default: ``0o644``
 
   .. versionchanged:: 2.7
 
-  On POSIX systems, files synchronized to disk will be assigned this permission.
-  Use ``0644`` for publically-readable files or ``0600`` if you want only the
-  Pootle user to be able to read them.
+  On POSIX systems, files synchronized to disk will be assigned this
+  permission.  Use ``0o644`` for publically-readable files or ``0o600`` if you
+  want only the Pootle user to be able to read them.
 
 
 .. setting:: POOTLE_TM_SERVER
@@ -420,22 +520,6 @@ Translation environment configuration settings.
   :djadmin:`update_stores` will read from this directory.
 
 
-.. setting:: POOTLE_QUALITY_CHECKER
-
-``POOTLE_QUALITY_CHECKER``
-  Default: ``''``
-
-  .. versionadded:: 2.7
-
-  The import path to a class that provides alternate quality checks to
-  Pootle.  If it is unset then the Translate Toolkit checking functions are
-  used and you can make adjustments in the project's admin page.  If set
-  then the quality checker function is used for all projects.
-
-  .. note:: If set, only the checker function defined here is used instead of
-     the Translate Toolkit counterparts. Both cannot be selectively applied.
-
-
 .. setting:: POOTLE_WORDCOUNT_FUNC
 
 ``POOTLE_WORDCOUNT_FUNC``
@@ -448,23 +532,11 @@ Translation environment configuration settings.
   Current options:
 
   - Translate Toolkit (default) - translate.storage.statsdb.wordcount
-  - Pootle - pootle.core.utils.wordcount.wordcount
 
   Adding a custom function allows you to alter how words are counted.
 
-  .. warning:: Changing this function requires that you run
-     :djadmin:`refresh_stats --calculate-wordcount <refresh_stats>` to
-     recalculate the associated wordcounts.
-
-
-.. setting:: POOTLE_EXPORT_VIEW_LIMIT
-
-``POOTLE_EXPORT_VIEW_LIMIT``
-  Default: ``10000``
-
-  .. versionadded:: 2.8
-
-  The maximum number of units that will be exported in export views.
+  .. warning:: Changing this function requires that you recalculate the
+     associated wordcounts.
 
 
 .. _settings#deprecated:
@@ -560,3 +632,20 @@ Deprecated Settings
 ``EXPORTED_DIRECTORY_MODE``
   .. deprecated:: 2.7
      Offline translation support was rewritten and the setting was unused.
+
+
+.. setting:: POOTLE_QUALITY_CHECKER
+
+``POOTLE_QUALITY_CHECKER``
+  .. deprecated:: 2.8
+     To simplify checker code, the ability to have a custom quality checker was
+     removed.  To create custom checks, write them within the Translate
+     Toolkit.
+
+
+.. setting:: POOTLE_SCORE_COEFFICIENTS
+
+``POOTLE_SCORE_COEFFICIENTS``
+  .. removed:: 2.8
+     A rewrite of the scoring in Pootle now uses :setting:`POOTLE_SCORE` to
+     store score adjustment coefficients.

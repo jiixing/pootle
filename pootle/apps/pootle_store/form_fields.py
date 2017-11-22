@@ -7,10 +7,10 @@
 # AUTHORS file for copyright and authorship information.
 
 from django import forms
-from django.utils.datastructures import MergeDict, MultiValueDict
+from django.utils.datastructures import MultiValueDict
 
 from pootle.core.dateparse import parse_datetime
-from pootle_misc.checks import CATEGORY_IDS
+from pootle_checks.constants import CATEGORY_IDS
 
 
 class CommaSeparatedCheckboxSelectMultiple(forms.CheckboxSelectMultiple):
@@ -19,7 +19,7 @@ class CommaSeparatedCheckboxSelectMultiple(forms.CheckboxSelectMultiple):
         # Accept `sfields` to be a comma-separated string of fields (#46)
         if "," in data.get(name, ""):
             return data.get(name).split(u',')
-        if isinstance(data, (MultiValueDict, MergeDict)):
+        if isinstance(data, MultiValueDict):
             return data.getlist(name)
         return data.get(name, None)
 

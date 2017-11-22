@@ -7,6 +7,7 @@
 # AUTHORS file for copyright and authorship information.
 
 import logging
+import time
 
 
 logger = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ class ItemState(object):
                  == sorted(other.kwargs.items())))
 
     def __getattr__(self, k):
-        if k in self.kwargs:
+        if self.__dict__.get("kwargs") and k in self.__dict__["kwargs"]:
             return self.kwargs[k]
         return self.__getattribute__(k)
 
@@ -46,11 +47,12 @@ class State(object):
     item_state_class = ItemState
     prefix = "state"
 
-    def __init__(self, context, **kwargs):
+    def __init__(self, context, load=True, **kwargs):
         self.context = context
         self.__state__ = {}
         self.kwargs = kwargs
-        self.reload()
+        if load:
+            self.reload()
 
     def __contains__(self, k):
         return k in self.__state__ and self.__state__[k]
@@ -64,6 +66,9 @@ class State(object):
 
     def __getitem__(self, k):
         return self.__state__[k]
+
+    def __setitem__(self, k, v):
+        self.__state__[k] = v
 
     def __iter__(self):
         for k in self.__state__:
@@ -85,6 +90,10 @@ class State(object):
                           if self.__state__[k]])))
 
     @property
+    def changed(self):
+        return {k: len(v) for k, v in self.__state__.items() if v}
+
+    @property
     def has_changed(self):
         return any(self.__state__.values())
 
@@ -102,16 +111,26 @@ class State(object):
     def reload(self):
         self.clear_cache()
         logger.debug("Checking state")
-
+        reload_start = time.time()
         for k in self.states:
+            start = time.time()
             state_attr = getattr(
                 self, "%s_%s" % (self.prefix, k), None)
+            count = 0
             if callable(state_attr):
                 for v in state_attr(**self.kwargs):
+                    count += 1
                     self.add(
                         k, self.item_state_class(self, k, **v))
             else:
                 for v in state_attr:
+                    count += 1
                     self.add(
                         k, self.item_state_class(self, k, **v))
+            logger.debug(
+                "Checked '%s' (%s) in %s seconds",
+                k, count, time.time() - start)
+        logger.debug(
+            "Reloaded state in %s seconds",
+            time.time() - reload_start)
         return self

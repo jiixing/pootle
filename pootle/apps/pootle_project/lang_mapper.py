@@ -74,8 +74,8 @@ class ProjectLanguageMapper(object):
         for preset_name in self.project_presets:
             if preset_name not in self.site_presets:
                 logger.warning(
-                    "Unrecognised lang mapping preset: %s"
-                    % preset_name)
+                    "Unrecognised lang mapping preset: %s",
+                    preset_name)
                 continue
             mappings.update(self.site_presets[preset_name])
         return mappings
@@ -85,13 +85,18 @@ class ProjectLanguageMapper(object):
         """Language mappings after Project.config and presets are parsed"""
         return self._parse_mappings()
 
+    @cached_property
+    def all_languages(self):
+        return {
+            lang.code: lang
+            for lang in Language.objects.all()}
+
     @lru_cache()
     def get_lang(self, upstream_code):
         """Return a `Language` for a given code after mapping"""
         try:
-            return Language.objects.get(
-                code=self.get_pootle_code(upstream_code))
-        except Language.DoesNotExist:
+            return self.all_languages[self.get_pootle_code(upstream_code)]
+        except KeyError:
             return None
 
     def get_pootle_code(self, upstream_code):

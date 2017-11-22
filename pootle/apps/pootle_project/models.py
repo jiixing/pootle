@@ -6,35 +6,39 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
-import logging
 import os
+import shutil
 from collections import OrderedDict
 
 from translate.filters import checks
 from translate.lang.data import langcode_re
 
 from django.conf import settings
+from django.contrib.contenttypes.fields import GenericRelation
 from django.core.cache import cache
-from django.core.exceptions import ObjectDoesNotExist
-from django.core.urlresolvers import reverse
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models
 from django.db.models import Q
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
+from django.urls import reverse
 from django.utils.encoding import iri_to_uri
 from django.utils.functional import cached_property
-from django.utils.translation import ugettext_lazy as _
+
+from sortedm2m.fields import SortedManyToManyField
 
 from pootle.core.cache import make_method_key
+from pootle.core.delegate import data_tool, filetype_tool, lang_mapper, tp_tool
 from pootle.core.mixins import CachedTreeItem
 from pootle.core.models import VirtualResource
-from pootle.core.url_helpers import (get_editor_filter, get_path_sortkey,
-                                     split_pootle_path, to_tp_relative_path)
+from pootle.core.url_helpers import get_editor_filter, split_pootle_path
+from pootle.i18n.gettext import ugettext_lazy as _
 from pootle_app.models.directory import Directory
 from pootle_app.models.permissions import PermissionSet
 from pootle_config.utils import ObjectConfig
-from pootle_store.filetypes import factory_classes
-from pootle_store.models import Store
+from pootle_format.models import Format
+from pootle_format.utils import ProjectFiletypes
+from pootle_revision.models import Revision
 from pootle_store.util import absolute_real_path
 from staticpages.models import StaticPage
 
@@ -43,6 +47,8 @@ RESERVED_PROJECT_CODES = ('admin', 'translate', 'settings')
 PROJECT_CHECKERS = {
     "none": checks.TranslationChecker,
     "standard": checks.StandardChecker,
+    "minimal": checks.MinimalChecker,
+    "reduced": checks.ReducedChecker,
     "openoffice": checks.OpenOfficeChecker,
     "libreoffice": checks.LibreOfficeChecker,
     "mozilla": checks.MozillaChecker,
@@ -52,10 +58,25 @@ PROJECT_CHECKERS = {
     "creativecommons": checks.CCLicenseChecker,
     "drupal": checks.DrupalChecker,
     "terminology": checks.TermChecker,
+    "l20n": checks.L20nChecker,
 }
 
 
 class ProjectManager(models.Manager):
+
+    def create(self, *args, **kwargs):
+        filetypes = Format.objects.filter(name__in=kwargs.pop("filetypes", ["po"]))
+        project = super(ProjectManager, self).create(*args, **kwargs)
+        for filetype in filetypes:
+            project.filetypes.add(filetype)
+        return project
+
+    def get_or_create(self, *args, **kwargs):
+        project, created = super(
+            ProjectManager, self).get_or_create(*args, **kwargs)
+        if created and not project.filetypes.count():
+            project.filetypes.add(Format.objects.get(name="po"))
+        return project, created
 
     def cached_dict(self, user):
         """Return a cached ordered dictionary of projects tuples for `user`.
@@ -71,10 +92,10 @@ class ProjectManager(models.Manager):
             cache_params = {'username': user.username}
         else:
             cache_params = {'is_admin': user.is_superuser}
-        cache_key = make_method_key('Project', 'cached_dict', cache_params)
+        cache_key = iri_to_uri(make_method_key('Project', 'cached_dict',
+                                               cache_params))
         projects = cache.get(cache_key)
         if not projects:
-            logging.debug('Cache miss for %s', cache_key)
             projects_dict = self.for_user(user).order_by('fullname') \
                                                .values('code', 'fullname',
                                                        'disabled')
@@ -126,11 +147,11 @@ class ProjectURLMixin(object):
     """
 
     def get_absolute_url(self):
-        lang, proj, dir, fn = split_pootle_path(self.pootle_path)
+        proj_code = split_pootle_path(self.pootle_path)[1]
 
-        if proj is not None:
+        if proj_code is not None:
             pattern_name = 'pootle-project-browse'
-            pattern_args = [proj, '']
+            pattern_args = [proj_code, '']
         else:
             pattern_name = 'pootle-projects-browse'
             pattern_args = []
@@ -138,11 +159,11 @@ class ProjectURLMixin(object):
         return reverse(pattern_name, args=pattern_args)
 
     def get_translate_url(self, **kwargs):
-        lang, proj, dir, fn = split_pootle_path(self.pootle_path)
+        proj_code, dir_path, filename = split_pootle_path(self.pootle_path)[1:]
 
-        if proj is not None:
+        if proj_code is not None:
             pattern_name = 'pootle-project-translate'
-            pattern_args = [proj, dir, fn]
+            pattern_args = [proj_code, dir_path, filename]
         else:
             pattern_name = 'pootle-projects-translate'
             pattern_args = []
@@ -153,6 +174,23 @@ class ProjectURLMixin(object):
         ])
 
 
+def validate_not_reserved(value):
+    if value in RESERVED_PROJECT_CODES:
+        raise ValidationError(
+            _('"%(code)s" cannot be used as a project code'),
+            params={'code': value},
+        )
+
+
+def validate_project_checker(value):
+    if value not in PROJECT_CHECKERS.keys():
+        raise ValidationError(
+            # Translators: this refers to the project quality checker
+            _('"%(code)s" cannot be used as a project checker'),
+            params={'code': value},
+        )
+
+
 class Project(models.Model, CachedTreeItem, ProjectURLMixin):
 
     code_help_text = _('A short code for the project. This should only '
@@ -161,32 +199,28 @@ class Project(models.Model, CachedTreeItem, ProjectURLMixin):
     # any changes to the `code` field may require updating the schema
     # see migration 0003_case_sensitive_schema.py
     code = models.CharField(max_length=255, null=False, unique=True,
-                            db_index=True, verbose_name=_('Code'),
+                            db_index=True, verbose_name=_('Code'), blank=False,
+                            validators=[validate_not_reserved],
                             help_text=code_help_text)
 
-    fullname = models.CharField(max_length=255, null=False,
+    fullname = models.CharField(max_length=255, null=False, blank=False,
                                 verbose_name=_("Full Name"))
 
-    checker_choices = [
-        (checker, checker)
-        for checker
-        in sorted(PROJECT_CHECKERS.keys())]
     checkstyle = models.CharField(
         max_length=50,
         default='standard',
         null=False,
-        choices=checker_choices,
+        validators=[validate_project_checker],
         verbose_name=_('Quality Checks'))
 
-    localfiletype = models.CharField(max_length=50, default="po",
-                                     verbose_name=_('File Type'))
+    filetypes = SortedManyToManyField(Format)
 
     treestyle_choices = (
         # TODO: check that the None is stored and handled correctly
-        ('auto', _('Automatic detection of gnu/non-gnu file layouts (slower)')),
+        ('auto', _('Automatic detection of GNU/non-GNU file layouts (slower)')),
         ('gnu', _('GNU style: files named by language code')),
         ('nongnu', _('Non-GNU: Each language in its own directory')),
-        ('none', _('Allow pootle_fs to manage filesystems')),
+        ('pootle_fs', _('Allow Pootle FS to manage filesystems (Experimental)')),
     )
     treestyle = models.CharField(max_length=20, default='auto',
                                  choices=treestyle_choices,
@@ -194,26 +228,29 @@ class Project(models.Model, CachedTreeItem, ProjectURLMixin):
 
     source_language = models.ForeignKey(
         'pootle_language.Language', db_index=True,
-        verbose_name=_('Source Language'))
+        verbose_name=_('Source Language'), on_delete=models.CASCADE)
 
     ignoredfiles = models.CharField(
         max_length=255, blank=True, null=False, default="",
         verbose_name=_('Ignore Files'))
 
-    directory = models.OneToOneField('pootle_app.Directory', db_index=True,
-                                     editable=False)
+    directory = models.OneToOneField(
+        'pootle_app.Directory', db_index=True, editable=False,
+        on_delete=models.CASCADE)
     report_email = models.EmailField(
         max_length=254, blank=True, verbose_name=_("Errors Report Email"),
         help_text=_('An email address where issues with the source text '
                     'can be reported.'))
 
     screenshot_search_prefix = models.URLField(
+        # Translators: This is the URL prefix to search for context screenshots
         blank=True, null=True, verbose_name=_('Screenshot Search Prefix'))
 
     creation_time = models.DateTimeField(auto_now_add=True, db_index=True,
                                          editable=False, null=True)
 
     disabled = models.BooleanField(verbose_name=_('Disabled'), default=False)
+    revisions = GenericRelation(Revision)
 
     objects = ProjectManager()
 
@@ -245,8 +282,6 @@ class Project(models.Model, CachedTreeItem, ProjectURLMixin):
         if user_projects is not None:
             return user_projects
 
-        logging.debug(u'Cache miss for %s', key)
-
         # FIXME: use `cls.objects.cached_dict().keys()`
         ALL_PROJECTS = cls.objects.values_list('code', flat=True)
 
@@ -255,7 +290,7 @@ class Project(models.Model, CachedTreeItem, ProjectURLMixin):
         else:
             ALL_PROJECTS = set(ALL_PROJECTS)
 
-            if user.is_anonymous():
+            if user.is_anonymous:
                 allow_usernames = [username]
                 forbid_usernames = [username, 'default']
             else:
@@ -296,16 +331,31 @@ class Project(models.Model, CachedTreeItem, ProjectURLMixin):
 
         return user_projects
 
+    @cached_property
+    def data_tool(self):
+        return data_tool.get(self.__class__)(self)
+
     # # # # # # # # # # # # # #  Properties # # # # # # # # # # # # # # # # # #
 
     @cached_property
     def config(self):
         return ObjectConfig(self)
 
+    @cached_property
+    def filetype_tool(self):
+        return filetype_tool.get(self.__class__)(self)
+
+    @cached_property
+    def lang_mapper(self):
+        return lang_mapper.get(self.__class__, instance=self)
+
+    @cached_property
+    def tp_tool(self):
+        return tp_tool.get(self.__class__)(self)
+
     @property
     def local_fs_path(self):
-        return os.path.join(
-            settings.POOTLE_FS_PATH, self.code)
+        return os.path.join(settings.POOTLE_FS_WORKING_PATH, self.code)
 
     @property
     def name(self):
@@ -331,38 +381,20 @@ class Project(models.Model, CachedTreeItem, ProjectURLMixin):
         return Language.objects.filter(Q(translationproject__project=self),
                                        ~Q(code='templates'))
 
-    @cached_property
-    def resources(self):
-        """Returns a list of :cls:`~pootle_app.models.Directory` and
-        :cls:`~pootle_store.models.Store` resource paths available for
-        this :cls:`~pootle_project.models.Project` across all languages.
-        """
-        cache_key = make_method_key(self, 'resources', self.code)
-        resources = cache.get(cache_key, None)
-        if resources is not None:
-            return resources
-
-        stores = Store.objects.live().order_by().filter(
-            translation_project__project__pk=self.pk)
-        dirs = Directory.objects.live().order_by().filter(
-            pootle_path__regex=r"^/[^/]*/%s/" % self.code)
-        resources = sorted(
-            {to_tp_relative_path(pootle_path)
-             for pootle_path
-             in (set(stores.values_list("pootle_path", flat=True))
-                 | set(dirs.values_list("pootle_path", flat=True)))},
-            key=get_path_sortkey)
-        cache.set(cache_key, resources, settings.POOTLE_CACHE_TIMEOUT)
-        return resources
-
     # # # # # # # # # # # # # #  Methods # # # # # # # # # # # # # # # # # # #
 
     def __unicode__(self):
         return self.fullname
 
     def save(self, *args, **kwargs):
+        self.fullname = self.fullname.strip()
+        self.code = self.code.strip()
+
+        # Force validation of fields.
+        self.full_clean()
+
         requires_translation_directory = (
-            not self.treestyle == "none"
+            self.treestyle != 'pootle_fs'
             and not self.disabled
             and not self.directory_exists_on_disk())
         if requires_translation_directory:
@@ -374,6 +406,9 @@ class Project(models.Model, CachedTreeItem, ProjectURLMixin):
         super(Project, self).save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
+        if os.path.exists(self.local_fs_path):
+            shutil.rmtree(self.local_fs_path)
+
         directory = self.directory
 
         # Just doing a plain delete will collect all related objects in memory
@@ -401,15 +436,7 @@ class Project(models.Model, CachedTreeItem, ProjectURLMixin):
     def get_children(self):
         return self.translationproject_set.live()
 
-    def get_cachekey(self):
-        return self.directory.pootle_path
-
     # # # /TreeItem
-
-    def get_stats_for_user(self, user):
-        self.set_children(self.get_children_for_user(user))
-
-        return self.get_stats()
 
     def get_children_for_user(self, user, select_related=None):
         """Returns children translation projects for a specific `user`."""
@@ -433,32 +460,23 @@ class Project(models.Model, CachedTreeItem, ProjectURLMixin):
 
         return self.code in Project.accessible_by_user(user)
 
-    def get_template_filetype(self):
-        if self.localfiletype == 'po':
-            return 'pot'
-        else:
-            return self.localfiletype
-
-    def get_file_class(self):
-        """Returns the TranslationStore subclass required for parsing project
-        files.
-        """
-        return factory_classes[self.localfiletype]
-
     def file_belongs_to_project(self, filename, match_templates=True):
         """Tests if ``filename`` matches project filetype (ie. extension).
 
         If ``match_templates`` is ``True``, this will also check if the file
         matches the template filetype.
         """
-        template_ext = os.path.extsep + self.get_template_filetype()
-        return (filename.endswith(os.path.extsep + self.localfiletype)
-                or match_templates and filename.endswith(template_ext))
+        ext = os.path.splitext(filename)[1][1:]
+        filetypes = ProjectFiletypes(self)
+        return (
+            ext in filetypes.filetype_extensions
+            or (match_templates
+                and ext in filetypes.template_extensions))
 
     def _detect_treestyle(self):
         try:
             dirlisting = os.walk(self.get_real_path())
-            dirpath, dirnames, filenames = dirlisting.next()
+            dirpath_, dirnames, filenames = dirlisting.next()
 
             if not dirnames:
                 # No subdirectories
@@ -473,7 +491,7 @@ class Project(models.Model, CachedTreeItem, ProjectURLMixin):
                 return "nongnu"
 
             # No language subdirs found, look for any translation file
-            for dirpath, dirnames, filenames in os.walk(self.get_real_path()):
+            for dirpath_, dirnames, filenames in os.walk(self.get_real_path()):
                 if filter(self.file_belongs_to_project, filenames):
                     return "gnu"
         except:
@@ -526,20 +544,14 @@ class ProjectResource(VirtualResource, ProjectURLMixin):
             self.pootle_path == other.pootle_path
             and list(self.get_children()) == list(other.get_children()))
 
-    # # # TreeItem
-
-    def _get_code(self, resource):
-        return split_pootle_path(resource.pootle_path)[0]
-
-    # # # /TreeItem
+    @cached_property
+    def data_tool(self):
+        return data_tool.get(self.__class__)(self)
 
     def get_children_for_user(self, user, select_related=None):
         if select_related:
             return self.children.select_related(*select_related)
         return self.children
-
-    def get_stats_for_user(self, user):
-        return self.get_stats()
 
 
 class ProjectSet(VirtualResource, ProjectURLMixin):
@@ -553,31 +565,14 @@ class ProjectSet(VirtualResource, ProjectURLMixin):
         self.directory = Directory.objects.projects
         super(ProjectSet, self).__init__(resources, self.directory.pootle_path)
 
-    # # # TreeItem
-
-    def _get_code(self, project):
-        return project.code
-
-    # # # /TreeItem
+    @cached_property
+    def data_tool(self):
+        return data_tool.get(self.__class__)(self)
 
 
 @receiver([post_delete, post_save])
-def invalidate_resources_cache(sender, instance, **kwargs):
-    if instance.__class__.__name__ not in ['Directory', 'Store']:
-        return
-
-    # Don't invalidate if the save didn't create new objects
-    if (('created' in kwargs and 'raw' in kwargs) and
-        (not kwargs['created'] or kwargs['raw'])):
-        return
-
-    lang, proj, dir, fn = split_pootle_path(instance.pootle_path)
-    if proj is not None:
-        cache.delete(make_method_key(Project, 'resources', proj))
-
-
-@receiver([post_delete, post_save])
-def invalidate_accessible_projects_cache(sender, instance, **kwargs):
+def invalidate_accessible_projects_cache(**kwargs):
+    instance = kwargs["instance"]
     # XXX: maybe use custom signals or simple function calls?
     if (instance.__class__.__name__ not in
         ['Project', 'TranslationProject', 'PermissionSet']):

@@ -7,11 +7,14 @@
 # AUTHORS file for copyright and authorship information.
 
 from django.contrib import auth
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import get_language
 from django.views.generic import DetailView, UpdateView
 
-from pootle.core.views import (APIView, NoDefaultUserMixin, TestUserFieldMixin,
-                               UserObjectMixin)
+from pootle.core.delegate import profile
+from pootle.core.views import APIView
+from pootle.core.views.mixins import (NoDefaultUserMixin, TestUserFieldMixin,
+                                      UserObjectMixin)
+from pootle.i18n.gettext import ugettext_lazy as _
 
 from .forms import EditUserForm
 
@@ -29,9 +32,13 @@ class UserAPIView(TestUserFieldMixin, APIView):
 class UserDetailView(NoDefaultUserMixin, UserObjectMixin, DetailView):
     template_name = 'user/profile.html'
 
+    @property
+    def request_lang(self):
+        return get_language()
+
     def get_context_data(self, **kwargs):
         context = super(UserDetailView, self).get_context_data(**kwargs)
-        context['user_is_manager'] = self.request.user.has_manager_permissions()
+        context["profile"] = profile.get(self.object.__class__)(self.object)
         return context
 
 

@@ -11,26 +11,16 @@ from django.conf.urls import url
 from . import views
 
 
-urlpatterns = [
-    # permalinks
-    url(r'^unit/(?P<uid>[0-9]+)/?$',
-        views.permalink_redirect,
-        name='pootle-unit-permalink'),
-
-    # XHR
-    url(r'^xhr/stats/checks/?$',
-        views.get_qualitycheck_stats,
-        name='pootle-xhr-stats-checks'),
-    url(r'^xhr/stats/?$',
-        views.get_stats,
-        name='pootle-xhr-stats'),
-
+get_units_urlpatterns = [
     url(r'^xhr/units/?$',
         views.get_units,
-        name='pootle-xhr-units'),
+        name='pootle-xhr-units')]
 
+unit_xhr_urlpatterns = [
+
+    # XHR
     url(r'^xhr/units/(?P<uid>[0-9]+)/?$',
-        views.submit,
+        views.UnitSubmitJSON.as_view(),
         name='pootle-xhr-units-submit'),
     url(r'^xhr/units/(?P<uid>[0-9]+)/comment/?$',
         views.comment,
@@ -46,13 +36,20 @@ urlpatterns = [
         name='pootle-xhr-units-timeline'),
 
     url(r'^xhr/units/(?P<uid>[0-9]+)/suggestions/?$',
-        views.suggest,
+        views.UnitAddSuggestionJSON.as_view(),
         name='pootle-xhr-units-suggest'),
     url(r'^xhr/units/(?P<uid>[0-9]+)/suggestions/(?P<sugg_id>[0-9]+)/?$',
-        views.manage_suggestion,
+        views.UnitSuggestionJSON.as_view(),
         name='pootle-xhr-units-suggest-manage'),
 
     url(r'^xhr/units/(?P<uid>[0-9]+)/checks/(?P<check_id>[0-9]+)/toggle/?$',
         views.toggle_qualitycheck,
         name='pootle-xhr-units-checks-toggle'),
 ]
+
+urlpatterns = (
+    [url(r'^unit/(?P<uid>[0-9]+)/?$',
+         views.permalink_redirect,
+         name='pootle-unit-permalink')]
+    + get_units_urlpatterns
+    + unit_xhr_urlpatterns)

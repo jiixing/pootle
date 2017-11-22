@@ -11,16 +11,11 @@ from hashlib import md5
 import factory
 
 from django.utils import timezone
+from django.utils.encoding import force_bytes
 
 import pootle_store
+from pootle.core.delegate import wordcount
 from pootle.core.utils.timezone import make_aware
-
-
-class ScoreLogFactory(factory.django.DjangoModelFactory):
-    creation_time = make_aware(timezone.now())
-
-    class Meta(object):
-        model = 'pootle_statistics.ScoreLog'
 
 
 class SubmissionFactory(factory.django.DjangoModelFactory):
@@ -78,6 +73,8 @@ class LanguageDBFactory(factory.django.DjangoModelFactory):
         model = 'pootle_language.Language'
         django_get_or_create = ("code", )
 
+    nplurals = 2
+
     @factory.lazy_attribute
     def code(self):
         from pootle_language.models import Language
@@ -91,6 +88,12 @@ class LanguageDBFactory(factory.django.DjangoModelFactory):
 
         # returns an incrementing index relative to the tp
         return 'Language %s' % (Language.objects.count() - 1)
+
+    @factory.lazy_attribute
+    def specialchars(self):
+        from pootle_language.models import Language
+
+        return "" if (Language.objects.count() - 1) % 2 == 0 else u"ñ\u200c€"
 
 
 class ProjectDBFactory(factory.django.DjangoModelFactory):
@@ -113,8 +116,8 @@ class ProjectDBFactory(factory.django.DjangoModelFactory):
         # returns an incrementing index relative to the tp
         return 'Project %s' % Project.objects.count()
 
-    pootle_path = factory.LazyAttribute(lambda p: "/projects/%s" % p.code)
     checkstyle = "standard"
+    treestyle = 'pootle_fs'
 
 
 class StoreDBFactory(factory.django.DjangoModelFactory):
@@ -151,7 +154,7 @@ class UnitDBFactory(factory.django.DjangoModelFactory):
     class Meta(object):
         model = 'pootle_store.Unit'
 
-    state = pootle_store.util.UNTRANSLATED
+    state = pootle_store.constants.UNTRANSLATED
 
     @factory.lazy_attribute
     def index(self):
@@ -164,7 +167,7 @@ class UnitDBFactory(factory.django.DjangoModelFactory):
 
     @factory.lazy_attribute
     def unitid_hash(self):
-        return md5(self.unitid.encode("utf-8")).hexdigest()
+        return md5(force_bytes(self.unitid)).hexdigest()
 
     @factory.lazy_attribute
     def source_f(self):
@@ -192,16 +195,21 @@ class UnitDBFactory(factory.django.DjangoModelFactory):
                    ending))
         return ""
 
+    @factory.lazy_attribute
+    def target_wordcount(self):
+        from pootle_store.models import Unit
+
+        counter = wordcount.get(Unit)
+        return counter.count_words(self.target_f)
+
 
 class VirtualFolderDBFactory(factory.django.DjangoModelFactory):
 
     class Meta(object):
         model = 'virtualfolder.VirtualFolder'
-        django_get_or_create = ("location", "is_public", "filter_rules")
 
     priority = 2
     is_public = True
-    location = "/{LANG}/{PROJ}/"
 
     @factory.lazy_attribute
     def name(self):

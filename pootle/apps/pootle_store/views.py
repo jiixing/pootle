@@ -6,108 +6,82 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
-import copy
+import calendar
+import unicodedata
+from collections import OrderedDict
 
 from translate.lang import data
 
 from django import forms
 from django.conf import settings
-from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
+from django.core.exceptions import ObjectDoesNotExist
 from django.http import Http404, QueryDict
-from django.shortcuts import redirect
-from django.template import RequestContext, loader
-from django.utils import timezone
+from django.shortcuts import get_object_or_404, redirect
+from django.template import loader
 from django.utils.functional import cached_property
 from django.utils.lru_cache import lru_cache
-from django.utils.translation import to_locale, ugettext as _
+from django.utils.translation import to_locale
 from django.utils.translation.trans_real import parse_accept_lang_header
 from django.views.decorators.http import require_http_methods
+from django.views.generic import FormView
 
-from pootle.core.decorators import (get_path_obj, get_resource,
-                                    permission_required)
 from pootle.core.delegate import search_backend
 from pootle.core.exceptions import Http400
 from pootle.core.http import JsonResponse, JsonResponseBadRequest
 from pootle.core.utils import dateformat
 from pootle.core.views import PootleJSON
-from pootle_app.models.directory import Directory
-from pootle_app.models.permissions import (check_permission,
-                                           check_user_permission)
-from pootle_comment.forms import UnsecuredCommentForm
+from pootle.core.views.decorators import requires_permission, set_permissions
+from pootle.core.views.mixins import GatherContextMixin, PootleJSONMixin
+from pootle.i18n.dates import timesince
+from pootle.i18n.gettext import ugettext as _
+from pootle_app.models.permissions import check_user_permission
+from pootle_language.models import Language
 from pootle_misc.util import ajax_required
-from pootle_statistics.models import (Submission, SubmissionFields,
-                                      SubmissionTypes)
 
 from .decorators import get_unit_context
 from .forms import (
-    highlight_whitespace, unit_comment_form_factory,
-    unit_form_factory, UnitSearchForm)
-from .models import Unit
-from .templatetags.store_tags import (highlight_diffs, pluralize_source,
-                                      pluralize_target)
+    AddSuggestionForm, SubmitForm, SuggestionReviewForm, SuggestionSubmitForm,
+    UnitSearchForm, unit_comment_form_factory, unit_form_factory)
+from .models import Suggestion, Unit
+from .templatetags.store_tags import pluralize_source, pluralize_target
 from .unit.results import GroupedResults
 from .unit.timeline import Timeline
 from .util import find_altsrcs
 
 
-#: Mapping of allowed sorting criteria.
-#: Keys are supported query strings, values are the field + order that
-#: will be used against the DB.
-ALLOWED_SORTS = {
-    'units': {
-        'priority': '-priority',
-        'oldest': 'submitted_on',
-        'newest': '-submitted_on',
-    },
-    'suggestions': {
-        'oldest': 'suggestion__creation_time',
-        'newest': '-suggestion__creation_time',
-    },
-    'submissions': {
-        'oldest': 'submission__creation_time',
-        'newest': '-submission__creation_time',
-    },
-}
-
-
-#: List of fields from `ALLOWED_SORTS` that can be sorted by simply using
-#: `order_by(field)`
-SIMPLY_SORTED = ['units']
-
-
 def get_alt_src_langs(request, user, translation_project):
+    if request.user.is_anonymous:
+        return
     language = translation_project.language
     project = translation_project.project
     source_language = project.source_language
+    langs = list(
+        user.alt_src_langs.exclude(
+            id__in=(language.id, source_language.id)
+        ).filter(
+            translationproject__project=project))
+    if langs:
+        return langs
+    accept = request.META.get('HTTP_ACCEPT_LANGUAGE', '')
+    for accept_lang, __ in parse_accept_lang_header(accept):
+        if accept_lang == '*':
+            continue
+        normalized = to_locale(
+            data.normalize_code(
+                data.simplify_to_common(accept_lang)))
+        code = to_locale(accept_lang)
+        is_source_lang = any(
+            langcode in ('en', 'en_US', source_language.code, language.code)
+            for langcode in [code, normalized])
+        if is_source_lang:
+            continue
 
-    langs = user.alt_src_langs.exclude(
-        id__in=(language.id, source_language.id)
-    ).filter(translationproject__project=project)
-
-    if not user.alt_src_langs.count():
-        from pootle_language.models import Language
-        accept = request.META.get('HTTP_ACCEPT_LANGUAGE', '')
-
-        for accept_lang, unused in parse_accept_lang_header(accept):
-            if accept_lang == '*':
-                continue
-
-            simplified = data.simplify_to_common(accept_lang)
-            normalized = to_locale(data.normalize_code(simplified))
-            code = to_locale(accept_lang)
-            if (normalized in
-                    ('en', 'en_US', source_language.code, language.code) or
-                code in ('en', 'en_US', source_language.code, language.code)):
-                continue
-
-            langs = Language.objects.filter(
+        langs = list(
+            Language.objects.filter(
                 code__in=(normalized, code),
-                translationproject__project=project,
-            )
-            if langs.count():
-                break
-
-    return langs
+                translationproject__project=project))
+        if langs:
+            return langs
 
 
 #
@@ -176,13 +150,15 @@ def _get_critical_checks_snippet(request, unit):
     ctx = {
         'canreview': can_review,
         'unit': unit,
+        'critical_checks': list(unit.get_critical_qualitychecks()),
+        'warning_checks': list(unit.get_warning_qualitychecks()),
     }
     template = loader.get_template('editor/units/xhr_checks.html')
-    return template.render(RequestContext(request, ctx))
+    return template.render(context=ctx, request=request)
 
 
 @ajax_required
-def get_units(request):
+def get_units(request, **kwargs_):
     """Gets source and target texts and its metadata.
 
     :return: A JSON-encoded string containing the source and target texts
@@ -217,7 +193,7 @@ def get_units(request):
 
 @ajax_required
 @get_unit_context('view')
-def get_more_context(request, unit):
+def get_more_context(request, unit, **kwargs_):
     """Retrieves more context units.
 
     :return: An object in JSON notation that contains the source and target
@@ -235,7 +211,7 @@ def get_more_context(request, unit):
 @ajax_required
 @require_http_methods(['POST', 'DELETE'])
 @get_unit_context('translate')
-def comment(request, unit):
+def comment(request, unit, **kwargs_):
     """Dispatches the comment action according to the HTTP verb."""
     if request.method == 'DELETE':
         return delete_comment(request, unit)
@@ -243,12 +219,12 @@ def comment(request, unit):
         return save_comment(request, unit)
 
 
-def delete_comment(request, unit):
+def delete_comment(request, unit, **kwargs_):
     """Deletes a comment by blanking its contents and records a new
     submission.
     """
-    unit.commented_by = None
-    unit.commented_on = None
+    unit.change.commented_by = None
+    unit.change.commented_on = None
 
     language = request.translation_project.language
     comment_form_class = unit_comment_form_factory(language)
@@ -267,9 +243,6 @@ def save_comment(request, unit):
     :return: If the form validates, the cleaned comment is returned.
              An error message is returned otherwise.
     """
-    # Update current unit instance's attributes
-    unit.commented_by = request.user
-    unit.commented_on = timezone.now().replace(microsecond=0)
 
     language = request.translation_project.language
     form = unit_comment_form_factory(language)(request.POST, instance=unit,
@@ -289,9 +262,9 @@ def save_comment(request, unit):
             'cansuggest': check_user_permission(user, 'suggest', directory),
         }
         t = loader.get_template('editor/units/xhr_comment.html')
-        c = RequestContext(request, ctx)
 
-        return JsonResponse({'comment': t.render(c)})
+        return JsonResponse({'comment': t.render(context=ctx,
+                                                 request=request)})
 
     return JsonResponseBadRequest({'msg': _("Comment submission failed.")})
 
@@ -303,10 +276,7 @@ class PootleUnitJSON(PootleJSON):
     @cached_property
     def permission_context(self):
         self.object = self.get_object()
-        tp_prefix = "parent__" * (self.pootle_path.count("/") - 3)
-        return Directory.objects.select_related(
-            "%stranslationproject__project"
-            % tp_prefix).get(pk=self.store.parent_id)
+        return self.store.parent
 
     @property
     def pootle_path(self):
@@ -359,42 +329,87 @@ class UnitTimelineJSON(PootleUnitJSON):
 
     def get_context_data(self, *args, **kwargs):
         return dict(
-            entries_group=self.timeline.grouped_entries,
+            event_groups=self.timeline.grouped_events(),
             language=self.language)
 
     def get_queryset(self):
         return Unit.objects.get_translatable(self.request.user).select_related(
+            "change",
             "store__translation_project__language",
             "store__translation_project__project__directory")
 
     def get_response_data(self, context):
         return {
             'uid': self.object.id,
-            'entries_group': self.get_entries_group_data(context),
+            'event_groups': self.get_event_groups_data(context),
             'timeline': self.render_timeline(context)}
 
     def render_timeline(self, context):
-        return loader.get_template(
-            self.template_name).render(context).replace('\n', '')
+        return loader.get_template(self.template_name).render(context=context)
 
-    def get_entries_group_data(self, context):
+    def get_event_groups_data(self, context):
         result = []
-        for entry_group in context['entries_group']:
-            display_dt = entry_group['datetime']
+        for event_group in context['event_groups']:
+            display_dt = event_group['datetime']
             if display_dt is not None:
                 display_dt = dateformat.format(display_dt)
-                iso_dt = entry_group['datetime'].isoformat()
+                iso_dt = event_group['datetime'].isoformat()
+                relative_time = timesince(
+                    calendar.timegm(event_group['datetime'].timetuple()),
+                    self.request_lang)
             else:
                 iso_dt = None
+                relative_time = None
             result.append({
                 "display_datetime": display_dt,
                 "iso_datetime": iso_dt,
-                "via_upload": entry_group.get('via_upload', False),
+                "relative_time": relative_time,
+                "via_upload": event_group.get('via_upload', False),
             })
         return result
 
 
+CHARACTERS_NAMES = OrderedDict(
+    (
+        # Code  Display name
+        (8204, 'ZWNJ'),
+        (8205, 'ZWJ'),
+        (8206, 'LRM'),
+        (8207, 'RLM'),
+        (8234, 'LRE'),
+        (8235, 'RLE'),
+        (8236, 'PDF'),
+        (8237, 'LRO'),
+        (8238, 'RLO'),
+    )
+)
+
+CHARACTERS = u"".join([unichr(index) for index in CHARACTERS_NAMES.keys()])
+
+
 class UnitEditJSON(PootleUnitJSON):
+
+    @property
+    def special_characters(self):
+        if self.language.direction == "rtl":
+            # Inject some extra special characters for RTL languages.
+            language_specialchars = CHARACTERS
+            # Do not repeat special chars.
+            language_specialchars += u"".join(
+                [c for c in self.language.specialchars if c not in CHARACTERS])
+        else:
+            language_specialchars = self.language.specialchars
+
+        special_chars = []
+        for specialchar in language_specialchars:
+            code = ord(specialchar)
+            special_chars.append({
+                'display': CHARACTERS_NAMES.get(code, specialchar),
+                'code': code,
+                'hex_code': "U+" + hex(code)[2:].upper(),  # Like U+200C
+                'name': unicodedata.name(specialchar, ''),
+            })
+        return special_chars
 
     def get_edit_template(self):
         if self.project.is_terminology or self.store.has_terminology:
@@ -402,14 +417,29 @@ class UnitEditJSON(PootleUnitJSON):
         return loader.get_template('editor/units/edit.html')
 
     def render_edit_template(self, context):
-        return self.get_edit_template().render(
-            RequestContext(self.request, context))
+        return self.get_edit_template().render(context=context,
+                                               request=self.request)
+
+    def get_source_nplurals(self):
+        if self.object.hasplural():
+            return len(self.object.source.strings)
+        return None
+
+    def get_target_nplurals(self):
+        source_nplurals = self.get_source_nplurals()
+        return self.language.nplurals if source_nplurals is not None else 1
+
+    def get_unit_values(self):
+        target_nplurals = self.get_target_nplurals()
+        unit_values = [value for value in self.object.target_f.strings]
+        if len(unit_values) < target_nplurals:
+            return unit_values + ((target_nplurals - len(unit_values)) * [''])
+        return unit_values
 
     def get_unit_edit_form(self):
-        snplurals = None
-        if self.object.hasplural():
-            snplurals = len(self.object.source.strings)
-        form_class = unit_form_factory(self.language, snplurals, self.request)
+        form_class = unit_form_factory(self.language,
+                                       self.get_source_nplurals(),
+                                       self.request)
         return form_class(instance=self.object, request=self.request)
 
     def get_unit_comment_form(self):
@@ -418,6 +448,8 @@ class UnitEditJSON(PootleUnitJSON):
 
     @lru_cache()
     def get_alt_srcs(self):
+        if self.request.user.is_anonymous:
+            return []
         return find_altsrcs(
             self.object,
             get_alt_src_langs(self.request, self.request.user, self.tp),
@@ -426,27 +458,37 @@ class UnitEditJSON(PootleUnitJSON):
 
     def get_queryset(self):
         return Unit.objects.get_translatable(self.request.user).select_related(
+            "change",
+            "change__submitted_by",
             "store",
+            "store__filetype",
             "store__parent",
             "store__translation_project",
             "store__translation_project__project",
+            "store__translation_project__project__directory",
             "store__translation_project__project__source_language",
             "store__translation_project__language")
 
     def get_sources(self):
         sources = {
-            unit.store.translation_project.language.code: unit.target_f.strings
+            unit.language_code: unit.target.strings
             for unit in self.get_alt_srcs()}
         sources[self.source_language.code] = self.object.source_f.strings
         return sources
 
     def get_context_data(self, *args, **kwargs):
         priority = (
-            self.object.priority if 'virtualfolder' in settings.INSTALLED_APPS
-            else None
-        )
+            self.store.priority
+            if 'virtualfolder' in settings.INSTALLED_APPS
+            else None)
+        suggestions = self.object.get_suggestions()
+        latest_target_submission = self.object.get_latest_target_submission()
+        accepted_suggestion = None
+        if latest_target_submission is not None:
+            accepted_suggestion = latest_target_submission.suggestion
         return {
             'unit': self.object,
+            'accepted_suggestion': accepted_suggestion,
             'form': self.get_unit_edit_form(),
             'comment_form': self.get_unit_comment_form(),
             'priority': priority,
@@ -455,6 +497,7 @@ class UnitEditJSON(PootleUnitJSON):
             'user': self.request.user,
             'project': self.project,
             'language': self.language,
+            'special_characters': self.special_characters,
             'source_language': self.source_language,
             'cantranslate': check_user_permission(self.request.user,
                                                   "translate",
@@ -471,7 +514,19 @@ class UnitEditJSON(PootleUnitJSON):
             'has_admin_access': check_user_permission(self.request.user,
                                                       'administrate',
                                                       self.directory),
-            'altsrcs': self.get_alt_srcs()}
+            'altsrcs': {x.id: x.data for x in self.get_alt_srcs()},
+            'unit_values': self.get_unit_values(),
+            'target_nplurals': self.get_target_nplurals(),
+            'has_plurals': self.object.hasplural(),
+            'filetype': self.object.store.filetype.name,
+            'suggestions': suggestions,
+            'suggestions_dict': {x.id: dict(id=x.id, target=x.target.strings)
+                                 for x in suggestions},
+            "critical_checks": list(
+                self.object.get_critical_qualitychecks()),
+            "warning_checks": list(
+                self.object.get_warning_qualitychecks()),
+            "terms": self.object.get_terminology()}
 
     def get_response_data(self, context):
         return {
@@ -486,243 +541,211 @@ def permalink_redirect(request, unit):
     return redirect(request.build_absolute_uri(unit.get_translate_url()))
 
 
-@ajax_required
-@get_path_obj
-@permission_required('view')
-@get_resource
-def get_qualitycheck_stats(request, *args, **kwargs):
-    failing_checks = request.resource_obj.get_checks()
-    return JsonResponse(failing_checks if failing_checks is not None else {})
+class UnitSuggestionJSON(PootleJSONMixin, GatherContextMixin, FormView):
 
+    action = "accept"
+    form_class = SuggestionReviewForm
+    http_method_names = ['post', 'delete']
 
-@ajax_required
-@get_path_obj
-@permission_required('view')
-@get_resource
-def get_stats(request, *args, **kwargs):
-    stats = request.resource_obj.get_stats()
+    @property
+    def permission_context(self):
+        return self.get_object().unit.store.parent
 
-    if (isinstance(request.resource_obj, Directory) and
-        'virtualfolder' in settings.INSTALLED_APPS):
-        stats['vfolders'] = {}
+    @set_permissions
+    @requires_permission("view")
+    def dispatch(self, request, *args, **kwargs):
+        # get funky with the request 8/
+        return super(UnitSuggestionJSON, self).dispatch(request, *args, **kwargs)
 
-        for vfolder_treeitem in request.resource_obj.vf_treeitems.iterator():
-            if request.user.is_superuser or vfolder_treeitem.is_visible:
-                stats['vfolders'][vfolder_treeitem.code] = \
-                    vfolder_treeitem.get_stats(include_children=False)
+    @lru_cache()
+    def get_object(self):
+        return get_object_or_404(
+            Suggestion.objects.select_related(
+                "unit",
+                "unit__store",
+                "unit__store__parent",
+                "unit__change",
+                "state"),
+            unit_id=self.request.resolver_match.kwargs["uid"],
+            id=self.request.resolver_match.kwargs["sugg_id"])
 
-    return JsonResponse(stats)
+    def get_form_kwargs(self, **kwargs):
+        comment = (
+            QueryDict(self.request.body).get("comment")
+            if self.action == "reject"
+            else self.request.POST.get("comment"))
+        is_fuzzy = (
+            QueryDict(self.request.body).get("is_fuzzy")
+            if self.action == "reject"
+            else self.request.POST.get("is_fuzzy"))
+        return dict(
+            target_object=self.get_object(),
+            request_user=self.request.user,
+            data=dict(
+                is_fuzzy=is_fuzzy,
+                comment=comment,
+                action=self.action))
 
+    def delete(self, request, *args, **kwargs):
+        self.action = "reject"
+        return self.post(request, *args, **kwargs)
 
-@ajax_required
-@get_unit_context('translate')
-def submit(request, unit):
-    """Processes translation submissions and stores them in the database.
+    def get_context_data(self, *args, **kwargs):
+        ctx = super(UnitSuggestionJSON, self).get_context_data(*args, **kwargs)
+        form = ctx["form"]
+        if form.is_valid():
+            result = dict(
+                udbid=form.target_object.unit.id,
+                sugid=form.target_object.id,
+                user_score=self.request.user.public_score)
+            if form.cleaned_data["action"] == "accept":
+                result.update(
+                    dict(
+                        newtargets=[
+                            target
+                            for target
+                            in form.target_object.unit.target.strings],
+                        checks=_get_critical_checks_snippet(
+                            self.request,
+                            form.target_object.unit)))
+            return result
 
-    :return: An object in JSON notation that contains the previous and last
-             units for the unit next to unit ``uid``.
-    """
-    json = {}
+    def form_valid(self, form):
+        form.save()
+        return self.render_to_response(
+            self.get_context_data(form=form))
 
-    translation_project = request.translation_project
-    language = translation_project.language
-    old_unit = copy.copy(unit)
-
-    if unit.hasplural():
-        snplurals = len(unit.source.strings)
-    else:
-        snplurals = None
-
-    # Store current time so that it is the same for all submissions
-    current_time = timezone.now()
-
-    form_class = unit_form_factory(language, snplurals, request)
-    form = form_class(request.POST, instance=unit, request=request)
-
-    if form.is_valid():
-        suggestion = form.cleaned_data['suggestion']
-        if suggestion:
-            old_unit.accept_suggestion(suggestion,
-                                       request.translation_project, request.user)
-            if form.cleaned_data['comment']:
-                kwargs = dict(
-                    comment=form.cleaned_data['comment'],
-                    user=request.user,
-                )
-                comment_form = UnsecuredCommentForm(suggestion, kwargs)
-                if comment_form.is_valid():
-                    comment_form.save()
-
-        if form.updated_fields:
-            for field, old_value, new_value in form.updated_fields:
-                if field == SubmissionFields.TARGET and suggestion:
-                    old_value = str(suggestion.target_f)
-                sub = Submission(
-                    creation_time=current_time,
-                    translation_project=translation_project,
-                    submitter=request.user,
-                    unit=unit,
-                    store=unit.store,
-                    field=field,
-                    type=SubmissionTypes.NORMAL,
-                    old_value=old_value,
-                    new_value=new_value,
-                    similarity=form.cleaned_data['similarity'],
-                    mt_similarity=form.cleaned_data['mt_similarity'],
-                )
-                sub.save()
-
-            # Update current unit instance's attributes
-            # important to set these attributes after saving Submission
-            # because we need to access the unit's state before it was saved
-            if SubmissionFields.TARGET in (f[0] for f in form.updated_fields):
-                form.instance.submitted_by = request.user
-                form.instance.submitted_on = current_time
-                form.instance.reviewed_by = None
-                form.instance.reviewed_on = None
-
-            form.instance._log_user = request.user
-
-            form.save()
-
-            json['checks'] = _get_critical_checks_snippet(request, unit)
-
-        json['user_score'] = request.user.public_score
-
-        return JsonResponse(json)
-
-    return JsonResponseBadRequest({'msg': _("Failed to process submission.")})
-
-
-@ajax_required
-@get_unit_context('suggest')
-def suggest(request, unit):
-    """Processes translation suggestions and stores them in the database.
-
-    :return: An object in JSON notation that contains the previous and last
-             units for the unit next to unit ``uid``.
-    """
-    json = {}
-
-    translation_project = request.translation_project
-    language = translation_project.language
-
-    if unit.hasplural():
-        snplurals = len(unit.source.strings)
-    else:
-        snplurals = None
-
-    form_class = unit_form_factory(language, snplurals, request)
-    form = form_class(request.POST, instance=unit, request=request)
-
-    if form.is_valid():
-        if form.instance._target_updated:
-            # TODO: Review if this hackish method is still necessary
-            # HACKISH: django 1.2 stupidly modifies instance on model form
-            # validation, reload unit from db
-            unit = Unit.objects.get(id=unit.id)
-            unit.add_suggestion(
-                form.cleaned_data['target_f'],
-                user=request.user,
-                similarity=form.cleaned_data['similarity'],
-                mt_similarity=form.cleaned_data['mt_similarity'],
-            )
-
-            json['user_score'] = request.user.public_score
-
-        return JsonResponse(json)
-
-    return JsonResponseBadRequest({'msg': _("Failed to process suggestion.")})
-
-
-@ajax_required
-@require_http_methods(['POST', 'DELETE'])
-def manage_suggestion(request, uid, sugg_id):
-    """Dispatches the suggestion action according to the HTTP verb."""
-    if request.method == 'DELETE':
-        return reject_suggestion(request, uid, sugg_id)
-    elif request.method == 'POST':
-        return accept_suggestion(request, uid, sugg_id)
-
-
-@get_unit_context()
-def reject_suggestion(request, unit, suggid):
-    json = {
-        'udbid': unit.id,
-        'sugid': suggid,
-    }
-
-    try:
-        sugg = unit.suggestion_set.get(id=suggid)
-    except ObjectDoesNotExist:
-        raise Http404
-
-    # In order to be able to reject a suggestion, users have to either:
-    # 1. Have `review` rights, or
-    # 2. Be the author of the suggestion being rejected
-    if (not check_permission('review', request) and
-        (request.user.is_anonymous() or request.user != sugg.user)):
-        raise PermissionDenied(_('Insufficient rights to access review mode.'))
-
-    unit.reject_suggestion(sugg, request.translation_project, request.user)
-    r_data = QueryDict(request.body)
-    if "comment" in r_data and r_data["comment"]:
-        kwargs = dict(
-            comment=r_data["comment"],
-            user=request.user,
-        )
-        comment_form = UnsecuredCommentForm(sugg, kwargs)
-        if comment_form.is_valid():
-            comment_form.save()
-
-    json['user_score'] = request.user.public_score
-
-    return JsonResponse(json)
-
-
-@get_unit_context('review')
-def accept_suggestion(request, unit, suggid):
-    json = {
-        'udbid': unit.id,
-        'sugid': suggid,
-    }
-
-    try:
-        suggestion = unit.suggestion_set.get(id=suggid)
-    except ObjectDoesNotExist:
-        raise Http404
-
-    unit.accept_suggestion(suggestion, request.translation_project, request.user)
-    if "comment" in request.POST and request.POST["comment"]:
-        kwargs = dict(
-            comment=request.POST["comment"],
-            user=request.user,
-        )
-        comment_form = UnsecuredCommentForm(suggestion, kwargs)
-        if comment_form.is_valid():
-            comment_form.save()
-
-    json['user_score'] = request.user.public_score
-    json['newtargets'] = [highlight_whitespace(target)
-                          for target in unit.target.strings]
-    json['newdiffs'] = {}
-    for sugg in unit.get_suggestions():
-        json['newdiffs'][sugg.id] = [highlight_diffs(unit.target.strings[i],
-                                                     target) for i, target in
-                                     enumerate(sugg.target.strings)]
-
-    json['checks'] = _get_critical_checks_snippet(request, unit)
-
-    return JsonResponse(json)
+    def form_invalid(self, form):
+        if form.non_field_errors():
+            raise Http404
+        raise Http400(form.errors)
 
 
 @ajax_required
 @get_unit_context('review')
-def toggle_qualitycheck(request, unit, check_id):
+def toggle_qualitycheck(request, unit, check_id, **kwargs_):
     try:
-        unit.toggle_qualitycheck(check_id, bool(request.POST.get('mute')),
-                                 request.user)
+        unit.toggle_qualitycheck(check_id, 'mute' in request.POST, request.user)
     except ObjectDoesNotExist:
         raise Http404
 
     return JsonResponse({})
+
+
+class UnitSubmitJSON(UnitSuggestionJSON):
+
+    @set_permissions
+    @requires_permission("translate")
+    def dispatch(self, request, *args, **kwargs):
+        # get funky with the request 8/
+        return super(UnitSuggestionJSON, self).dispatch(request, *args, **kwargs)
+
+    @property
+    def form_class(self):
+        if self.get_suggestion():
+            return SuggestionSubmitForm
+        return SubmitForm
+
+    @property
+    def permission_context(self):
+        return self.get_object().store.parent
+
+    @lru_cache()
+    def get_object(self):
+        return get_object_or_404(
+            Unit.objects.select_related(
+                "store",
+                "change",
+                "store__parent",
+                "store__translation_project",
+                "store__filetype",
+                "store__translation_project__language",
+                "store__translation_project__project",
+                "store__data",
+                "store__translation_project__data"),
+            id=self.request.resolver_match.kwargs["uid"])
+
+    @lru_cache()
+    def get_suggestion(self):
+        if "suggestion" in self.request.POST:
+            return get_object_or_404(
+                Suggestion,
+                unit_id=self.get_object().id,
+                id=self.request.POST["suggestion"])
+
+    def get_form_kwargs(self, **kwargs):
+        kwargs = dict(
+            unit=self.get_object(),
+            request_user=self.request.user,
+            data=self.request.POST)
+        if self.get_suggestion():
+            kwargs["target_object"] = self.get_suggestion()
+        return kwargs
+
+    def get_context_data(self, *args, **kwargs):
+        ctx = super(UnitSuggestionJSON, self).get_context_data(*args, **kwargs)
+        form = ctx["form"]
+        if form.is_valid():
+            form.unit.refresh_from_db()
+            result = dict(
+                checks=_get_critical_checks_snippet(self.request, form.unit),
+                user_score=self.request.user.public_score,
+                newtargets=[target for target in form.unit.target.strings],
+                critical_checks_active=(
+                    form.unit.get_active_critical_qualitychecks().exists()))
+            return result
+
+
+class UnitAddSuggestionJSON(PootleJSONMixin, GatherContextMixin, FormView):
+    form_class = AddSuggestionForm
+    http_method_names = ['post']
+
+    @set_permissions
+    @requires_permission("suggest")
+    def dispatch(self, request, *args, **kwargs):
+        # get funky with the request 8/
+        return super(UnitAddSuggestionJSON, self).dispatch(request, *args, **kwargs)
+
+    @property
+    def permission_context(self):
+        return self.get_object().store.parent
+
+    @lru_cache()
+    def get_object(self):
+        return get_object_or_404(
+            Unit.objects.select_related(
+                "store",
+                "store__parent",
+                "store__translation_project",
+                "store__filetype",
+                "store__translation_project__language",
+                "store__translation_project__project",
+                "store__data",
+                "store__translation_project__data"),
+            id=self.request.resolver_match.kwargs["uid"])
+
+    def get_form_kwargs(self, **kwargs):
+        kwargs = dict(
+            unit=self.get_object(),
+            request_user=self.request.user,
+            data=self.request.POST)
+        return kwargs
+
+    def get_context_data(self, *args, **kwargs):
+        ctx = super(UnitAddSuggestionJSON, self).get_context_data(*args, **kwargs)
+        form = ctx["form"]
+        if form.is_valid():
+            data = dict()
+            if not self.request.user.is_anonymous:
+                data['user_score'] = self.request.user.public_score
+            return data
+
+    def form_valid(self, form):
+        form.save()
+        return self.render_to_response(
+            self.get_context_data(form=form))
+
+    def form_invalid(self, form):
+        if form.non_field_errors():
+            raise Http404
+        raise Http400(form.errors)

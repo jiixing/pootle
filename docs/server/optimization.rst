@@ -21,11 +21,8 @@ Database Backends
 You should really switch to a real database backend in production environments.
 Adjust the :setting:`DATABASES` setting accordingly.
 
-`MySQL-python <http://mysql-python.sourceforge.net/>`_
-  MySQL adapter for Python.
-
-`Psycopg2 <http://initd.org/psycopg/>`_
-  PostgreSQL adapter for Python.
+* :doc:`MySQL <mysql_installation>`
+* :doc:`PostgreSQL <postgresql_installation>`
 
 
 Web Servers
@@ -53,8 +50,8 @@ Speed-ups and Extras
 
 `raven <https://raven.readthedocs.io/en/latest/>`_
   Enables logging server exceptions to a `Sentry server
-  <https://docs.getsentry.com/hosted/>`_. If installed and configured,
-  Pootle will automatically use the raven client.
+  <https://docs.sentry.io/>`_. If installed and configured, Pootle will
+  automatically use the raven client.
 
 
 .. _optimization#tips:
@@ -93,6 +90,11 @@ some tips for performance tuning on your Pootle installation.
   `mod_deflate <https://httpd.apache.org/docs/2.4/mod/mod_deflate.html>`_ and
   for Nginx, `ngx_http_gzip_module
   <http://nginx.org/en/docs/http/ngx_http_gzip_module.html>`_.
+
+- Serve your `robots.txt` file statically.  By default Pootle will serve this
+  file as a static template, but that means it is still going through a small
+  layer of Django.  On larger sites you likely want to have your webserver
+  serve this file.
 
 
 .. _optimization#apache:
