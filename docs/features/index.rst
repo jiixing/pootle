@@ -13,9 +13,8 @@ Pootle FS
    :maxdepth: 2
 
    pootle_fs
-   pootle_fs_install_plugins
-   pootle_fs_add_project
    migrate_to_pootle_fs
+   integrate_with_vcs
    using_pootle_fs
    pootle_fs_statuses
 

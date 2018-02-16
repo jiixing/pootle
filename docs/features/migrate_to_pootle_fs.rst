@@ -3,93 +3,73 @@
 Migrating to Pootle FS
 ======================
 
+When upgrading Pootle your projects will be automatically migrated to use the
+Pootle FS ``localfs`` backend.
+
+.. note:: Before continuing :ref:`ensure all projects were properly migrated
+   to Pootle FS <upgrading#check-pootle-fs-migration>` when upgrading Pootle.
+
+
 While Pootle will continue to support :djadmin:`update_stores` and
-:djadmin:`sync_stores` this will eventually be deprecated. Thus it makes sense
-to migrate your projects to Pootle FS.
-
-These steps will convert a project currently hosted in
-:setting:`POOTLE_TRANSLATION_DIRECTORY` into a Pootle FS ``localfs`` project.
+:djadmin:`sync_stores` these are now deprecated, so it is advisable you start
+to adjust your workflow to use Pootle FS.
 
 
-Preparation
------------
+.. _migrate_to_pootle_fs#adjust-existing-automation:
 
-1. (optional) Disable the project to prevent translators working on the stores.
-   You can also, quite safely, perform the migration live.
-2. Run :djadmin:`sync_stores` to ensure that all translations in Pootle are on
-   the filesystem. The filesystem and Pootle should now have exactly the same
-   data.
+Adjust existing automation
+--------------------------
 
-   .. code-block:: console
+If you have scripts using :djadmin:`sync_stores` and :djadmin:`update_stores`
+then you might want to continue using those until you can migrate them to
+Pootle FS commands.
 
-      (env) $ pootle sync_stores --project=MYPROJECT
+:djadmin:`sync_stores` and :djadmin:`update_stores` make use of Pootle FS
+infrastructure so they are in fact still using Pootle FS.  The difference is
+that they mimic the monodirectional behaviour of the old commands.  Pootle FS
+will synchronise in both directions at a unit level, while
+:djadmin:`update_stores` will only load new and changed units and
+:djadmin:`sync_stores` will only synchronise Pootle changes to disk.
 
+The advantage of this monodirectional mode is that you can add scripts to adapt
+files after synchronising or before loading into Pootle.  Your scripts changing
+files on disk will likely mess with direct Pootle FS change detection.
 
-Setup Pootle FS
----------------
-
-Click on the ``Filesystems`` link below the project edit form and set the
-following:
-
-.. image:: ../_static/pootle_fs_link.png
-
-
-* **Filesystem backend** to ``localfs``
-* **Backend URL or path** to the value of
-  :setting:`POOTLE_TRANSLATION_DIRECTORY` + MYPROJECT, e.g.
-  :file:`/path/to/pootle/translations/MYPROJECT`
-* **Translation path mapping** to the one your project uses, or pick one of the
-  existing **Translation mapping presets**.
+You may want to look at the format adaptors for future massaging or formats.
 
 
-First synchronization
----------------------
+.. _migrate_to_pootle_fs#replacing-update_stores-and-sync_stores:
 
-Now that our project is setup we can initiate the first synchronization to
-ensure all files are tracked:
+Replacing update_stores and sync_stores
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+:djadmin:`update_stores` can be replaced with the following set of Pootle FS
+commands:
 
 .. code-block:: console
 
-   (env) $ pootle fs add --force MYPROJECT
-   (env) $ pootle fs sync MYPROJECT
+    (env) $ pootle fs fetch my-project
+    (env) $ pootle fs resolve my-project --overwrite
+    (env) $ pootle fs sync my-project --update=pootle
 
 
-This will use translations from Pootle and ignore those on the filesystem.
+.. note:: To narrow down the execution to a particular language in a project
+   you must append the ``--fs-path`` argument for each of command in the
+   previous snippet. For example ``--fs-path=my-project/fr/*`` constrains to
+   the project's French filesystem files.
 
 
-Variations on the theme
------------------------
-
-The process above outlines how you can move an ``update_stores`` project to
-Pootle FS on the local filesystem with Pootle winning. You might want to do
-some other things such as:
-
-
-Filesystem wins
-^^^^^^^^^^^^^^^
-
-The :djadmin:`sync_stores` in our recipe above ensures that everything is in
-sync. However if you have scripts that commit and update files you might prefer
-to let the filesystem win in which case rather use:
+:djadmin:`sync_stores` can be replaced with the following set of Pootle FS
+commands:
 
 .. code-block:: console
 
-   (env) $ pootle fs fetch --force MYPROJECT
+    (env) $ pootle fs fetch my-project
+    (env) $ pootle fs resolve my-project --overwrite --pootle-wins
+    (env) $ pootle fs sync my-project --update=fs
 
 
-Migrating to version control
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-1. Make sure you have installed the needed Pootle FS plugin for the version
-   control backend you are using.
-2. (optional but recommended) Disable the project.
-3. Ensure you have synchronized all your files and committed them to your
-   version control system.
-4. Instead of ``localfs``, set the backend appropriately.
-5. Set the URL to your version control repository.
-6. Synchronize as follows:
-
-   .. code-block:: console
-
-     (env) $ pootle fs fetch --force MYPROJECT
-     (env) $ pootle fs sync MYPROJECT
+.. note:: To narrow down the execution to a particular language in a project
+   you must append the ``--pootle-path`` argument for each of command in the
+   previous snippet. For example ``--pootle-path=/de/my-project/*`` constrains
+   to the project's German database stores.

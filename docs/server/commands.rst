@@ -234,7 +234,8 @@ sync_stores
 ^^^^^^^^^^^
 
 .. deprecated:: 2.9
-   Deprecated in favor of Pootle FS commands.
+   Deprecated in favor of :ref:`Pootle FS equivalent
+   <migrate_to_pootle_fs#replacing-update_stores-and-sync_stores>`.
 
 
 .. note:: Since version 2.9 all projects are managed by Pootle FS and therefore
@@ -282,7 +283,8 @@ update_stores
 ^^^^^^^^^^^^^
 
 .. deprecated:: 2.9
-   Deprecated in favor of Pootle FS commands.
+   Deprecated in favor of :ref:`Pootle FS equivalent
+   <migrate_to_pootle_fs#replacing-update_stores-and-sync_stores>`.
 
 
 .. note:: Since version 2.9 all projects are managed by Pootle FS and therefore
@@ -1037,9 +1039,8 @@ To interact with Pootle FS we use multiple subcommands:
 
   * :djadmin:`fetch` - Add a file from the filesystem to Pootle
   * :djadmin:`add` - Add a store from Pootle to the filesystem
-  * :djadmin:`merge` - Handle conflicts in stores and files
   * :djadmin:`rm` - Remove a store and file from both Pootle and the filesystem
-  * :djadmin:`resolve` - Revert a staged action
+  * :djadmin:`resolve` - Handle conflicts in stores and files
   * :djadmin:`unstage` - Revert a staged action
 
 * Execute:
@@ -1048,7 +1049,7 @@ To interact with Pootle FS we use multiple subcommands:
 
 
 .. note:: The **action** staging commands require that you run
-   :djadmin:sync in order to actually perform the staged actions.
+   :djadmin:`sync` in order to actually perform the staged actions.
 
 
 .. _commands#pootle-fs-common-options:
@@ -1060,27 +1061,33 @@ Pootle FS **action** and **execution** subcommands take the :option:`-p` and
 :option:`-P` options which allow you to specify a glob to limit which files or
 stores are affected by the command.
 
-.. django-admin-option:: -p --fs_path
+.. django-admin-option:: -p --fs-path
 
   Only affect files whose filesystem path matches a given glob.
 
 
   .. code-block:: console
 
-     (env) $ pootle fs add --fs_path MYPROJECT/af/directory/file.po MYPROJECT
+     (env) $ pootle fs add --fs-path=MYPROJECT/af/directory/file.po MYPROJECT
+     (env) $ pootle fs add --fs-path=MYPROJECT/af/* MYPROJECT
+     (env) $ pootle fs add --fs-path=MYPROJECT/af/*/file.po MYPROJECT
+     (env) $ pootle fs add --fs-path=MYPROJECT/af/directory/*.po MYPROJECT
 
 
   .. note:: The path should be relative to the Pootle FS URL setting for the
      project.
 
 
-.. django-admin-option:: -P --pootle_path
+.. django-admin-option:: -P --pootle-path
 
   Only affect files whose Pootle path matches a given glob.
 
   .. code-block:: console
 
-     (env) $ pootle fs add --pootle_path /af/MYPROJECT/directory/file.po MYPROJECT
+     (env) $ pootle fs add --pootle-path=/af/MYPROJECT/directory/file.po MYPROJECT
+     (env) $ pootle fs add --pootle-path=/af/MYPROJECT/* MYPROJECT
+     (env) $ pootle fs add --pootle-path=/af/MYPROJECT/*/file.po MYPROJECT
+     (env) $ pootle fs add --pootle-path=/af/MYPROJECT/directory/*.po MYPROJECT
 
 
   .. note:: Keep in mind that Pootle paths always start with `/`.
@@ -1179,7 +1186,7 @@ without user input:
 
 .. code-block:: console
 
-   (env) $ pootle fs merge MYPROJECT
+   (env) $ pootle fs resolve MYPROJECT
 
 
 .. django-admin-option:: --pootle-wins

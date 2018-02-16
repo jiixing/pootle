@@ -8,17 +8,13 @@ allows Pootle to synchronize with an external repository containing your
 translations, keep them synchronised and manage and resolve any conflicts
 either automatically or via user input.
 
-.. warning:: Pootle FS is considered beta in Pootle 2.8.0.  We'd love you to
-   try it out but please be aware that if you are basing production installs on
-   Pootle FS that you can expect changes that might require manual
-   intervention.
-
 
 Aims
 ----
 
-* Allow Pootle data to be stored on version control systems
-* Abstract version control systems into a standard method across all systems
+* Allow Pootle translations to be stored in version control
+* Abstract diverse version control systems into a standard set of Pootle
+  commands across all systems
 * Ensure that we don't lose any data
 * Ensure that changes made on Pootle and the filesystem can seamlessly move
   from one to the other
@@ -92,12 +88,14 @@ Previous versions of Pootle made use of two commands, :djadmin:`update_stores`
 and :djadmin:`sync_stores`, to allow translations to be pushed into Pootle or
 pulled from Pootle.
 
-These two commands still exist but we will be phasing these out in the long
-term to make everything use Pootle FS.
+These two commands still exist but are now deprecated. We will be phasing these
+out in the long term to make everything use Pootle FS, but you can
+:ref:`replace these commands with Pootle FS equivalents
+<migrate_to_pootle_fs#replacing-update_stores-and-sync_stores>`.
 
-You can find an outline of how to use Pootle FS on your existing Pootle
-projects in the :ref:`adding a Pootle FS managed project
-<pootle_fs_add_project>` instructions.
-
-Once you are familiar with Pootle FS you can start :ref:`migrating your
-projects to Pootle FS <migrate_to_pootle_fs>`.
+You can find an outline of how to use Pootle FS in the :ref:`using Pootle FS
+<using_pootle_fs>` instructions. If you have a existing project you want to
+migrate to Pootle FS please read the :ref:`migrating your projects to Pootle FS
+<migrate_to_pootle_fs>` instructions. You might also have an already correctly
+setup project that you want to :ref:`integrate directly with a version control
+system <integrate_with_vcs>`.
